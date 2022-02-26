@@ -1,6 +1,13 @@
 #ifndef GL_H
 #define GL_H
 
+#define GL_FALSE 0
+#define GL_TRUE 1
+
+#define GL_TRIANGLES 0x0004
+#define GL_TRIANGLE_STRIP 0x0005
+#define GL_TRIANGLE_FAN 0x0006
+#define GL_FLOAT 0x1406
 #define GL_ARRAY_BUFFER 0x8892
 #define GL_STREAM_DRAW 0x88E0
 #define GL_STREAM_READ 0x88E1
@@ -23,10 +30,20 @@ struct gl_context {
     void (*GenVertexArrays)(GLsizei n, GLuint *arrays);
     void (*DeleteVertexArrays)(GLsizei n, const GLuint *arrays);
     void (*BindVertexArray)(GLuint array);
+    void (*VertexAttribPointer)(GLuint index, GLint size, GLenum type, 
+            GLboolean normalized, GLsizei stride, const void *pointer);
+    void (*EnableVertexAttribArray)(GLuint index);
     GLuint (*CreateShader)(GLenum type);
+    void (*ShaderSource)(GLuint shader, GLsizei count, 
+            const GLchar *const *string, const GLint *length);
+    void (*CompileShader)(GLuint shader);
+    void (*DeleteShader)(GLuint shader);
     GLuint (*CreateProgram)(void);
     void (*AttachShader)(GLuint program, GLuint shader);
-    void (*CompileShader)(GLuint shader);
+    void (*LinkProgram)(GLuint program);
+    void (*UseProgram)(GLuint program);
+    void (*DeleteProgram)(GLuint program);
+    void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
 
     GLXContext context;
 };

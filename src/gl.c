@@ -14,10 +14,18 @@ static const char *gl_function_names[] = {
     "glGenVertexArrays",
     "glDeleteVertexArrays",
     "glBindVertexArrays",
+    "glVertexAttribPointer",
+    "glEnableVertexAttribArray",
     "glCreateShader",
+    "glShaderSource",
+    "glCompileShader",
+    "glDeleteShader",
     "glCreateProgram",
     "glAttachShader",
-    "glCompileShader",
+    "glLinkProgram",
+    "glUseProgram",
+    "glDeleteProgram",
+    "glDrawArrays",
 };
 
 i32
