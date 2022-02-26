@@ -12,5 +12,7 @@ options:
 	@echo "CC      = $(CC)"
 	@echo
 
-waycraft: $(SRC)
+waycraft:
 	$(CC) $(CFLAGS) -o $@ src/main.c $(LDFLAGS)
+
+.PHONY: waycraft
