@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -50,7 +51,6 @@ typedef struct {
 
 #define assert(expr) ((expr) ? (void)0 : (void)(*(volatile int *)0 = 0))
 #define static_assert(expr, msg) _Static_assert(expr, msg)
-#define offsetof(type, member) (((type *)0)->member)
 
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
