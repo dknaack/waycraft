@@ -26,22 +26,24 @@ struct x11_window {
     uint is_open;
 };
 
-struct gl_function_table {
+struct gl_context {
     void (*Clear)(GLbitfield mask);
     void (*ClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+
+    GLXContext context;
 };
 
-static const u8 *gl_function_names[] = {
+static const char *gl_function_names[] = {
     "glClear",
     "glClearColor",
 };
 
-static struct gl_function_table gl;
+static struct gl_context gl;
 
 static i32
 x11_window_init(struct x11_window *window)
 {
-    u8 *title = "Hello, world!";
+    char *title = "Hello, world!";
     XTextProperty prop;
     Window root;
     u32 mask, screen;
@@ -104,19 +106,6 @@ x11_window_finish(struct x11_window *window)
     XCloseDisplay(window->display);
 }
 
-static i32
-load_code(void *module, u32 count, const u8 **names, void **functions, 
-        void *(*get_proc_address)(void *module, const u8 *name))
-{
-    for (u32 i = 0; i < count; i++) {
-        if (!(*(void **)(&functions[i]) = get_proc_address(module, names[i]))) {
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
 static void
 x11_window_poll_events(struct x11_window *window)
 {
@@ -140,7 +129,7 @@ x11_window_poll_events(struct x11_window *window)
 }
 
 static i32
-glx_context_init(GLXContext *context, struct x11_window *window)
+gl_context_init(struct gl_context *gl, const struct x11_window *window)
 {
     int attributes[] = {
         GLX_RGBA,
@@ -151,34 +140,32 @@ glx_context_init(GLXContext *context, struct x11_window *window)
 
     Display *display = window->display;
     XVisualInfo *visual = glXChooseVisual(display, 0, attributes);
-    *context = glXCreateContext(display, visual, 0, True);
-    glXMakeCurrent(display, window->drawable, *context);
-    return 0;
-}
+    gl->context = glXCreateContext(display, visual, 0, True);
+    glXMakeCurrent(display, window->drawable, gl->context);
 
-static void *
-glx_get_proc_address(void *module, const u8 *proc_name)
-{
-    return glXGetProcAddress(proc_name);
+    void (**gl_functions)(void);
+    *(void **)&gl_functions = gl;
+
+    for (i32 i = 0; i < LENGTH(gl_function_names); i++) {
+        gl_functions[i] = glXGetProcAddress((u8 *)gl_function_names[i]);
+        if (!gl_functions[i]) {
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 int
 main(void)
 {
     struct x11_window window = {0};
-    GLXContext context;
     if (x11_window_init(&window) != 0) {
         fprintf(stderr, "Failed to initialize window\n");
         return 1;
     }
 
-    if (glx_context_init(&context, &window) != 0) {
-        fprintf(stderr, "Failed to initialize glx context\n");
-        return 1;
-    }
-
-    if (load_code(0, LENGTH(gl_function_names), gl_function_names, 
-                (void **)&gl, glx_get_proc_address) != 0) {
+    if (gl_context_init(&gl, &window) != 0) {
         fprintf(stderr, "Failed to load the functions for OpenGL\n");
         return 1;
     }
@@ -194,7 +181,7 @@ main(void)
         nanosleep(&wait_time, 0);
     }
 
-    glXDestroyContext(window.display, context);
+    glXDestroyContext(window.display, gl.context);
     x11_window_finish(&window);
     return 0;
 }
