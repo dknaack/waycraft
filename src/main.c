@@ -20,10 +20,16 @@
 
 static struct gl_context gl;
 
+static const u16 indices[] = {
+    0, 1, 3,
+    1, 2, 3,
+};
+
 static const f32 vertices[] = {
-    0.5f,  0.5f, 0.0f,
-    0.0f, -0.5f, 0.0f,
-    1.0f, -0.5f, 0.0f,
+     0.5f,  0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+    -0.5f, -0.5f, 0.0f,
+    -0.5f,  0.5f, 0.0f,
 };
 
 static const u8 *vert_shader_source = (u8 *)
@@ -84,10 +90,14 @@ main(void)
     u32 program = gl_program_create(vert_shader_source, frag_shader_source);
     assert(program != 0);
 
-    u32 vao, vbo;
+    u32 vao, vbo, ebo;
     gl.GenBuffers(1, &vbo);
     gl.BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    gl.GenBuffers(1, &ebo);
+    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     gl.GenVertexArrays(1, &vao);
     gl.BindVertexArray(vao);
@@ -102,8 +112,7 @@ main(void)
         gl.Clear(GL_COLOR_BUFFER_BIT);
 
         gl.UseProgram(program);
-        gl.BindVertexArray(vao);
-        gl.DrawArrays(GL_TRIANGLES, 0, 3);
+        gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
         glXSwapBuffers(window.display, window.drawable);
         nanosleep(&wait_time, 0);

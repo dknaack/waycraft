@@ -26,6 +26,7 @@ static const char *gl_function_names[] = {
     "glUseProgram",
     "glDeleteProgram",
     "glDrawArrays",
+    "glDrawElements",
 };
 
 i32

@@ -7,8 +7,15 @@
 #define GL_TRIANGLES 0x0004
 #define GL_TRIANGLE_STRIP 0x0005
 #define GL_TRIANGLE_FAN 0x0006
+#define GL_BYTE 0x1400
+#define GL_UNSIGNED_BYTE 0x1401
+#define GL_SHORT 0x1402
+#define GL_UNSIGNED_SHORT 0x1403
+#define GL_INT 0x1404
+#define GL_UNSIGNED_INT 0x1405
 #define GL_FLOAT 0x1406
 #define GL_ARRAY_BUFFER 0x8892
+#define GL_ELEMENT_ARRAY_BUFFER 0x8893
 #define GL_STREAM_DRAW 0x88E0
 #define GL_STREAM_READ 0x88E1
 #define GL_STREAM_COPY 0x88E2
@@ -44,6 +51,8 @@ struct gl_context {
     void (*UseProgram)(GLuint program);
     void (*DeleteProgram)(GLuint program);
     void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
+    void (*DrawElements)(GLenum mode, GLsizei count, GLenum type, 
+            const void *indices);
 
     GLXContext context;
 };
