@@ -108,6 +108,7 @@ main(void)
     while (window.is_open) {
         x11_window_poll_events(&window);
         
+        gl.Viewport(0, 0, window.width, window.height);
         gl.ClearColor(0.15, 0.15, 0.25, 1.0);
         gl.Clear(GL_COLOR_BUFFER_BIT);
 
@@ -120,6 +121,8 @@ main(void)
 
     gl.DeleteVertexArrays(1, &vao);
     gl.DeleteBuffers(1, &vbo);
+    gl.DeleteBuffers(1, &ebo);
+    gl.DeleteProgram(program);
     gl_context_finish(&gl, &window);
     x11_window_finish(&window);
     return 0;

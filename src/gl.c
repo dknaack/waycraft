@@ -5,6 +5,7 @@
 #include "gl.h"
 
 static const char *gl_function_names[] = {
+    "glViewport",
     "glClear",
     "glClearColor",
     "glGenBuffers",
@@ -27,6 +28,9 @@ static const char *gl_function_names[] = {
     "glDeleteProgram",
     "glDrawArrays",
     "glDrawElements",
+    "glGenTextures",
+    "glTexImage2D",
+    "glDeleteTextures",
 };
 
 i32

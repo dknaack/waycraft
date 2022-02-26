@@ -27,6 +27,7 @@
 #define GL_DYNAMIC_COPY 0x88EA
 
 struct gl_context {
+    void (*Viewport)(GLint x, GLint y, GLsizei width, GLsizei height);
     void (*Clear)(GLbitfield mask);
     void (*ClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
     void (*GenBuffers)(GLsizei n, GLuint *buffers);
@@ -53,6 +54,11 @@ struct gl_context {
     void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
     void (*DrawElements)(GLenum mode, GLsizei count, GLenum type, 
             const void *indices);
+    void (*GenTextures)(GLsizei n, GLuint *textures);
+    void (*TexImage2D)(GLenum target, GLint level, GLint internalformat,
+            GLsizei width, GLsizei height, GLint border, GLenum format, 
+            GLenum type, const void *pixels);
+    void (*DeleteTextures)(GLsizei n, const GLuint *textures);
 
     GLXContext context;
 };
