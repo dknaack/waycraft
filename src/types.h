@@ -40,13 +40,13 @@ typedef union {
 } vec4;
 
 typedef struct {
-    f32 r[4][4];
     f32 e[16];
+    f32 r[4][4];
 } mat4;
 
 typedef struct {
-    f32 r[3][3];
     f32 e[9];
+    f32 r[3][3];
 } mat3;
 
 #define assert(expr) ((expr) ? (void)0 : (void)(*(volatile int *)0 = 0))
@@ -60,6 +60,7 @@ typedef struct {
 #define MAX(a, b) ((a) > (b)? (a) : (b))
 #define LENGTH(x) (sizeof(x)/sizeof((x)[0]))
 
+#define MAT4(...)        (mat4){{ __VA_ARGS__ }}
 #define VEC4(x, y, z, w) (vec4){{ (x), (y), (z), (w) }}
 #define VEC3(x, y, z)    (vec3){{ (x), (y), (z) }}
 #define VEC2(x, y)       (vec2){{ (x), (y) }}
