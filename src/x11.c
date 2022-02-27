@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 
 #include "x11.h"
+#include "game.h"
 
 i32
 x11_window_init(struct x11_window *window)
@@ -69,9 +70,12 @@ x11_window_finish(struct x11_window *window)
 }
 
 void
-x11_window_poll_events(struct x11_window *window)
+x11_window_poll_events(struct x11_window *window, struct game_input *input)
 {
+    char keybuf[16] = {0};
+    KeySym key;
     XEvent event;
+    u32 is_pressed = 0;
 
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
@@ -85,6 +89,34 @@ x11_window_poll_events(struct x11_window *window)
         case ConfigureNotify:
             window->width = event.xconfigure.width;
             window->height = event.xconfigure.height;
+            break;
+        case MotionNotify:
+            // TODO: convert to relative coordinates?
+            input->mouse.dx = event.xmotion.x - input->mouse.x;
+            input->mouse.dy = event.xmotion.y - input->mouse.y;
+            input->mouse.x = event.xmotion.x;
+            input->mouse.y = event.xmotion.y;
+            break;
+        case KeyPress:
+            is_pressed = 1;
+            /* fallthrough */
+        case KeyRelease:
+            XLookupString(&event.xkey, keybuf, sizeof(keybuf), &key, 0);
+
+            switch (key) {
+            case XK_w:
+                input->controller.move_up = is_pressed;
+                break;
+            case XK_a:
+                input->controller.move_left = is_pressed;
+                break;
+            case XK_s:
+                input->controller.move_down = is_pressed;
+                break;
+            case XK_d:
+                input->controller.move_right = is_pressed;
+                break;
+            }
             break;
         }
     }

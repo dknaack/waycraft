@@ -14,8 +14,11 @@ struct x11_window {
     uint is_open;
 };
 
+struct game_input;
+
 i32 x11_window_init(struct x11_window *window);
 void x11_window_finish(struct x11_window *window);
-void x11_window_poll_events(struct x11_window *window);
+void x11_window_poll_events(struct x11_window *window, 
+        struct game_input *input);
 
 #endif /* X11_H */ 
