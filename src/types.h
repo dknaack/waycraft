@@ -60,6 +60,7 @@ typedef struct {
 #define MAX(a, b) ((a) > (b)? (a) : (b))
 #define LENGTH(x) (sizeof(x)/sizeof((x)[0]))
 #define DEG2RAD(deg) ((deg) / 180.f * PI)
+#define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
 #define MAT4(...)        (mat4){{ __VA_ARGS__ }}
 #define VEC4(x, y, z, w) (vec4){{ (x), (y), (z), (w) }}
