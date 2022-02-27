@@ -52,10 +52,11 @@ world_init(struct world *world)
 }
 
 static u32
-world_at(const struct world *world, u32 x, u32 y)
+world_at(const struct world *world, u32 x, u32 y, u32 z)
 {
-    if ((0 <= x && x < world->width) && (0 <= y && y < world->height)) {
-        return world->blocks[y * world->width + x];
+    if ((0 <= x && x < world->width) && (0 <= y && y < world->height) && 
+            (0 <= z && z < world->depth)) {
+        return world->blocks[(z * world->depth + y) * world->width + x];
     } else {
         return 0;
     }
@@ -106,7 +107,7 @@ world_generate_mesh(struct world *world, struct mesh *mesh)
     for (u32 z = 0; z < depth; z++) {
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                if (world_at(world, x, y) != 0) {
+                if (world_at(world, x, y, z) != 0) {
                     vec3 pos0 = VEC3(
                             size * (x + 0.5 - width / 2.), 
                             size * (y + 0.5 - height / 2.), 
@@ -141,12 +142,29 @@ world_generate_mesh(struct world *world, struct mesh *mesh)
                             size * (y - 0.5 - height / 2.),
                             size * (z - 0.5 - depth / 2.));
 
-                    mesh_push_quad(mesh, pos6, pos7, pos2, pos3);
-                    mesh_push_quad(mesh, pos4, pos5, pos0, pos1);
-                    mesh_push_quad(mesh, pos4, pos0, pos6, pos2);
-                    mesh_push_quad(mesh, pos1, pos5, pos3, pos7);
-                    mesh_push_quad(mesh, pos0, pos1, pos2, pos3);
-                    mesh_push_quad(mesh, pos5, pos4, pos7, pos6);
+                    if (!world_at(world, x, y - 1, z)) {
+                        mesh_push_quad(mesh, pos6, pos7, pos2, pos3);
+                    }
+
+                    if (!world_at(world, x, y + 1, z)) {
+                        mesh_push_quad(mesh, pos4, pos5, pos0, pos1);
+                    }
+
+                    if (!world_at(world, x + 1, y, z)) {
+                        mesh_push_quad(mesh, pos4, pos0, pos6, pos2);
+                    }
+
+                    if (!world_at(world, x - 1, y, z)) {
+                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7);
+                    }
+
+                    if (!world_at(world, x, y, z + 1)) {
+                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3);
+                    }
+
+                    if (!world_at(world, x, y, z - 1)) {
+                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6);
+                    }
                 }
             }
         }
