@@ -7,6 +7,9 @@
 #define GL_TRIANGLES 0x0004
 #define GL_TRIANGLE_STRIP 0x0005
 #define GL_TRIANGLE_FAN 0x0006
+#define GL_DEPTH_BUFFER_BIT 0x00000100
+#define GL_STENCIL_BUFFER_BIT 0x00000400
+#define GL_COLOR_BUFFER_BIT 0x00004000
 #define GL_BYTE 0x1400
 #define GL_UNSIGNED_BYTE 0x1401
 #define GL_SHORT 0x1402
@@ -112,6 +115,8 @@ struct gl_context {
             GLfloat v3);
     void (*UniformMatrix4fv)(GLint location, GLsizei count, 
             GLboolean transpose, const GLfloat *value);
+    void (*Enable)(GLenum cap);
+    void (*Disable)(GLenum cap);
 
     GLXContext context;
 };

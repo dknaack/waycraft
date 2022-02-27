@@ -45,6 +45,8 @@ static const char *gl_function_names[] = {
     "glUniform3f",
     "glUniform4f",
     "glUniformMatrix4fv",
+    "glEnable",
+    "glDisable",
 };
 
 static i32
