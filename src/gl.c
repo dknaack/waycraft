@@ -20,10 +20,14 @@ static const char *gl_function_names[] = {
     "glCreateShader",
     "glShaderSource",
     "glCompileShader",
+    "glGetShaderiv",
+    "glGetShaderInfoLog",
     "glDeleteShader",
     "glCreateProgram",
     "glAttachShader",
     "glLinkProgram",
+    "glGetProgramiv",
+    "glGetProgramInfoLog",
     "glUseProgram",
     "glDeleteProgram",
     "glDrawArrays",
@@ -31,9 +35,18 @@ static const char *gl_function_names[] = {
     "glGenTextures",
     "glTexImage2D",
     "glDeleteTextures",
+    "glBindTexture",
+    "glActiveTexture",
+    "glTexParameteri",
+    "glGenerateMipmap",
+    "glGetUniformLocation",
+    "glUniform1f",
+    "glUniform2f",
+    "glUniform3f",
+    "glUniform4f",
 };
 
-i32
+static i32
 gl_context_init(struct gl_context *gl, const struct x11_window *window)
 {
     int attributes[] = {
@@ -61,8 +74,57 @@ gl_context_init(struct gl_context *gl, const struct x11_window *window)
     return 0;
 }
 
-void
+static void
 gl_context_finish(struct gl_context *gl, const struct x11_window *window)
 {
     glXDestroyContext(window->display, gl->context);
+}
+
+static u32
+gl_shader_create(const u8 *src, u32 type)
+{
+    u32 shader = gl.CreateShader(type);
+    i32 success;
+
+    gl.ShaderSource(shader, 1, (const char *const *)&src, 0);
+    gl.CompileShader(shader);
+    gl.GetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char info[1024];
+        gl.GetShaderInfoLog(shader, sizeof(info) - 1, 0, info);
+        fprintf(stderr, "gl_shader_create: %s\n", info);
+
+        return 0;
+    }
+
+    return shader;
+}
+
+static u32
+gl_program_create(const u8 *vert_shader_source, const u8 *frag_shader_source)
+{
+    u32 program = gl.CreateProgram();
+    u32 vert_shader = gl_shader_create(vert_shader_source, GL_VERTEX_SHADER);
+    u32 frag_shader = gl_shader_create(frag_shader_source, GL_FRAGMENT_SHADER);
+    i32 success;
+
+    if (vert_shader == 0 || frag_shader == 0) {
+        return 0;
+    }
+
+    gl.AttachShader(program, vert_shader);
+    gl.AttachShader(program, frag_shader);
+    gl.LinkProgram(program);
+    gl.DeleteShader(vert_shader);
+    gl.DeleteShader(frag_shader);
+    gl.GetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        char info[1024];
+        gl.GetProgramInfoLog(program, sizeof(info) - 1, 0, info);
+        fprintf(stderr, "gl_program_create: %s\n", info);
+
+        return 0;
+    }
+
+    return program;
 }
