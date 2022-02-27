@@ -70,7 +70,12 @@ main(void)
 
     u32 program = gl_program_create(vert_shader_source, frag_shader_source);
     i32 tint_uniform = gl.GetUniformLocation(program, "tint");
-    assert(program != 0);
+    if (program == 0) {
+        u8 error[1024];
+        gl_program_error(program, error, sizeof(error));
+        fprintf(stderr, "Failed to create program: %s\n", error);
+        return 1;
+    }
 
     u32 vao, vbo, ebo;
     gl.GenBuffers(1, &vbo);

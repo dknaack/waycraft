@@ -124,7 +124,9 @@ static void gl_context_finish(struct gl_context *context,
         const struct x11_window *window);
 
 static u32 gl_shader_create(const u8 *src, u32 type);
+static void gl_shader_error(u32 shader, u8 *buffer, u32 size);
 static u32 gl_program_create(const u8 *vert_shader_source,
         const u8 *frag_shader_source);
+static void gl_program_error(u32 program, u8 *buffer, u32 size);
 
 #endif /* GL_H */ 

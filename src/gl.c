@@ -89,15 +89,13 @@ gl_shader_create(const u8 *src, u32 type)
     gl.ShaderSource(shader, 1, (const char *const *)&src, 0);
     gl.CompileShader(shader);
     gl.GetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char info[1024];
-        gl.GetShaderInfoLog(shader, sizeof(info) - 1, 0, info);
-        fprintf(stderr, "gl_shader_create: %s\n", info);
+    return success ? shader : 0; 
+}
 
-        return 0;
-    }
-
-    return shader;
+static void
+gl_shader_error(u32 shader, u8 *buffer, u32 size)
+{
+    gl.GetShaderInfoLog(shader, size - 1, 0, (char *)buffer);
 }
 
 static u32
@@ -118,13 +116,12 @@ gl_program_create(const u8 *vert_shader_source, const u8 *frag_shader_source)
     gl.DeleteShader(vert_shader);
     gl.DeleteShader(frag_shader);
     gl.GetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        char info[1024];
-        gl.GetProgramInfoLog(program, sizeof(info) - 1, 0, info);
-        fprintf(stderr, "gl_program_create: %s\n", info);
 
-        return 0;
-    }
+    return success ? program : 0;
+}
 
-    return program;
+static void
+gl_program_error(u32 program, u8 *buffer, u32 size)
+{
+    gl.GetProgramInfoLog(program, size - 1, 0, (char *)buffer);
 }
