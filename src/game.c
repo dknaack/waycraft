@@ -74,11 +74,11 @@ mesh_push_quad(struct mesh *mesh, vec3 pos0, vec3 pos1, vec3 pos2, vec3 pos3)
     out_vertex++;
 
     out_vertex->position = pos1;
-    out_vertex->texcoord = VEC2(1, 0);
+    out_vertex->texcoord = VEC2(0, 1);
     out_vertex++;
 
     out_vertex->position = pos2;
-    out_vertex->texcoord = VEC2(0, 1);
+    out_vertex->texcoord = VEC2(1, 0);
     out_vertex++;
 
     out_vertex->position = pos3;
@@ -110,36 +110,36 @@ world_generate_mesh(struct world *world, struct mesh *mesh)
                 if (world_at(world, x, y, z) != 0) {
                     vec3 pos0 = VEC3(
                             size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height / 2.), 
+                            size * (y + 0.5 - height), 
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos1 = VEC3(
                             size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height / 2.),
+                            size * (y + 0.5 - height),
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos2 = VEC3(
                             size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height / 2.),
+                            size * (y - 0.5 - height),
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos3 = VEC3(
                             size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height / 2.),
+                            size * (y - 0.5 - height),
                             size * (z + 0.5 - depth / 2.));
 
                     vec3 pos4 = VEC3(
                             size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height / 2.), 
+                            size * (y + 0.5 - height), 
                             size * (z - 0.5 - depth / 2.));
                     vec3 pos5 = VEC3(
                             size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height / 2.),
+                            size * (y + 0.5 - height),
                             size * (z - 0.5 - depth / 2.));
                     vec3 pos6 = VEC3(
                             size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height / 2.),
+                            size * (y - 0.5 - height),
                             size * (z - 0.5 - depth / 2.));
                     vec3 pos7 = VEC3(
                             size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height / 2.),
+                            size * (y - 0.5 - height),
                             size * (z - 0.5 - depth / 2.));
 
                     if (!world_at(world, x, y - 1, z)) {
@@ -175,7 +175,7 @@ i32
 game_init(struct game_state *game)
 {
     world_init(&game->world);
-    camera_init(&game->camera, VEC3(0, 0, -5), 1.f, 45.f);
+    camera_init(&game->camera, VEC3(0, 0, 0), 1.f, 45.f);
 
     gl.Enable(GL_DEPTH_TEST);
 
@@ -248,7 +248,7 @@ game_init(struct game_state *game)
     i32 width, height, comp;
     u8 *data;
 
-    if (!(data = stbi_load("texture.jpg", &width, &height, &comp, 0))) {
+    if (!(data = stbi_load("res/stone.png", &width, &height, &comp, 3))) {
         fprintf(stderr, "Failed to load texture\n");
         return -1;
     }
@@ -256,6 +256,8 @@ game_init(struct game_state *game)
     gl.GenTextures(1, &texture);
     gl.BindTexture(GL_TEXTURE_2D, texture);
     gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl.GenerateMipmap(GL_TEXTURE_2D);
     game->world.texture = texture;
 
