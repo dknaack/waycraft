@@ -4,6 +4,14 @@
 #include "gl.h"
 #include "game.h"
 
+struct mesh {
+    struct vertex *vertices;
+    u32 *indices;
+
+    u32 vertex_count;
+    u32 index_count;
+};
+
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
     "layout (location = 0) in vec3 pos;"
@@ -37,7 +45,7 @@ world_init(struct world *world)
     for (u32 z = 0; z < depth; z++) {
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
-                *block++ = (x + y + z) & 1;
+                *block++ = rand() > RAND_MAX / 2;
             }
         }
     }
@@ -54,9 +62,12 @@ world_at(const struct world *world, u32 x, u32 y)
 }
 
 static void
-push_quad(struct vertex *out_vertex, u16 *out_index, u16 vertex_index,
-        vec3 pos0, vec3 pos1, vec3 pos2, vec3 pos3)
+mesh_push_quad(struct mesh *mesh, vec3 pos0, vec3 pos1, vec3 pos2, vec3 pos3)
 {
+    u32 vertex_count = mesh->vertex_count;
+    struct vertex *out_vertex = mesh->vertices + vertex_count;
+    u32 *out_index = mesh->indices + mesh->index_count;
+
     out_vertex->position = pos0;
     out_vertex->texcoord = VEC2(1, 1);
     out_vertex++;
@@ -66,26 +77,27 @@ push_quad(struct vertex *out_vertex, u16 *out_index, u16 vertex_index,
     out_vertex++;
 
     out_vertex->position = pos2;
-    out_vertex->texcoord = VEC2(0, 0);
-    out_vertex++;
-
-    out_vertex->position = pos3;
     out_vertex->texcoord = VEC2(0, 1);
     out_vertex++;
 
-    *out_index++ = vertex_index;
-    *out_index++ = vertex_index + 1;
-    *out_index++ = vertex_index + 3;
-    *out_index++ = vertex_index + 1;
-    *out_index++ = vertex_index + 2;
-    *out_index++ = vertex_index + 3;
+    out_vertex->position = pos3;
+    out_vertex->texcoord = VEC2(0, 0);
+    out_vertex++;
+
+    *out_index++ = vertex_count;
+    *out_index++ = vertex_count + 2;
+    *out_index++ = vertex_count + 1;
+    *out_index++ = vertex_count + 2;
+    *out_index++ = vertex_count + 3;
+    *out_index++ = vertex_count + 1;
+
+    mesh->index_count += 6;
+    mesh->vertex_count += 4;
 }
 
 static void
-world_generate_mesh(struct world *world, struct vertex *vertices, u32 *vertex_count, u16 *indices, u32 *index_count)
+world_generate_mesh(struct world *world, struct mesh *mesh)
 {
-    struct vertex *out_vertex = vertices;
-    u16 *out_index  = indices;
     u32 depth  = world->depth;
     u32 height = world->height;
     u32 width  = world->width;
@@ -95,31 +107,46 @@ world_generate_mesh(struct world *world, struct vertex *vertices, u32 *vertex_co
         for (u32 y = 0; y < height; y++) {
             for (u32 x = 0; x < width; x++) {
                 if (world_at(world, x, y) != 0) {
-                    u16 vertex_index = *vertex_count;
-
                     vec3 pos0 = VEC3(
                             size * (x + 0.5 - width / 2.), 
                             size * (y + 0.5 - height / 2.), 
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos1 = VEC3(
-                            size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height / 2.),
+                            size * (x - 0.5 - width / 2.),
+                            size * (y + 0.5 - height / 2.),
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos2 = VEC3(
-                            size * (x - 0.5 - width / 2.),
+                            size * (x + 0.5 - width / 2.),
                             size * (y - 0.5 - height / 2.),
                             size * (z + 0.5 - depth / 2.));
                     vec3 pos3 = VEC3(
                             size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height / 2.),
+                            size * (y - 0.5 - height / 2.),
                             size * (z + 0.5 - depth / 2.));
 
-                    push_quad(out_vertex, out_index, vertex_index,
-                            pos0, pos1, pos2, pos3);
-                    out_vertex += 4;
-                    out_index += 6;
-                    *vertex_count += 4;
-                    *index_count += 6;
+                    vec3 pos4 = VEC3(
+                            size * (x + 0.5 - width / 2.), 
+                            size * (y + 0.5 - height / 2.), 
+                            size * (z - 0.5 - depth / 2.));
+                    vec3 pos5 = VEC3(
+                            size * (x - 0.5 - width / 2.),
+                            size * (y + 0.5 - height / 2.),
+                            size * (z - 0.5 - depth / 2.));
+                    vec3 pos6 = VEC3(
+                            size * (x + 0.5 - width / 2.),
+                            size * (y - 0.5 - height / 2.),
+                            size * (z - 0.5 - depth / 2.));
+                    vec3 pos7 = VEC3(
+                            size * (x - 0.5 - width / 2.),
+                            size * (y - 0.5 - height / 2.),
+                            size * (z - 0.5 - depth / 2.));
+
+                    mesh_push_quad(mesh, pos6, pos7, pos2, pos3);
+                    mesh_push_quad(mesh, pos4, pos5, pos0, pos1);
+                    mesh_push_quad(mesh, pos4, pos0, pos6, pos2);
+                    mesh_push_quad(mesh, pos1, pos5, pos3, pos7);
+                    mesh_push_quad(mesh, pos0, pos1, pos2, pos3);
+                    mesh_push_quad(mesh, pos5, pos4, pos7, pos6);
                 }
             }
         }
@@ -164,23 +191,27 @@ game_init(struct game_state *game)
 
     world_init(&world);
 
-    struct vertex vertices[WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH * 4] = {0};
-    u16 indices[WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH * 6] = {0};
-    u32 index_count, vertex_count;
-    world_generate_mesh(&world, vertices, &vertex_count, indices, &index_count);
-    game->world.index_count = index_count;
-    game->world.vertex_count = vertex_count;
+    u32 size = WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH;
+    struct mesh mesh = {0};
+    mesh.vertices = calloc(size * 64, sizeof(struct vertex));
+    mesh.indices = calloc(size * 36, sizeof(u32));
+    world_generate_mesh(&world, &mesh);
+    game->world.index_count = mesh.index_count;
+    game->world.vertex_count = mesh.vertex_count;
 
     u32 vao, vbo, ebo;
     gl.GenBuffers(1, &vbo);
     gl.BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl.BufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(*vertices), 
-            vertices, GL_STATIC_DRAW);
+    gl.BufferData(GL_ARRAY_BUFFER, mesh.vertex_count * sizeof(*mesh.vertices), 
+            mesh.vertices, GL_STATIC_DRAW);
 
     gl.GenBuffers(1, &ebo);
     gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(*indices),
-            indices, GL_STATIC_DRAW);
+    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.index_count * 
+            sizeof(*mesh.indices), mesh.indices, GL_STATIC_DRAW);
+
+    free(mesh.vertices);
+    free(mesh.indices);
 
     gl.GenVertexArrays(1, &vao);
     gl.BindVertexArray(vao);
@@ -229,17 +260,22 @@ game_update(struct game_state *game, struct game_input *input)
     gl.UseProgram(game->shader.program);
 
     /* update the camera */
-    f32 horizontal_axis = input->controller.move_right - 
-        input->controller.move_left;
-    f32 vertical_axis = input->controller.move_up - 
-        input->controller.move_down;
-    vec3 direction = VEC3(dt * horizontal_axis, dt * vertical_axis, 0);
-    game->camera.position = vec3_add(game->camera.position, direction);
+    f32 haxis = input->controller.move_right - input->controller.move_left;
+    f32 vaxis = input->controller.move_up - input->controller.move_down;
+    f32 speed = game->camera.speed;
+    if (haxis || vaxis) {
+        vec3 direction = vec3_mulf(vec3_norm(vec3_add(
+                vec3_mulf(game->camera.front, vaxis),
+                vec3_mulf(game->camera.right, haxis))), dt * speed);
+        game->camera.position = vec3_add(game->camera.position, direction);
+    }
+
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
+
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
-    gl.DrawElements(GL_TRIANGLES, game->world.index_count, GL_UNSIGNED_SHORT, 0);
+    gl.DrawElements(GL_TRIANGLES, game->world.index_count, GL_UNSIGNED_INT, 0);
 
     return 0;
 }
