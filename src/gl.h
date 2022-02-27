@@ -110,6 +110,8 @@ struct gl_context {
     void (*Uniform3f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
     void (*Uniform4f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2,
             GLfloat v3);
+    void (*UniformMatrix4fv)(GLint location, GLsizei count, 
+            GLboolean transpose, const GLfloat *value);
 
     GLXContext context;
 };
