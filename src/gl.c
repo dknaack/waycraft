@@ -44,6 +44,7 @@ static const char *gl_function_names[] = {
     "glUniform2f",
     "glUniform3f",
     "glUniform4f",
+    "glUniformMatrix4fv",
 };
 
 static i32
@@ -89,6 +90,12 @@ gl_shader_create(const u8 *src, u32 type)
     gl.ShaderSource(shader, 1, (const char *const *)&src, 0);
     gl.CompileShader(shader);
     gl.GetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        u8 error[1024];
+        gl_shader_error(shader, error, sizeof(error));
+        fprintf(stderr, "Failed to create shader: %s\n", error);
+    }
+
     return success ? shader : 0; 
 }
 
