@@ -44,6 +44,7 @@ static const char *gl_function_names[] = {
     "glUniformMatrix4fv",
     "glEnable",
     "glDisable",
+    "glCullFace",
 };
 
 static i32

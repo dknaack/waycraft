@@ -44,6 +44,8 @@ game_init(struct game_state *game)
     camera_init(&game->camera, VEC3(0, 0, 0), 1.f, 45.f);
 
     gl.Enable(GL_DEPTH_TEST);
+    gl.Enable(GL_CULL_FACE);
+    gl.CullFace(GL_FRONT);
 
     u32 program = gl_program_create(vert_shader_source, frag_shader_source);
     game->shader.camera_position = 

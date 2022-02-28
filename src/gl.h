@@ -7,9 +7,21 @@
 #define GL_TRIANGLES 0x0004
 #define GL_TRIANGLE_STRIP 0x0005
 #define GL_TRIANGLE_FAN 0x0006
+#define GL_FRONT_LEFT 0x0400
+#define GL_FRONT_RIGHT 0x0401
+#define GL_BACK_LEFT 0x0402
+#define GL_BACK_RIGHT 0x0403
+#define GL_FRONT 0x0404
+#define GL_BACK 0x0405
+#define GL_LEFT 0x0406
+#define GL_RIGHT 0x0407
+#define GL_FRONT_AND_BACK 0x0408
 #define GL_DEPTH_BUFFER_BIT 0x00000100
 #define GL_STENCIL_BUFFER_BIT 0x00000400
 #define GL_COLOR_BUFFER_BIT 0x00004000
+#define GL_CULL_FACE 0x0B44
+#define GL_CULL_FACE_MODE 0x0B45
+#define GL_FRONT_FACE 0x0B46
 #define GL_DEPTH_TEST 0x0B71
 #define GL_BYTE 0x1400
 #define GL_UNSIGNED_BYTE 0x1401
@@ -124,6 +136,7 @@ struct gl_context {
             GLboolean transpose, const GLfloat *value);
     void (*Enable)(GLenum cap);
     void (*Disable)(GLenum cap);
+    void (*CullFace)(GLenum mode);
 
     GLXContext context;
 };
