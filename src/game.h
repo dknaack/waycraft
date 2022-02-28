@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "camera.h"
+#include "world.h"
 
 struct game_input {
     struct {
@@ -25,17 +26,6 @@ struct game_input {
 struct vertex {
     vec3 position;
     vec2 texcoord;
-};
-
-struct world {
-    u8 *blocks;
-    u32 width;
-    u32 height;
-    u32 depth;
-    u32 texture;
-    u32 vao, vbo, ebo;
-    u32 vertex_count;
-    u32 index_count;
 };
 
 struct game_state {

@@ -23,6 +23,8 @@
 #include "math.c"
 #include "camera.c"
 #include "game.c"
+#include "noise.c"
+#include "world.c"
 
 static struct gl_context gl;
 

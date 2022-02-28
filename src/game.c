@@ -3,14 +3,8 @@
 
 #include "gl.h"
 #include "game.h"
-
-struct mesh {
-    struct vertex *vertices;
-    u32 *indices;
-
-    u32 vertex_count;
-    u32 index_count;
-};
+#include "noise.h"
+#include "world.h"
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
@@ -34,146 +28,18 @@ static const u8 *frag_shader_source = (u8 *)
         "frag_color = texture(tex, coords);"
     "}";
 
-static void
-world_init(struct world *world)
-{
-    u32 height = world->height;
-    u32 width = world->width;
-    u32 depth = world->depth;
-
-    u8 *block = world->blocks;
-    for (u32 z = 0; z < depth; z++) {
-        for (u32 y = 0; y < height; y++) {
-            for (u32 x = 0; x < width; x++) {
-                *block++ = rand() > RAND_MAX / 2;
-            }
-        }
-    }
-}
-
-static u32
-world_at(const struct world *world, u32 x, u32 y, u32 z)
-{
-    if ((0 <= x && x < world->width) && (0 <= y && y < world->height) && 
-            (0 <= z && z < world->depth)) {
-        return world->blocks[(z * world->depth + y) * world->width + x];
-    } else {
-        return 0;
-    }
-}
-
-static void
-mesh_push_quad(struct mesh *mesh, vec3 pos0, vec3 pos1, vec3 pos2, vec3 pos3)
-{
-    u32 vertex_count = mesh->vertex_count;
-    struct vertex *out_vertex = mesh->vertices + vertex_count;
-    u32 *out_index = mesh->indices + mesh->index_count;
-
-    out_vertex->position = pos0;
-    out_vertex->texcoord = VEC2(1, 1);
-    out_vertex++;
-
-    out_vertex->position = pos1;
-    out_vertex->texcoord = VEC2(0, 1);
-    out_vertex++;
-
-    out_vertex->position = pos2;
-    out_vertex->texcoord = VEC2(1, 0);
-    out_vertex++;
-
-    out_vertex->position = pos3;
-    out_vertex->texcoord = VEC2(0, 0);
-    out_vertex++;
-
-    *out_index++ = vertex_count;
-    *out_index++ = vertex_count + 2;
-    *out_index++ = vertex_count + 1;
-    *out_index++ = vertex_count + 2;
-    *out_index++ = vertex_count + 3;
-    *out_index++ = vertex_count + 1;
-
-    mesh->index_count += 6;
-    mesh->vertex_count += 4;
-}
-
-static void
-world_generate_mesh(struct world *world, struct mesh *mesh)
-{
-    u32 depth  = world->depth;
-    u32 height = world->height;
-    u32 width  = world->width;
-
-    f32 size = 0.2;
-    for (u32 z = 0; z < depth; z++) {
-        for (u32 y = 0; y < height; y++) {
-            for (u32 x = 0; x < width; x++) {
-                if (world_at(world, x, y, z) != 0) {
-                    vec3 pos0 = VEC3(
-                            size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height), 
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos1 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos2 = VEC3(
-                            size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos3 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
-
-                    vec3 pos4 = VEC3(
-                            size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height), 
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos5 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos6 = VEC3(
-                            size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos7 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
-
-                    if (!world_at(world, x, y - 1, z)) {
-                        mesh_push_quad(mesh, pos6, pos7, pos2, pos3);
-                    }
-
-                    if (!world_at(world, x, y + 1, z)) {
-                        mesh_push_quad(mesh, pos4, pos5, pos0, pos1);
-                    }
-
-                    if (!world_at(world, x + 1, y, z)) {
-                        mesh_push_quad(mesh, pos4, pos0, pos6, pos2);
-                    }
-
-                    if (!world_at(world, x - 1, y, z)) {
-                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7);
-                    }
-
-                    if (!world_at(world, x, y, z + 1)) {
-                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3);
-                    }
-
-                    if (!world_at(world, x, y, z - 1)) {
-                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6);
-                    }
-                }
-            }
-        }
-    }
-}
-
 i32
 game_init(struct game_state *game)
 {
+#define WORLD_DEPTH 8
+#define WORLD_HEIGHT 1
+#define WORLD_WIDTH  8
+#define WORLD_SIZE WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH
+    static struct chunk chunks[WORLD_SIZE] = {0};
+    game->world.chunks = chunks;
+    game->world.width  = WORLD_WIDTH;
+    game->world.height = WORLD_HEIGHT;
+    game->world.depth  = WORLD_DEPTH;
     world_init(&game->world);
     camera_init(&game->camera, VEC3(0, 0, 0), 1.f, 45.f);
 
@@ -195,72 +61,6 @@ game_init(struct game_state *game)
         return -1;
     }
 
-    /* world mesh generation */
-#define WORLD_DEPTH 32
-#define WORLD_HEIGHT 32
-#define WORLD_WIDTH  32
-    static u8 world_blocks[WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH] = {0};
-    struct world world = { 
-        world_blocks,
-        WORLD_WIDTH,
-        WORLD_HEIGHT,
-        WORLD_DEPTH
-    };
-
-    world_init(&world);
-
-    u32 size = WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH;
-    struct mesh mesh = {0};
-    mesh.vertices = calloc(size * 64, sizeof(struct vertex));
-    mesh.indices = calloc(size * 36, sizeof(u32));
-    world_generate_mesh(&world, &mesh);
-    game->world.index_count = mesh.index_count;
-    game->world.vertex_count = mesh.vertex_count;
-
-    u32 vao, vbo, ebo;
-    gl.GenBuffers(1, &vbo);
-    gl.BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl.BufferData(GL_ARRAY_BUFFER, mesh.vertex_count * sizeof(*mesh.vertices), 
-            mesh.vertices, GL_STATIC_DRAW);
-
-    gl.GenBuffers(1, &ebo);
-    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.index_count * 
-            sizeof(*mesh.indices), mesh.indices, GL_STATIC_DRAW);
-
-    free(mesh.vertices);
-    free(mesh.indices);
-
-    gl.GenVertexArrays(1, &vao);
-    gl.BindVertexArray(vao);
-    gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
-            (const void *)offsetof(struct vertex, position));
-    gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
-            (const void *)offsetof(struct vertex, texcoord));
-    gl.EnableVertexAttribArray(1);
-
-    game->world.vao = vao;
-    game->world.vbo = vbo;
-    game->world.ebo = ebo;
-
-    u32 texture;
-    i32 width, height, comp;
-    u8 *data;
-
-    if (!(data = stbi_load("res/stone.png", &width, &height, &comp, 3))) {
-        fprintf(stderr, "Failed to load texture\n");
-        return -1;
-    }
-
-    gl.GenTextures(1, &texture);
-    gl.BindTexture(GL_TEXTURE_2D, texture);
-    gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl.GenerateMipmap(GL_TEXTURE_2D);
-    game->world.texture = texture;
-
     return 0;
 }
 
@@ -269,17 +69,9 @@ game_update(struct game_state *game, struct game_input *input)
 {
     f32 dt = input->dt;
 
-    gl.ClearColor(0.15, 0.15, 0.25, 1.0);
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    camera_resize(&game->camera, input->width, input->height);
-
     mat4 projection = game->camera.projection;
     mat4 view = game->camera.view;
 
-    gl.UseProgram(game->shader.program);
-
-    /* update the camera */
     f32 haxis = input->controller.move_right - input->controller.move_left;
     f32 vaxis = input->controller.move_up - input->controller.move_down;
     f32 speed = game->camera.speed;
@@ -290,12 +82,15 @@ game_update(struct game_state *game, struct game_input *input)
         game->camera.position = vec3_add(game->camera.position, direction);
     }
 
+    camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 
+    gl.ClearColor(0.15, 0.15, 0.25, 1.0);
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl.UseProgram(game->shader.program);
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
-
-    gl.DrawElements(GL_TRIANGLES, game->world.index_count, GL_UNSIGNED_INT, 0);
+    world_render(&game->world);
 
     return 0;
 }
@@ -303,9 +98,6 @@ game_update(struct game_state *game, struct game_input *input)
 void
 game_finish(struct game_state *game)
 {
-    gl.DeleteTextures(1, &game->world.texture);
-    gl.DeleteVertexArrays(1, &game->world.vao);
-    gl.DeleteBuffers(1, &game->world.vbo);
-    gl.DeleteBuffers(1, &game->world.ebo);
+    world_finish(&game->world);
     gl.DeleteProgram(game->shader.program);
 }
