@@ -31,15 +31,12 @@ static const u8 *frag_shader_source = (u8 *)
 i32
 game_init(struct game_state *game)
 {
-#define WORLD_DEPTH 8
-#define WORLD_HEIGHT 1
-#define WORLD_WIDTH  8
-#define WORLD_SIZE WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH
-    static struct chunk chunks[WORLD_SIZE] = {0};
-    game->world.chunks = chunks;
-    game->world.width  = WORLD_WIDTH;
-    game->world.height = WORLD_HEIGHT;
-    game->world.depth  = WORLD_DEPTH;
+#define WORLD_SIZE 16
+    u32 size = WORLD_SIZE * WORLD_SIZE * WORLD_SIZE;
+    game->world.chunks = calloc(size, sizeof(struct chunk));
+    game->world.width  = WORLD_SIZE;
+    game->world.height = WORLD_SIZE;
+    game->world.depth  = WORLD_SIZE;
     world_init(&game->world);
     camera_init(&game->camera, VEC3(0, 0, 0), 1.f, 45.f);
 
@@ -101,5 +98,6 @@ void
 game_finish(struct game_state *game)
 {
     world_finish(&game->world);
+    free(game->world.chunks);
     gl.DeleteProgram(game->shader.program);
 }
