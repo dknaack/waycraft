@@ -12,6 +12,7 @@ struct x11_window {
     Atom wm_delete_win;
     u32 width, height;
     uint is_open;
+    uint lock_cursor;
 };
 
 struct game_input;

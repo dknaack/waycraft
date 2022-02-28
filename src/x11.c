@@ -57,7 +57,12 @@ x11_window_init(struct x11_window *window)
     XSetTextProperty(window->display, window->drawable, &prop, window->net_wm_name);
     XFree(prop.value);
 
+    mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
+        FocusChangeMask | EnterWindowMask | LeaveWindowMask;
+    XGrabPointer(window->display, DefaultRootWindow(window->display), False, 
+                mask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
     window->is_open = 1;
+    window->lock_cursor = 1;
 
     return 0;
 }
@@ -97,6 +102,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             input->mouse.x = event.xmotion.x;
             input->mouse.y = event.xmotion.y;
             break;
+        case ButtonPress:
+            window->lock_cursor = 1;
         case KeyPress:
             is_pressed = 1;
             /* fallthrough */
@@ -116,8 +123,20 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             case XK_d:
                 input->controller.move_right = is_pressed;
                 break;
+            case XK_Escape:
+                window->lock_cursor = 0;
+                XUngrabPointer(window->display, CurrentTime);
+                break;
             }
             break;
+        }
+    }
+
+    if (window->lock_cursor) {
+        XWarpPointer(window->display, 0, window->drawable, 0, 0, 0, 0,
+                window->width / 2, window->height / 2);
+        while (XPending(window->display)) {
+            XNextEvent(window->display, &event);
         }
     }
 }
