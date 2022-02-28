@@ -1,6 +1,3 @@
-#include <GL/gl.h>
-#include <GL/glx.h>
-
 #include "x11.h"
 #include "gl.h"
 
@@ -14,7 +11,7 @@ static const char *gl_function_names[] = {
     "glBufferData",
     "glGenVertexArrays",
     "glDeleteVertexArrays",
-    "glBindVertexArrays",
+    "glBindVertexArray",
     "glVertexAttribPointer",
     "glEnableVertexAttribArray",
     "glCreateShader",
