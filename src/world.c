@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "types.h"
+#include "memory.h"
 #include "world.h"
 #include "gl.h"
 
@@ -146,77 +147,119 @@ mesh_push_quad(struct mesh *mesh,
 static void
 chunk_generate_mesh(struct chunk *chunk, i32 cx, i32 cy, i32 cz, const struct world *world, struct mesh *mesh)
 {
-    u32 depth  = world->depth;
-    u32 height = world->height;
-    u32 width  = world->width;
+    vec3 world_position = world->position;
+    i32 index  = chunk - world->chunks;
+    i32 width  = world->width;
+    i32 height = world->height;
+    i32 depth  = world->depth;
 
-    f32 size = 0.1;
-    for (u32 z = cz; z < cz + CHUNK_SIZE; z++) {
-        for (u32 y = cy; y < cy + CHUNK_SIZE; y++) {
-            for (u32 x = cx; x < cx + CHUNK_SIZE; x++) {
-                if (world_at(world, x, y, z) != 0) {
-                    vec3 pos0 = VEC3(
-                            size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height), 
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos1 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos2 = VEC3(
-                            size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
-                    vec3 pos3 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z + 0.5 - depth / 2.));
+    *x = world_position.x + CHUNK_SIZE * (f32)(index % width);
+    *y = world_position.y + CHUNK_SIZE * (f32)(index / width % height);
+    *z = world_position.z + CHUNK_SIZE * (f32)(index / width / height % depth);
+}
 
-                    vec3 pos4 = VEC3(
-                            size * (x + 0.5 - width / 2.), 
-                            size * (y + 0.5 - height), 
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos5 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y + 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos6 = VEC3(
-                            size * (x + 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
-                    vec3 pos7 = VEC3(
-                            size * (x - 0.5 - width / 2.),
-                            size * (y - 0.5 - height),
-                            size * (z - 0.5 - depth / 2.));
+static void
+block_texcoords(enum block_type block, vec2 *uv)
+{
+    uv[0] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(0, 0)), 1 / 16.f);
+    uv[1] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(1, 0)), 1 / 16.f);
+    uv[2] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(0, 1)), 1 / 16.f);
+    uv[3] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(1, 1)), 1 / 16.f);
+}
 
+static void
+chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh *mesh)
+{
+    i32 depth  = world->depth;
+    i32 height = world->height;
+    i32 width  = world->width;
+
+    f32 size = BLOCK_SIZE;
+    f32 xmin, ymin, zmin;
+    world_chunk_position(world, chunk, &xmin, &ymin, &zmin);
+    for (i32 z = zmin; z < zmin + CHUNK_SIZE; z++) {
+        for (i32 y = ymin; y < ymin + CHUNK_SIZE; y++) {
+            for (i32 x = xmin; x < xmin + CHUNK_SIZE; x++) {
+                vec2 uv[4];
+
+                vec3 pos0 = VEC3(
+                        size * (x + 0.5 - width / 2.), 
+                        size * (y + 0.5 - height), 
+                        size * (z + 0.5 - depth / 2.));
+                vec3 pos1 = VEC3(
+                        size * (x - 0.5 - width / 2.),
+                        size * (y + 0.5 - height),
+                        size * (z + 0.5 - depth / 2.));
+                vec3 pos2 = VEC3(
+                        size * (x + 0.5 - width / 2.),
+                        size * (y - 0.5 - height),
+                        size * (z + 0.5 - depth / 2.));
+                vec3 pos3 = VEC3(
+                        size * (x - 0.5 - width / 2.),
+                        size * (y - 0.5 - height),
+                        size * (z + 0.5 - depth / 2.));
+
+                vec3 pos4 = VEC3(
+                        size * (x + 0.5 - width / 2.), 
+                        size * (y + 0.5 - height), 
+                        size * (z - 0.5 - depth / 2.));
+                vec3 pos5 = VEC3(
+                        size * (x - 0.5 - width / 2.),
+                        size * (y + 0.5 - height),
+                        size * (z - 0.5 - depth / 2.));
+                vec3 pos6 = VEC3(
+                        size * (x + 0.5 - width / 2.),
+                        size * (y - 0.5 - height),
+                        size * (z - 0.5 - depth / 2.));
+                vec3 pos7 = VEC3(
+                        size * (x - 0.5 - width / 2.),
+                        size * (y - 0.5 - height),
+                        size * (z - 0.5 - depth / 2.));
+
+                u32 block_type = world_at(world, x, y, z);
+                switch (block_type){
+                case BLOCK_AIR:
+                    continue;
+                case BLOCK_GRASS:
+                    block_texcoords(BLOCK_DIRT, uv);
                     if (!world_at(world, x, y - 1, z)) {
-                        mesh_push_quad(mesh, pos6, pos7, pos2, pos3);
+                        mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
 
+                    block_texcoords(BLOCK_GRASS_TOP, uv);
                     if (!world_at(world, x, y + 1, z)) {
-                        mesh_push_quad(mesh, pos4, pos5, pos0, pos1);
+                        mesh_push_quad(mesh, pos4, pos5, pos0, pos1,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
 
+                    block_texcoords(BLOCK_GRASS, uv);
                     if (!world_at(world, x + 1, y, z)) {
-                        mesh_push_quad(mesh, pos4, pos0, pos6, pos2);
+                        mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     if (!world_at(world, x - 1, y, z)) {
-                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7);
+                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     if (!world_at(world, x, y, z + 1)) {
-                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3);
+                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     if (!world_at(world, x, y, z - 1)) {
-                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6);
+                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
+                                uv[0], uv[1], uv[2], uv[3]);
                     }
-                }
-            }
-        }
-    }
-}
+                    break;
+                default:
+                    block_texcoords(block_type, uv);
+                    if (!world_at(world, x, y - 1, z)) {
+                        mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
+                                uv[0], uv[1], uv[2], uv[3]);
+                    }
 
 static void
 chunk_init(struct chunk *chunk, i32 cx, i32 cy, i32 cz)
