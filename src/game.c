@@ -53,10 +53,8 @@ game_init(struct game_state *game)
     u32 program = gl_program_create(vert_shader_source, frag_shader_source);
     game->shader.camera_position = 
         gl.GetUniformLocation(program, "camera_position");
-    game->shader.view =
-        gl.GetUniformLocation(program, "view");
-    game->shader.projection =
-        gl.GetUniformLocation(program, "projection");
+    game->shader.view = gl.GetUniformLocation(program, "view");
+    game->shader.projection = gl.GetUniformLocation(program, "projection");
     game->shader.program = program;
 
     if (program == 0) {
@@ -69,28 +67,40 @@ game_init(struct game_state *game)
     return 0;
 }
 
-i32
-game_update(struct game_state *game, struct game_input *input)
+void
+player_update(struct game_state *game, struct game_input *input)
 {
     f32 dt = input->dt;
 
-    mat4 projection = game->camera.projection;
-    mat4 view = game->camera.view;
+    vec3 position = game->camera.position;
 
     f32 haxis = input->controller.move_right - input->controller.move_left;
     f32 vaxis = input->controller.move_up - input->controller.move_down;
     f32 speed = game->camera.speed;
     if (haxis || vaxis) {
+        vec3 front = game->camera.front;
+        vec3 right = game->camera.right;
         vec3 direction = vec3_mulf(vec3_norm(vec3_add(
-                vec3_mulf(game->camera.front, vaxis),
-                vec3_mulf(game->camera.right, haxis))), dt * speed);
-        game->camera.position = vec3_add(game->camera.position, direction);
+                vec3_mulf(front, vaxis),
+                vec3_mulf(right, haxis))), dt * speed);
+        position = vec3_add(game->camera.position, direction);
     }
 
+    game->camera.position = position;
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
+}
 
-    gl.ClearColor(0.15, 0.15, 0.25, 1.0);
+i32
+game_update(struct game_state *game, struct game_input *input)
+{
+    mat4 projection = game->camera.projection;
+    mat4 view = game->camera.view;
+
+    player_update(game, input);
+    world_update(&game->world, game->camera.position);
+
+    gl.ClearColor(0.45, 0.65, 0.85, 1.0);
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl.UseProgram(game->shader.program);
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
@@ -104,6 +114,6 @@ void
 game_finish(struct game_state *game)
 {
     world_finish(&game->world);
-    free(game->world.chunks);
+    arena_finish(&game->arena);
     gl.DeleteProgram(game->shader.program);
 }
