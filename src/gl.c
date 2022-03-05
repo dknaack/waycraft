@@ -47,40 +47,6 @@ static const char *gl_function_names[] = {
     "glCullFace",
 };
 
-static i32
-gl_context_init(struct gl_context *gl, const struct x11_window *window)
-{
-    int attributes[] = {
-        GLX_RGBA,
-        GLX_DEPTH_SIZE, 24,
-        GLX_DOUBLEBUFFER,
-        None
-    };
-
-    Display *display = window->display;
-    XVisualInfo *visual = glXChooseVisual(display, 0, attributes);
-    gl->context = glXCreateContext(display, visual, 0, True);
-    glXMakeCurrent(display, window->drawable, gl->context);
-
-    void (**gl_functions)(void);
-    *(void **)&gl_functions = gl;
-
-    for (i32 i = 0; i < LENGTH(gl_function_names); i++) {
-        gl_functions[i] = glXGetProcAddress((u8 *)gl_function_names[i]);
-        if (!gl_functions[i]) {
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-static void
-gl_context_finish(struct gl_context *gl, const struct x11_window *window)
-{
-    glXDestroyContext(window->display, gl->context);
-}
-
 static u32
 gl_shader_create(const u8 *src, u32 type)
 {

@@ -140,3 +140,37 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
         }
     }
 }
+
+void
+x11_window_init_gl_context(struct x11_window *window, struct gl_context *gl)
+{
+    int attributes[] = {
+        GLX_RGBA,
+        GLX_DEPTH_SIZE, 24,
+        GLX_DOUBLEBUFFER,
+        None
+    };
+
+    Display *display = window->display;
+    XVisualInfo *visual = glXChooseVisual(display, 0, attributes);
+    gl->context = glXCreateContext(display, visual, 0, True);
+    glXMakeCurrent(display, window->drawable, gl->context);
+
+    void (**gl_functions)(void);
+    *(void **)&gl_functions = gl;
+
+    for (i32 i = 0; i < LENGTH(gl_function_names); i++) {
+        gl_functions[i] = glXGetProcAddress((u8 *)gl_function_names[i]);
+        if (!gl_functions[i]) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+void
+x11_window_finish_gl_context(struct x11_window *window, struct gl_context *gl)
+{
+    glXDestroyContext(window->display, gl->context);
+}
