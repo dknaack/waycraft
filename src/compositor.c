@@ -1,4 +1,4 @@
-#include <GL/glx.h>
+#include <EGL/egl.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <stdio.h>
@@ -577,6 +577,76 @@ main(void)
         return 1;
     }
 
+    /*
+     * initialize egl
+     */
+    EGLDisplay *egl_display = eglGetDisplay(window.display);
+    if (egl_display == EGL_NO_DISPLAY) {
+        fprintf(stderr, "Failed to get the egl display.\n");
+        return 1;
+    }
+
+    i32 major, minor;
+    if (!eglInitialize(egl_display, &major, &minor)) {
+        fprintf(stderr, "Failed to initalize egl.\n");
+        return 1;
+    }
+
+    EGLint egl_config_attributes[] = {
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_DEPTH_SIZE, 24,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+        EGL_NONE
+    };
+
+    EGLConfig config;
+    EGLint config_count;
+    if (!eglChooseConfig(egl_display, egl_config_attributes, &config, 1, 
+            &config_count)) {
+        fprintf(stderr, "Failed to choose egl config.\n");
+        return 1;
+    }
+
+    if (config_count != 1) {
+        fprintf(stderr, "Got more than one config.\n");
+        return 1;
+    }
+
+    EGLSurface *egl_surface = eglCreateWindowSurface(egl_display,
+            config, window.drawable, 0);
+
+    if (!eglBindAPI(EGL_OPENGL_API)) {
+        fprintf(stderr, "Failed to bind opengl api\n");
+        return 1;
+    }
+
+    EGLint egl_context_attributes[] = {
+        EGL_CONTEXT_MAJOR_VERSION, 3,
+        EGL_CONTEXT_MINOR_VERSION, 3,
+        EGL_NONE
+    };
+
+    EGLContext *egl_context = eglCreateContext(egl_display, config, 
+            EGL_NO_CONTEXT, egl_context_attributes);
+    if (egl_context == EGL_NO_CONTEXT) {
+        fprintf(stderr, "Failed to initalize the egl context: %d\n", 
+                eglGetError());
+        return 1;
+    }
+
+    eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
+
+    fprintf(stderr, "Initalized egl: %d, %d\n", major, minor);
+
+    gl_context_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
+
+    /*
+     * initialize wayland 
+     */
+
     if (!(display = wl_display_create())) {
         fprintf(stderr, "Failed to initialize display\n");
         return 1;
@@ -598,11 +668,9 @@ main(void)
             &server, &wl_seat_bind);
     wl_display_init_shm(display);
 
-    if (x11_window_init_gl_context(&window, &gl) != 0) {
-        fprintf(stderr, "Failed to load the functions for OpenGL\n");
-        return 1;
-    }
-
+    /*
+     * initalize the game
+     */
     if (game_init(&game) != 0) {
         fprintf(stderr, "Failed to initialize the game\n");
         return 1;
@@ -626,11 +694,14 @@ main(void)
         }
 
         wl_display_flush_clients(display);
-        glXSwapBuffers(window.display, window.drawable);
+        eglSwapBuffers(egl_display, egl_surface);
         nanosleep(&wait_time, 0);
     }
 
-    x11_window_finish_gl_context(&window, &gl);
+    eglDestroyContext(egl_display, egl_context);
+    eglDestroySurface(egl_display, egl_surface);
+    eglTerminate(egl_display);
+
     wl_display_destroy(display);
     x11_window_finish(&window);
     return 0;
