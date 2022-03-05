@@ -65,18 +65,17 @@ f32
 noise_layered_2d(f32 x, f32 y)
 {
     u32 layer_count = 8;
-
-    f32 value = 0;
-    f32 size = 0.125;
-    f32 factor = 0.5;
+    f32 noise_value = 0;
+    f32 noise_size = 0.125;
+    f32 amplitude_multiplier = 2.0;
     for (u32 i = 0; i < layer_count; i++) {
-        f32 nx = size * x;
-        f32 ny = size * y;
+        f32 nx = noise_size * x;
+        f32 ny = noise_size * y;
 
-        value += factor * noise_2d(nx, ny);
-        factor /= 1.375;
-        size *= 1.5;
+        noise_value += amplitude_multiplier * noise_2d(nx, ny);
+        amplitude_multiplier /= 1.375;
+        noise_size *= 1.5;
     }
 
-    return value;
+    return noise_value;
 }
