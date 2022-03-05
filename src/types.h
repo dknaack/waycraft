@@ -49,6 +49,11 @@ typedef struct {
     f32 r[3][3];
 } mat3;
 
+typedef union {
+    struct { i32 x, y, z; };
+    f32 e[3];
+} ivec3;
+
 #define assert(expr) ((expr) ? (void)0 : (void)(*(volatile int *)0 = 0))
 #define static_assert(expr, msg) _Static_assert(expr, msg)
 
