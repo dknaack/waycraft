@@ -18,13 +18,14 @@
 #include "gl.h"
 #include "x11.h"
 
-#include "gl.c"
-#include "x11.c"
-#include "math.c"
 #include "camera.c"
 #include "game.c"
+#include "gl.c"
+#include "math.c"
+#include "memory.c"
 #include "noise.c"
 #include "world.c"
+#include "x11.c"
 
 static struct gl_context gl;
 
