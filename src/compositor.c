@@ -106,7 +106,8 @@ wl_region_resource_destroy(struct wl_resource *resource)
  * wl_surface functions
  */
 
-static void wl_surface_destroy(struct wl_client *client,
+static void
+wl_surface_destroy(struct wl_client *client,
         struct wl_resource *resource)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
@@ -115,14 +116,16 @@ static void wl_surface_destroy(struct wl_client *client,
     free(surface);
 }
 
-static void wl_surface_attach(struct wl_client *client,
+static void
+wl_surface_attach(struct wl_client *client,
         struct wl_resource *resource, struct wl_resource *buffer, i32 x, i32 y)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
     surface->buffer = buffer;
 }
 
-static void wl_surface_damage(struct wl_client *client,
+static void
+wl_surface_damage(struct wl_client *client,
         struct wl_resource *resource,
         i32 x,
         i32 y,
@@ -132,7 +135,8 @@ static void wl_surface_damage(struct wl_client *client,
 	/* TODO */
 }
 
-static void wl_surface_frame(struct wl_client *client,
+static void
+wl_surface_frame(struct wl_client *client,
         struct wl_resource *resource, u32 callback)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
@@ -141,19 +145,22 @@ static void wl_surface_frame(struct wl_client *client,
             &wl_callback_interface, 1, callback);
 }
 
-static void wl_surface_set_opaque_region(struct wl_client *client,
+static void
+wl_surface_set_opaque_region(struct wl_client *client,
         struct wl_resource *resource, struct wl_resource *region)
 {
 	/* TODO */
 }
 
-static void wl_surface_set_input_region(struct wl_client *client,
+static void
+wl_surface_set_input_region(struct wl_client *client,
         struct wl_resource *resource, struct wl_resource *region)
 {
 	/* TODO */
 }
 
-static void wl_surface_commit(struct wl_client *client,
+static void
+wl_surface_commit(struct wl_client *client,
         struct wl_resource *resource)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
@@ -164,25 +171,29 @@ static void wl_surface_commit(struct wl_client *client,
     // TODO: draw the texture
 }
 
-static void wl_surface_set_buffer_transform(struct wl_client *client,
+static void
+wl_surface_set_buffer_transform(struct wl_client *client,
         struct wl_resource *resource, i32 transform)
 {
 	/* TODO */
 }
 
-static void wl_surface_set_buffer_scale(struct wl_client *client,
+static void
+wl_surface_set_buffer_scale(struct wl_client *client,
         struct wl_resource *resource, i32 scale)
 {
 	/* TODO */
 }
 
-static void wl_surface_damage_buffer(struct wl_client *client,
+static void
+wl_surface_damage_buffer(struct wl_client *client,
         struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
 {
 	/* TODO */
 }
 
-static void wl_surface_offset(struct wl_client *client,
+static void
+wl_surface_offset(struct wl_client *client,
         struct wl_resource *resource, i32 x, i32 y)
 {
 	/* TODO */
@@ -223,7 +234,7 @@ wl_compositor_create_surface(struct wl_client *client,
     }
 
     surface->client = client;
-    surface->surface = wl_resource_create(client, 
+    surface->surface = wl_resource_create(client,
             &wl_surface_interface, WL_SURFACE_VERSION, id);
     wl_resource_set_implementation(surface->surface,
         &wl_surface_implementation, surface, &wl_surface_resource_destroy);
@@ -304,14 +315,14 @@ xdg_toplevel_show_window_menu(struct wl_client *client,
 }
 
 static void
-xdg_toplevel_move(struct wl_client *client, struct wl_resource *resource, 
+xdg_toplevel_move(struct wl_client *client, struct wl_resource *resource,
         struct wl_resource *seat, u32 serial)
 {
 	/* TODO */
 }
 
 static void
-xdg_toplevel_resize(struct wl_client *client, struct wl_resource *resource, 
+xdg_toplevel_resize(struct wl_client *client, struct wl_resource *resource,
         struct wl_resource *seat, u32 serial, u32 edges)
 {
 	/* TODO */
@@ -395,7 +406,7 @@ xdg_surface_destroy(struct wl_client *client, struct wl_resource *resource)
 }
 
 static void
-xdg_surface_get_toplevel(struct wl_client *client, 
+xdg_surface_get_toplevel(struct wl_client *client,
         struct wl_resource *resource, u32 id)
 {
     struct wl_resource *xdg_toplevel = wl_resource_create(client,
@@ -414,7 +425,7 @@ xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-xdg_surface_set_window_geometry(struct wl_client *client, 
+xdg_surface_set_window_geometry(struct wl_client *client,
         struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
 {
     /* TODO */
@@ -453,10 +464,10 @@ xdg_wm_base_create_positioner(struct wl_client *client,
 }
 
 static void
-xdg_wm_base_get_xdg_surface(struct wl_client *client, 
+xdg_wm_base_get_xdg_surface(struct wl_client *client,
         struct wl_resource *resource, u32 id, struct wl_resource *surface)
 {
-    struct wl_resource *xdg_surface = wl_resource_create(client, 
+    struct wl_resource *xdg_surface = wl_resource_create(client,
             &xdg_surface_interface, XDG_SURFACE_VERSION, id);
 
     // TODO: handle resource destroy
@@ -512,7 +523,7 @@ wl_seat_get_keyboard(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-wl_seat_get_touch(struct wl_client *client, struct wl_resource *resource, 
+wl_seat_get_touch(struct wl_client *client, struct wl_resource *resource,
         u32 id)
 {
     /* TODO */
@@ -576,14 +587,14 @@ main(void)
         return 1;
     }
 
-    struct wl_event_loop *event_loop = 
+    struct wl_event_loop *event_loop =
         wl_display_get_event_loop(display);
 
-    wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION, 
+    wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION,
             &server, wl_compositor_bind);
     wl_global_create(display, &xdg_wm_base_interface, XDG_WM_BASE_VERSION,
             &server, xdg_wm_base_bind);
-    wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION, 
+    wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION,
             &server, &wl_seat_bind);
     wl_display_init_shm(display);
 
