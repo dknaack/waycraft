@@ -141,7 +141,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     }
 }
 
-void
+i32
 x11_window_init_gl_context(struct x11_window *window, struct gl_context *gl)
 {
     int attributes[] = {
