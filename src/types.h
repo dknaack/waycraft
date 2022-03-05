@@ -61,6 +61,7 @@ typedef union {
 #define MB(x)     (KB(x) * 1024ll)
 #define GB(x)     (MB(x) * 1024ll)
 #define TB(x)     (GB(x) * 1024ll)
+#define MOD(a, n) (((a) % (n) + (n)) % (n))
 #define MIN(a, b) ((a) < (b)? (a) : (b))
 #define MAX(a, b) ((a) > (b)? (a) : (b))
 #define LENGTH(x) (sizeof(x)/sizeof((x)[0]))
