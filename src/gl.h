@@ -138,7 +138,7 @@ struct gl_context {
     void (*Disable)(GLenum cap);
     void (*CullFace)(GLenum mode);
 
-    GLXContext context;
+    void *context;
 };
 
 struct x11_window;
