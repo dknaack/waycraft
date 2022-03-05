@@ -4,6 +4,54 @@
 #include "world.h"
 #include "gl.h"
 
+enum block_type {
+    BLOCK_AIR,
+    BLOCK_STONE,
+    BLOCK_DIRT,
+    BLOCK_GRASS,
+    BLOCK_GRASS_TOP,
+    BLOCK_PLANKS,
+    BLOCK_OAK_LOG,
+    BLOCK_OAK_LEAVES,
+    BLOCK_SAND,
+    BLOCK_WATER,
+};
+
+static inline f32
+normalize_height(f32 value)
+{
+    f32 x = 0.5 * (value + 1);
+
+    return x;
+}
+
+static void
+chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
+{
+    chunk->blocks = blocks;
+    for (i32 z = 0; z < CHUNK_SIZE; z++) {
+        for (i32 x = 0; x < CHUNK_SIZE; x++) {
+            f32 nx = BLOCK_SIZE * (cx + x + 0.5);
+            f32 nz = BLOCK_SIZE * (cz + z + 0.5);
+            i32 height = normalize_height(noise_layered_2d(nx, nz)) * CHUNK_SIZE - cy;
+
+            i32 ymax = MAX(0, MIN(CHUNK_SIZE, height));
+            for (i32 y = 0; y < ymax; y++) {
+                u32 i = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+                if (y + 1 == height && cy + y > 0) {
+                    blocks[i] = BLOCK_GRASS;
+                } else if (y + 2 >= height && (cy + y > 3 || cy + y < -2)) {
+                    blocks[i] = BLOCK_DIRT;
+                } else if (y + 2 >= height) {
+                    blocks[i] = BLOCK_SAND;
+                } else {
+                    blocks[i] = BLOCK_STONE;
+                }
+            }
+        }
+    }
+}
+
 static u32
 chunk_at(const struct chunk *chunk, f32 x, f32 y, f32 z)
 {
