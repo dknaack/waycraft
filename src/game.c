@@ -31,9 +31,12 @@ static const u8 *frag_shader_source = (u8 *)
 i32
 game_init(struct game_state *game)
 {
-#define WORLD_SIZE 16
-    u32 size = WORLD_SIZE * WORLD_SIZE * WORLD_SIZE;
-    game->world.chunks = calloc(size, sizeof(struct chunk));
+    struct memory_arena *arena = &game->arena;
+
+#define WORLD_SIZE 32
+#define WORLD_HEIGHT 8
+    u32 size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
+    game->world.chunks = arena_alloc(arena, size, struct chunk);
     game->world.width  = WORLD_SIZE;
     game->world.height = WORLD_SIZE;
     game->world.depth  = WORLD_SIZE;
