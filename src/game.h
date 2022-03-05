@@ -4,6 +4,7 @@
 #include "types.h"
 #include "camera.h"
 #include "world.h"
+#include "memory.h"
 
 struct game_input {
     struct {
@@ -16,6 +17,7 @@ struct game_input {
         u8 move_down;
         u8 move_left;
         u8 move_right;
+        u8 jump;
     } controller;
 
     f32 dt;
@@ -31,6 +33,7 @@ struct vertex {
 struct game_state {
     struct world world;
     struct camera camera;
+    struct memory_arena arena;
     struct {
         u32 program;
         i32 camera_position;
