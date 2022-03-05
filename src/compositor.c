@@ -66,7 +66,7 @@ server_create_surface(struct server *server)
 {
     struct surface *surface = calloc(1, sizeof(struct surface *));
 
-    wl_list_insert(server->surfaces, surface);
+    wl_list_insert(&server->surfaces, &surface->node);
     return surface;
 }
 
@@ -598,7 +598,7 @@ main(void)
             &server, &wl_seat_bind);
     wl_display_init_shm(display);
 
-    if (gl_context_init(&gl, &window) != 0) {
+    if (x11_window_init_gl_context(&window, &gl) != 0) {
         fprintf(stderr, "Failed to load the functions for OpenGL\n");
         return 1;
     }
@@ -630,7 +630,7 @@ main(void)
         nanosleep(&wait_time, 0);
     }
 
-    gl_context_finish(&gl, &window);
+    x11_window_finish_gl_context(&window, &gl);
     wl_display_destroy(display);
     x11_window_finish(&window);
     return 0;
