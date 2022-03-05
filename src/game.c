@@ -38,10 +38,13 @@ game_init(struct game_state *game)
     u32 size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
     game->world.chunks = arena_alloc(arena, size, struct chunk);
     game->world.width  = WORLD_SIZE;
-    game->world.height = WORLD_SIZE;
+    game->world.height = WORLD_HEIGHT;
     game->world.depth  = WORLD_SIZE;
-    world_init(&game->world);
-    camera_init(&game->camera, VEC3(0, 0, 0), 1.f, 45.f);
+    f32 offset = -WORLD_SIZE * CHUNK_SIZE / 2.f;
+    f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
+    game->world.position = VEC3(offset, yoffset, offset);
+    world_init(&game->world, arena);
+    camera_init(&game->camera, VEC3(0, 0, 0), 4.f, 45.f);
 
     gl.Enable(GL_DEPTH_TEST);
     gl.Enable(GL_CULL_FACE);
