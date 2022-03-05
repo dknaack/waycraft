@@ -345,3 +345,15 @@ mat4_rotate(vec3 axis, float angle)
 
     return mat4_add(m1, mat4_add(mat4_mulf(m2, 1.f - cos), mat4_mulf(m3, sin)));
 }
+
+ivec3
+ivec3_vec3(vec3 a)
+{
+    ivec3 result;
+
+    result.x = a.x;
+    result.y = a.y;
+    result.z = a.z;
+
+    return result;
+}

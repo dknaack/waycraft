@@ -42,4 +42,6 @@ mat4 mat4_mulf(mat4 a, float f);
 mat4 mat4_mul(mat4 a, mat4 b);
 mat4 mat4_perspective(float fov, float aspect, float near, float far);
 
+ivec3 ivec3_vec3(vec3 a);
+
 #endif /* MATH_H */ 
