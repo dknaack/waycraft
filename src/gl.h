@@ -1,6 +1,8 @@
 #ifndef GL_H
 #define GL_H
 
+#include <GL/gl.h>
+
 #define GL_FALSE 0
 #define GL_TRUE 1
 
@@ -145,10 +147,8 @@ struct x11_window;
 
 static struct gl_context gl;
 
-static i32 gl_context_init(struct gl_context *context, 
-        const struct x11_window *window);
-static void gl_context_finish(struct gl_context *context,
-        const struct x11_window *window);
+static i32 gl_context_init(struct gl_context *gl,
+        void (* (*get_proc_address)(const u8 *proc_name))(void));
 
 static u32 gl_shader_create(const u8 *src, u32 type);
 static void gl_shader_error(u32 shader, u8 *buffer, u32 size);

@@ -47,6 +47,26 @@ static const char *gl_function_names[] = {
     "glCullFace",
 };
 
+typedef void gl_proc_t(void);
+
+static i32
+gl_context_init(struct gl_context *gl, 
+        gl_proc_t *(*get_proc_address)(const u8 *proc_name))
+{
+
+    gl_proc_t **gl_functions;
+    *(void **)&gl_functions = gl;
+
+    for (i32 i = 0; i < LENGTH(gl_function_names); i++) {
+        gl_functions[i] = get_proc_address((const u8 *)gl_function_names[i]);
+        if (!gl_functions[i]) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static u32
 gl_shader_create(const u8 *src, u32 type)
 {
