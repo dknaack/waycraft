@@ -1,30 +1,61 @@
+#include <math.h>
+
 #include "types.h"
 #include "world.h"
 #include "gl.h"
 
 static u32
-chunk_at(const struct chunk *chunk, u32 x, u32 y, u32 z)
+chunk_at(const struct chunk *chunk, f32 x, f32 y, f32 z)
 {
-    if ((0 <= x && x < CHUNK_SIZE) && (0 <= y && y < CHUNK_SIZE) && 
-            (0 <= z && z < CHUNK_SIZE)) {
-        return chunk->blocks[(z * CHUNK_SIZE + y) * CHUNK_SIZE + x];
+    i32 ix = x;
+    i32 iy = y;
+    i32 iz = z;
+
+    if ((0 <= ix && ix < CHUNK_SIZE) && (0 <= iy && iy < CHUNK_SIZE) && 
+            (0 <= iz && iz < CHUNK_SIZE)) {
+        return chunk->blocks[(iz * CHUNK_SIZE + iy) * CHUNK_SIZE + ix];
     } else {
         return 0;
     }
 }
 
-static u32
-world_at(const struct world *world, u32 x, u32 y, u32 z)
+u32
+world_at(const struct world *world, f32 x, f32 y, f32 z)
 {
+    x -= world->position.x;
+    y -= world->position.y;
+    z -= world->position.z;
+
     u32 cx = x / CHUNK_SIZE;
+    u32 cy = y / CHUNK_SIZE;
     u32 cz = z / CHUNK_SIZE;
 
-    if (cx >= world->width || cz >= world->depth) {
-        return 0;
-    } else {
+    x = fmodf(x, CHUNK_SIZE);
+    y = fmodf(y, CHUNK_SIZE);
+    z = fmodf(z, CHUNK_SIZE);
+
+    if ((0 <= cx && cx < world->width) && 
+            (0 <= cy && cy < world->height) && 
+            (0 <= cz && cz < world->depth)) {
         u32 width = world->width;
-        const struct chunk *chunk = &world->chunks[cz * width + cx];
-        return chunk_at(chunk, x % CHUNK_SIZE, y % CHUNK_SIZE, z % CHUNK_SIZE);
+        u32 height = world->height;
+        u32 chunk_index = (cz * height + cy) * width + cx;
+        struct chunk *chunk = &world->chunks[chunk_index];
+        if (!chunk->blocks) {
+            vec3 world_position = world->position;
+
+            f32 chunk_x = world_position.x + cx * CHUNK_SIZE;
+            f32 chunk_y = world_position.y + cy * CHUNK_SIZE;
+            f32 chunk_z = world_position.z + cz * CHUNK_SIZE;
+
+            u64 offset = chunk_index * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+            u8 *blocks = world->blocks + offset;
+            chunk_init(chunk, blocks, chunk_x, chunk_y, chunk_z);
+        }
+
+        return chunk_at(chunk, x, y, z);
+    } else {
+        return 0;
     }
 }
 
