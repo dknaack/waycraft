@@ -51,18 +51,17 @@ game_init(struct game_state *game)
     gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     u32 program = gl_program_create(vert_shader_source, frag_shader_source);
-    game->shader.camera_position = 
-        gl.GetUniformLocation(program, "camera_position");
-    game->shader.view = gl.GetUniformLocation(program, "view");
-    game->shader.projection = gl.GetUniformLocation(program, "projection");
-    game->shader.program = program;
-
     if (program == 0) {
         u8 error[1024];
         gl_program_error(program, error, sizeof(error));
         fprintf(stderr, "Failed to create program: %s\n", error);
         return -1;
     }
+
+    game->shader.model = gl.GetUniformLocation(program, "model");
+    game->shader.view = gl.GetUniformLocation(program, "view");
+    game->shader.projection = gl.GetUniformLocation(program, "projection");
+    game->shader.program = program;
 
     return 0;
 }
