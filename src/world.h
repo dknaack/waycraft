@@ -1,6 +1,8 @@
 #ifndef WORLD_H
 #define WORLD_H
 
+#include "mesh.h"
+
 #define CHUNK_SIZE 16
 #define BLOCK_SIZE 0.1
 
