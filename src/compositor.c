@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <stdio.h>
@@ -17,6 +18,7 @@
 #include "stb_image.h"
 #include "game.h"
 #include "math.h"
+#include "mesh.h"
 #include "gl.h"
 #include "x11.h"
 
@@ -24,6 +26,7 @@
 #include "game.c"
 #include "gl.c"
 #include "math.c"
+#include "mesh.c"
 #include "memory.c"
 #include "noise.c"
 #include "world.c"
@@ -38,17 +41,26 @@
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
 
+static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
+
 struct server {
     struct wl_display *display;
+    EGLDisplay *egl_display;
 
     struct wl_list clients;
     struct wl_list surfaces;
 
     struct wl_list free_clients;
     struct wl_list free_surfaces;
+
+    u32 vertex_array;
+    u32 vertex_buffer;
+    u32 index_buffer;
+    struct mesh mesh;
 };
 
 struct surface {
+    struct server *server;
     struct wl_resource *surface;
     struct wl_resource *buffer;
     struct wl_resource *xdg_surface;
@@ -56,17 +68,23 @@ struct surface {
     struct wl_resource *frame_callback;
     i32 x, y;
     i32 width, height;
+    u32 texture;
 
     struct wl_client *client;
-    struct wl_list node;
+    struct wl_list link;
 };
 
-static struct surface *
-server_create_surface(struct server *server)
-{
-    struct surface *surface = calloc(1, sizeof(struct surface *));
+static struct server server = {0};
 
-    wl_list_insert(&server->surfaces, &surface->node);
+static struct surface *
+server_create_surface(struct server *_server)
+{
+    printf("Created new surface\n");
+    struct surface *surface = calloc(1, sizeof(struct surface));
+    surface->server = &server;
+
+    printf("Inserting into list\n");
+    wl_list_insert(&server.surfaces, &surface->link);
     return surface;
 }
 
@@ -112,8 +130,8 @@ wl_surface_destroy(struct wl_client *client,
 {
     struct surface *surface = wl_resource_get_user_data(resource);
 
-    wl_list_remove(&surface->node);
-    free(surface);
+    wl_list_remove(&surface->link);
+    //free(surface);
 }
 
 static void
@@ -164,11 +182,46 @@ wl_surface_commit(struct wl_client *client,
         struct wl_resource *resource)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
+    struct server *server = surface->server;
+    EGLDisplay *egl_display = server->egl_display;
+    i32 texture_format;
+
     if (!surface->buffer) {
         xdg_surface_send_configure(surface->xdg_surface, 0);
-    }
+    } else if (eglQueryWaylandBufferWL(egl_display, surface->buffer,
+            EGL_TEXTURE_FORMAT, &texture_format)){
+        i32 width, height;
+        eglQueryWaylandBufferWL(egl_display, surface->buffer, EGL_WIDTH, &width);
+        eglQueryWaylandBufferWL(egl_display, surface->buffer, EGL_HEIGHT, &height);
 
-    // TODO: draw the texture
+        i64 attributes[] = { EGL_NONE };
+		EGLImage image = eglCreateImage(egl_display, EGL_NO_CONTEXT, 
+                EGL_WAYLAND_BUFFER_WL, surface->buffer, attributes);
+
+        u32 texture = 0;
+        gl.GenTextures(1, &texture);
+        gl.BindTexture(GL_TEXTURE_2D, texture);
+        gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl.EGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+        gl.BindTexture(GL_TEXTURE_2D, 0);
+        surface->texture = texture;
+    } else {
+        struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->buffer);
+        u32 width = wl_shm_buffer_get_width(shm_buffer);
+        u32 height = wl_shm_buffer_get_height(shm_buffer);
+        void *data = wl_shm_buffer_get_data(shm_buffer);
+
+        u32 texture = 0;
+        gl.GenTextures(1, &texture);
+        gl.BindTexture(GL_TEXTURE_2D, texture);
+        gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, 
+            GL_BGRA, GL_UNSIGNED_BYTE, data);
+        gl.BindTexture(GL_TEXTURE_2D, 0);
+        surface->texture = texture;
+    }
 }
 
 static void
@@ -465,10 +518,12 @@ xdg_wm_base_create_positioner(struct wl_client *client,
 
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
-        struct wl_resource *resource, u32 id, struct wl_resource *surface)
+        struct wl_resource *resource, u32 id, struct wl_resource *wl_surface)
 {
+    struct surface *surface = wl_resource_get_user_data(wl_surface);
     struct wl_resource *xdg_surface = wl_resource_create(client,
             &xdg_surface_interface, XDG_SURFACE_VERSION, id);
+    surface->xdg_surface = xdg_surface;
 
     // TODO: handle resource destroy
     wl_resource_set_implementation(xdg_surface, &xdg_surface_implementation, 0, 0);
@@ -565,12 +620,16 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 int
 main(void)
 {
-    struct server server = {0};
     struct x11_window window = {0};
     struct game_state game = {0};
     struct game_input input = {0};
     struct wl_display *display;
     const char *socket;
+
+    wl_list_init(&server.surfaces);
+    wl_list_init(&server.clients);
+    wl_list_init(&server.free_surfaces);
+    wl_list_init(&server.free_clients);
 
     if (x11_window_init(&window) != 0) {
         fprintf(stderr, "Failed to initialize window\n");
@@ -580,7 +639,7 @@ main(void)
     /*
      * initialize egl
      */
-    EGLDisplay *egl_display = eglGetDisplay(window.display);
+    EGLDisplay *egl_display = server.egl_display = eglGetDisplay(window.display);
     if (egl_display == EGL_NO_DISPLAY) {
         fprintf(stderr, "Failed to get the egl display.\n");
         return 1;
@@ -639,6 +698,9 @@ main(void)
 
     eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
 
+    eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
+        eglGetProcAddress("eglQueryWaylandBufferWL");
+
     fprintf(stderr, "Initalized egl: %d, %d\n", major, minor);
 
     gl_context_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
@@ -676,6 +738,35 @@ main(void)
         return 1;
     }
 
+    static const struct vertex vertices[] = {
+        { {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
+        { {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
+        { {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
+        { {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
+    };
+
+    static u32 indices[] = { 0, 1, 3, 1, 2, 3, };
+
+    gl.GenVertexArrays(1, &server.vertex_array);
+    gl.GenBuffers(1, &server.vertex_buffer);
+    gl.GenBuffers(1, &server.index_buffer);
+
+    gl.BindVertexArray(server.vertex_array);
+
+    gl.BindBuffer(GL_ARRAY_BUFFER, server.vertex_buffer);
+    gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
+            GL_STATIC_DRAW);
+    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, server.index_buffer);
+    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+            GL_STATIC_DRAW);
+
+    gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+            (const void *)offsetof(struct vertex, position));
+    gl.EnableVertexAttribArray(0);
+    gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+            (const void *)offsetof(struct vertex, texcoord));
+    gl.EnableVertexAttribArray(1);
+
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
@@ -691,6 +782,15 @@ main(void)
         gl.Viewport(0, 0, window.width, window.height);
         if (game_update(&game, &input) != 0) {
             window.is_open = 0;
+        }
+
+        u32 i = 0;
+        struct surface *surface;
+        wl_list_for_each(surface, &server.surfaces, link) {
+            printf("Drawing surface: %d\n", ++i);
+            gl.BindTexture(GL_TEXTURE_2D, surface->texture);
+            gl.BindVertexArray(server.vertex_array);
+            gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
 
         wl_display_flush_clients(display);
