@@ -4,14 +4,6 @@
 #define CHUNK_SIZE 16
 #define BLOCK_SIZE 0.1
 
-struct mesh {
-    struct vertex *vertices;
-    u32 *indices;
-
-    u32 vertex_count;
-    u32 index_count;
-};
-
 /* 
  * NOTE: world and chunks should be initialized to zero 
  */

@@ -6,6 +6,14 @@
 #include "world.h"
 #include "memory.h"
 
+struct window {
+    vec4 rotation;
+    vec3 scale;
+    vec3 position;
+    u32 width, height;
+    u32 texture;
+};
+
 struct game_input {
     struct {
         f32 dx, dy;
@@ -23,11 +31,6 @@ struct game_input {
     f32 dt;
     u32 width;
     u32 height;
-};
-
-struct vertex {
-    vec3 position;
-    vec2 texcoord;
 };
 
 struct game_state {
