@@ -42,7 +42,7 @@ game_init(struct game_state *game)
     f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
     game->world.position = VEC3(offset, yoffset, offset);
     world_init(&game->world, arena);
-    camera_init(&game->camera, VEC3(0, 0, 0), 4.f, 45.f);
+    camera_init(&game->camera, VEC3(0, 8, 0), 4.f, 45.f);
 
     gl.Enable(GL_DEPTH_TEST);
     gl.Enable(GL_CULL_FACE);
@@ -72,6 +72,18 @@ player_update(struct game_state *game, struct game_input *input)
     f32 dt = input->dt;
 
     vec3 position = game->camera.position;
+    vec3 velocity = game->player_velocity;
+
+    f32 player_x = position.x;
+    f32 player_y = position.y;
+    f32 player_z = position.z;
+
+    u32 block = world_at(&game->world, player_x, player_y, player_z);
+    if (0 && block == 0) {
+        velocity.y -= 0.1 * dt;
+    } else {
+        velocity.y = 0;
+    }
 
     f32 haxis = input->controller.move_right - input->controller.move_left;
     f32 vaxis = input->controller.move_up - input->controller.move_down;
@@ -82,10 +94,10 @@ player_update(struct game_state *game, struct game_input *input)
         vec3 direction = vec3_mulf(vec3_norm(vec3_add(
                 vec3_mulf(front, vaxis),
                 vec3_mulf(right, haxis))), dt * speed);
-        position = vec3_add(game->camera.position, direction);
+        velocity = vec3_add(velocity, direction);
     }
 
-    game->camera.position = position;
+    game->camera.position = vec3_add(position, velocity);
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }

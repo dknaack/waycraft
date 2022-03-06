@@ -44,6 +44,8 @@ struct game_state {
         i32 projection;
     } shader;
     u32 program;
+
+    vec3 player_velocity;
 };
 
 static i32 game_init(struct game_state *game);
