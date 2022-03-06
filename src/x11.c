@@ -74,13 +74,41 @@ x11_window_finish(struct x11_window *window)
     XCloseDisplay(window->display);
 }
 
+u32
+x11_get_key_state(u8 *key_vector, u8 key_code)
+{
+    u32 result = (key_vector[key_code / 8] & (1 << (key_code % 8))) != 0;
+    printf("%d: %d\n", key_code, result);
+    return result;
+}
+
 void
 x11_window_poll_events(struct x11_window *window, struct game_input *input)
 {
-    char keybuf[16] = {0};
     KeySym key;
     XEvent event;
-    u32 is_pressed = 0;
+    i32 dx, dy;
+
+    struct {
+        KeySym key_sym;
+        u8 *pressed;
+    } keys_to_check[] = {
+        { XK_space, &input->controller.jump   },
+        { XK_w, &input->controller.move_up    },
+        { XK_a, &input->controller.move_left  },
+        { XK_s, &input->controller.move_down  },
+        { XK_d, &input->controller.move_right },
+    };
+
+    u8 key_vector[32] = {0};
+    XQueryKeymap(window->display, key_vector);
+    for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
+        u8 key_code = XKeysymToKeycode(window->display, 
+                keys_to_check[i].key_sym);
+        if (x11_get_key_state(key_vector, key_code)) {
+            *keys_to_check[i].pressed = 1;
+        }
+    }
 
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
@@ -96,39 +124,28 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             window->height = event.xconfigure.height;
             break;
         case MotionNotify:
-            // TODO: convert to relative coordinates?
-            input->mouse.dx = event.xmotion.x - input->mouse.x;
-            input->mouse.dy = event.xmotion.y - input->mouse.y;
+            dx = event.xmotion.x - input->mouse.x;
+            dy = event.xmotion.y - input->mouse.y;
             input->mouse.x = event.xmotion.x;
             input->mouse.y = event.xmotion.y;
+            if (input->mouse.x == window->width / 2 && 
+                    input->mouse.y == window->height / 2) {
+                break;
+            }
+
+            // TODO: convert to relative coordinates?
+            input->mouse.dx = dx;
+            input->mouse.dy = dy;
             break;
         case ButtonPress:
             window->lock_cursor = 1;
         case KeyPress:
-            is_pressed = 1;
-            /* fallthrough */
-        case KeyRelease:
-            XLookupString(&event.xkey, keybuf, sizeof(keybuf), &key, 0);
-
-            switch (key) {
-            case XK_w:
-                input->controller.move_up = is_pressed;
-                break;
-            case XK_a:
-                input->controller.move_left = is_pressed;
-                break;
-            case XK_s:
-                input->controller.move_down = is_pressed;
-                break;
-            case XK_d:
-                input->controller.move_right = is_pressed;
-                break;
-            case XK_Escape:
+            key = XLookupKeysym(&event.xkey, 0);
+            if (key == XK_Escape) {
                 window->lock_cursor = 0;
                 XUngrabPointer(window->display, CurrentTime);
                 break;
             }
-            break;
         }
     }
 
