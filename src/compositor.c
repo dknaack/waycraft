@@ -79,11 +79,9 @@ static struct server server = {0};
 static struct surface *
 server_create_surface(struct server *_server)
 {
-    printf("Created new surface\n");
     struct surface *surface = calloc(1, sizeof(struct surface));
     surface->server = &server;
 
-    printf("Inserting into list\n");
     wl_list_insert(&server.surfaces, &surface->link);
     return surface;
 }
@@ -787,7 +785,6 @@ main(void)
         u32 i = 0;
         struct surface *surface;
         wl_list_for_each(surface, &server.surfaces, link) {
-            printf("Drawing surface: %d\n", ++i);
             gl.BindTexture(GL_TEXTURE_2D, surface->texture);
             gl.BindVertexArray(server.vertex_array);
             gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
