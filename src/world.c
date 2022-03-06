@@ -363,6 +363,8 @@ world_update(struct world *world, vec3 player_position)
 void
 world_render(const struct world *world)
 {
+    gl.BindTexture(GL_TEXTURE_2D, world->texture);
+
     u32 chunk_count = world->loaded_chunk_count;
     for (u32 i = 0; i < chunk_count; i++) {
         const struct chunk *chunk = world_next_chunk_to_load(world, i);
