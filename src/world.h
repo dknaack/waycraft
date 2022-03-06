@@ -6,7 +6,6 @@
 #define WORLD_SIZE 32
 #define WORLD_HEIGHT 8
 #define CHUNK_SIZE 16
-#define BLOCK_SIZE 0.1
 
 /* 
  * NOTE: world and chunks should be initialized to zero 

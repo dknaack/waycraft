@@ -29,11 +29,13 @@ normalize_height(f32 value)
 static void
 chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
 {
+    f32 noise_size = 0.1;
+
     chunk->blocks = blocks;
     for (i32 z = 0; z < CHUNK_SIZE; z++) {
         for (i32 x = 0; x < CHUNK_SIZE; x++) {
-            f32 nx = BLOCK_SIZE * (cx + x + 0.5);
-            f32 nz = BLOCK_SIZE * (cz + z + 0.5);
+            f32 nx = noise_size * (cx + x + 0.5);
+            f32 nz = noise_size * (cz + z + 0.5);
             i32 height = normalize_height(noise_layered_2d(nx, nz)) * CHUNK_SIZE - cy;
 
             i32 ymax = MAX(0, MIN(CHUNK_SIZE, height));
@@ -145,7 +147,6 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
     i32 height = world->height;
     i32 width  = world->width;
 
-    f32 size = BLOCK_SIZE;
     f32 xmin, ymin, zmin;
     world_position_of_chunk(world, chunk, &xmin, &ymin, &zmin);
     for (i32 z = zmin; z < zmin + CHUNK_SIZE; z++) {
@@ -154,38 +155,38 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
                 vec2 uv[4];
 
                 vec3 pos0 = VEC3(
-                        size * (x + 0.5 - width / 2.), 
-                        size * (y + 0.5 - height), 
-                        size * (z + 0.5 - depth / 2.));
+                        x + 0.5 - width / 2., 
+                        y + 0.5 - height, 
+                        z + 0.5 - depth / 2.);
                 vec3 pos1 = VEC3(
-                        size * (x - 0.5 - width / 2.),
-                        size * (y + 0.5 - height),
-                        size * (z + 0.5 - depth / 2.));
+                        x - 0.5 - width / 2.,
+                        y + 0.5 - height,
+                        z + 0.5 - depth / 2.);
                 vec3 pos2 = VEC3(
-                        size * (x + 0.5 - width / 2.),
-                        size * (y - 0.5 - height),
-                        size * (z + 0.5 - depth / 2.));
+                        x + 0.5 - width / 2.,
+                        y - 0.5 - height,
+                        z + 0.5 - depth / 2.);
                 vec3 pos3 = VEC3(
-                        size * (x - 0.5 - width / 2.),
-                        size * (y - 0.5 - height),
-                        size * (z + 0.5 - depth / 2.));
+                        x - 0.5 - width / 2.,
+                        y - 0.5 - height,
+                        z + 0.5 - depth / 2.);
 
                 vec3 pos4 = VEC3(
-                        size * (x + 0.5 - width / 2.), 
-                        size * (y + 0.5 - height), 
-                        size * (z - 0.5 - depth / 2.));
+                        x + 0.5 - width / 2., 
+                        y + 0.5 - height, 
+                        z - 0.5 - depth / 2.);
                 vec3 pos5 = VEC3(
-                        size * (x - 0.5 - width / 2.),
-                        size * (y + 0.5 - height),
-                        size * (z - 0.5 - depth / 2.));
+                        x - 0.5 - width / 2.,
+                        y + 0.5 - height,
+                        z - 0.5 - depth / 2.);
                 vec3 pos6 = VEC3(
-                        size * (x + 0.5 - width / 2.),
-                        size * (y - 0.5 - height),
-                        size * (z - 0.5 - depth / 2.));
+                        x + 0.5 - width / 2.,
+                        y - 0.5 - height,
+                        z - 0.5 - depth / 2.);
                 vec3 pos7 = VEC3(
-                        size * (x - 0.5 - width / 2.),
-                        size * (y - 0.5 - height),
-                        size * (z - 0.5 - depth / 2.));
+                        x - 0.5 - width / 2.,
+                        y - 0.5 - height,
+                        z - 0.5 - depth / 2.);
 
                 u32 block_type = world_at(world, x, y, z);
                 if (block_type == BLOCK_AIR) {
