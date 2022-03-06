@@ -39,15 +39,15 @@ struct game_state {
     struct memory_arena arena;
     struct {
         u32 program;
-        i32 camera_position;
+        i32 model;
         i32 view;
         i32 projection;
     } shader;
     u32 program;
 };
 
-i32 game_init(struct game_state *game);
-i32 game_update(struct game_state *game, struct game_input *input);
-void game_finish(struct game_state *game);
+static i32 game_init(struct game_state *game);
+static i32 game_update(struct game_state *game, struct game_input *input);
+static void game_finish(struct game_state *game);
 
 #endif /* GAME_H */ 
