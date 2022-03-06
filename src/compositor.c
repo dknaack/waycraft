@@ -12,25 +12,29 @@
 #include <unistd.h>
 #include <wayland-server.h>
 #include <xdg-shell-protocol.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "types.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "egl.h"
 #include "game.h"
+#include "gl.h"
 #include "math.h"
 #include "mesh.h"
-#include "gl.h"
 #include "x11.h"
 
 #include "camera.c"
 #include "game.c"
 #include "gl.c"
+#include "egl.c"
 #include "math.c"
 #include "mesh.c"
 #include "memory.c"
 #include "noise.c"
 #include "world.c"
 #include "x11.c"
+#include "x11_egl.c"
 #include "xdg-shell-protocol.c"
 
 #define WL_COMPOSITOR_VERSION 5
@@ -42,6 +46,7 @@
 #define XDG_SURFACE_VERSION 4
 
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
+static struct egl egl;
 
 struct server {
     struct wl_display *display;
@@ -74,15 +79,13 @@ struct surface {
     struct wl_list link;
 };
 
-static struct server server = {0};
-
 static struct surface *
-server_create_surface(struct server *_server)
+server_create_surface(struct server *server)
 {
     struct surface *surface = calloc(1, sizeof(struct surface));
-    surface->server = &server;
+    surface->server = server;
 
-    wl_list_insert(&server.surfaces, &surface->link);
+    wl_list_insert(&server->surfaces, &surface->link);
     return surface;
 }
 
@@ -196,6 +199,10 @@ wl_surface_commit(struct wl_client *client,
 		EGLImage image = eglCreateImage(egl_display, EGL_NO_CONTEXT, 
                 EGL_WAYLAND_BUFFER_WL, surface->buffer, attributes);
 
+        if (surface->texture) {
+            gl.DeleteTextures(1, &surface->texture);
+        }
+
         u32 texture = 0;
         gl.GenTextures(1, &texture);
         gl.BindTexture(GL_TEXTURE_2D, texture);
@@ -209,6 +216,10 @@ wl_surface_commit(struct wl_client *client,
         u32 width = wl_shm_buffer_get_width(shm_buffer);
         u32 height = wl_shm_buffer_get_height(shm_buffer);
         void *data = wl_shm_buffer_get_data(shm_buffer);
+
+        if (surface->texture) {
+            gl.DeleteTextures(1, &surface->texture);
+        }
 
         u32 texture = 0;
         gl.GenTextures(1, &texture);
@@ -479,7 +490,11 @@ static void
 xdg_surface_set_window_geometry(struct wl_client *client,
         struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
 {
-    /* TODO */
+    struct surface *surface = wl_resource_get_user_data(resource);
+    surface->width = width;
+    surface->height = height;
+    surface->x = x;
+    surface->y = y;
 }
 
 static void
@@ -524,7 +539,8 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
     surface->xdg_surface = xdg_surface;
 
     // TODO: handle resource destroy
-    wl_resource_set_implementation(xdg_surface, &xdg_surface_implementation, 0, 0);
+    wl_resource_set_implementation(xdg_surface, &xdg_surface_implementation, 
+            surface, 0);
 }
 
 static void
@@ -558,6 +574,38 @@ xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 /*
+ * wl_pointer functions
+ */
+
+static void 
+wl_pointer_set_cursor(struct wl_client *client, struct wl_resource *resource, 
+        u32 serial, struct wl_resource *surface, i32 hotspot_x, i32 hotspot_y)
+{
+}
+
+static void 
+wl_pointer_release(struct wl_client *client, struct wl_resource *resource)
+{
+}
+
+static const struct wl_pointer_interface wl_pointer_implementation = {
+    .set_cursor = wl_pointer_set_cursor,
+    .release    = wl_pointer_release,
+};
+
+/* 
+ * wl_keyboard functions
+ */
+static void
+wl_keyboard_release(struct wl_client *client, struct wl_resource *resource)
+{
+}
+
+static const struct wl_keyboard_interface wl_keyboard_implementation = {
+    .release = wl_keyboard_release,
+};
+
+/*
  * wl seat functions
  */
 
@@ -565,14 +613,23 @@ static void
 wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
         u32 id)
 {
-    /* TODO */
+    struct wl_resource *pointer = 
+        wl_resource_create(client, &wl_pointer_interface, 7, id);
+    wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
 }
 
 static void
 wl_seat_get_keyboard(struct wl_client *client, struct wl_resource *resource,
         u32 id)
 {
-    /* TODO */
+    struct wl_resource *keyboard =
+        wl_resource_create(client, &wl_keyboard_interface, 7, id);
+    wl_resource_set_implementation(keyboard, 
+            &wl_keyboard_implementation, 0, 0);
+
+    //i32 fd, size;
+    //// TODO: get the xkb keymap fd and size
+    //wl_keyboard_send_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, size);
 }
 
 static void
@@ -618,6 +675,7 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 int
 main(void)
 {
+    struct server server = {0};
     struct x11_window window = {0};
     struct game_state game = {0};
     struct game_input input = {0};
@@ -637,71 +695,10 @@ main(void)
     /*
      * initialize egl
      */
-    EGLDisplay *egl_display = server.egl_display = eglGetDisplay(window.display);
-    if (egl_display == EGL_NO_DISPLAY) {
-        fprintf(stderr, "Failed to get the egl display.\n");
-        return 1;
-    }
-
-    i32 major, minor;
-    if (!eglInitialize(egl_display, &major, &minor)) {
-        fprintf(stderr, "Failed to initalize egl.\n");
-        return 1;
-    }
-
-    EGLint egl_config_attributes[] = {
-        EGL_RED_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_BLUE_SIZE, 8,
-        EGL_DEPTH_SIZE, 24,
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-        EGL_NONE
-    };
-
-    EGLConfig config;
-    EGLint config_count;
-    if (!eglChooseConfig(egl_display, egl_config_attributes, &config, 1, 
-            &config_count)) {
-        fprintf(stderr, "Failed to choose egl config.\n");
-        return 1;
-    }
-
-    if (config_count != 1) {
-        fprintf(stderr, "Got more than one config.\n");
-        return 1;
-    }
-
-    EGLSurface *egl_surface = eglCreateWindowSurface(egl_display,
-            config, window.drawable, 0);
-
-    if (!eglBindAPI(EGL_OPENGL_API)) {
-        fprintf(stderr, "Failed to bind opengl api\n");
-        return 1;
-    }
-
-    EGLint egl_context_attributes[] = {
-        EGL_CONTEXT_MAJOR_VERSION, 3,
-        EGL_CONTEXT_MINOR_VERSION, 3,
-        EGL_NONE
-    };
-
-    EGLContext *egl_context = eglCreateContext(egl_display, config, 
-            EGL_NO_CONTEXT, egl_context_attributes);
-    if (egl_context == EGL_NO_CONTEXT) {
-        fprintf(stderr, "Failed to initalize the egl context: %d\n", 
-                eglGetError());
-        return 1;
-    }
-
-    eglMakeCurrent(egl_display, egl_surface, egl_surface, egl_context);
-
+    x11_egl_init(&egl, &window);
     eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
         eglGetProcAddress("eglQueryWaylandBufferWL");
-
-    fprintf(stderr, "Initalized egl: %d, %d\n", major, minor);
-
-    gl_context_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
+    gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
 
     /*
      * initialize wayland 
@@ -782,23 +779,31 @@ main(void)
             window.is_open = 0;
         }
 
-        u32 i = 0;
+        /* draw the windows */
+        gl.BindVertexArray(server.vertex_array);
         struct surface *surface;
         wl_list_for_each(surface, &server.surfaces, link) {
+            f32 virtual_screen_size = 2048;
+            f32 x      = surface->x / virtual_screen_size;
+            f32 y      = surface->y / virtual_screen_size;
+            f32 width  = surface->width / virtual_screen_size;
+            f32 height = surface->height / virtual_screen_size;
+
+            mat4 model = mat4_mul(
+                    mat4_translate(x, y, 0),
+                    mat4_scale(width, height, 1));
+            gl.UniformMatrix4fv(game.shader.model, 1, GL_FALSE, model.e);
             gl.BindTexture(GL_TEXTURE_2D, surface->texture);
-            gl.BindVertexArray(server.vertex_array);
             gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
 
         wl_display_flush_clients(display);
-        eglSwapBuffers(egl_display, egl_surface);
+        eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
     }
 
-    eglDestroyContext(egl_display, egl_context);
-    eglDestroySurface(egl_display, egl_surface);
-    eglTerminate(egl_display);
-
+    game_finish(&game);
+    egl_finish(&egl);
     wl_display_destroy(display);
     x11_window_finish(&window);
     return 0;
