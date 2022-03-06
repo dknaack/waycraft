@@ -114,7 +114,7 @@ world_at(const struct world *world, f32 x, f32 y, f32 z)
 }
 
 static void
-world_chunk_position(const struct world *world, const struct chunk *chunk,
+world_position_of_chunk(const struct world *world, const struct chunk *chunk,
         f32 *x, f32 *y, f32 *z)
 
 {
@@ -147,7 +147,7 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
 
     f32 size = BLOCK_SIZE;
     f32 xmin, ymin, zmin;
-    world_chunk_position(world, chunk, &xmin, &ymin, &zmin);
+    world_position_of_chunk(world, chunk, &xmin, &ymin, &zmin);
     for (i32 z = zmin; z < zmin + CHUNK_SIZE; z++) {
         for (i32 y = ymin; y < ymin + CHUNK_SIZE; y++) {
             for (i32 x = xmin; x < xmin + CHUNK_SIZE; x++) {
