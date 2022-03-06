@@ -11,11 +11,11 @@ static const u8 *vert_shader_source = (u8 *)
     "layout (location = 0) in vec3 pos;"
     "layout (location = 1) in vec2 in_coords;"
     "out vec2 coords;"
-    "uniform vec3 camera_position;"
+    "uniform mat4 model;"
     "uniform mat4 view;"
     "uniform mat4 projection;"
     "void main() {"
-        "gl_Position = projection * view * vec4(pos - camera_position, 1.);"
+        "gl_Position = projection * view * model * vec4(pos, 1.);"
         "coords = in_coords;"
     "}";
 
@@ -96,6 +96,7 @@ game_update(struct game_state *game, struct game_input *input)
 {
     mat4 projection = game->camera.projection;
     mat4 view = game->camera.view;
+    mat4 model = mat4_id(1);
 
     player_update(game, input);
     world_update(&game->world, game->camera.position);
@@ -103,6 +104,7 @@ game_update(struct game_state *game, struct game_input *input)
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl.UseProgram(game->shader.program);
+    gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE, model.e);
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
     world_render(&game->world);
