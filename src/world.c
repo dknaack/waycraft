@@ -370,7 +370,6 @@ world_finish(struct world *world)
         gl.DeleteVertexArrays(1, &chunk->vao);
         gl.DeleteBuffers(1, &chunk->vbo);
         gl.DeleteBuffers(1, &chunk->ebo);
-        free(chunk->blocks);
         chunk++;
     }
 
