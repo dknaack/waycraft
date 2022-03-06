@@ -1,7 +1,7 @@
 #include "x11.h"
 #include "gl.h"
 
-static const char *gl_function_names[] = {
+static const char *gl_proc_names[] = {
     "glViewport",
     "glClear",
     "glClearColor",
@@ -50,18 +50,16 @@ static const char *gl_function_names[] = {
 };
 
 typedef void gl_proc_t(void);
+typedef gl_proc_t *gl_get_proc_address_t(const u8 *proc_name);
 
 static i32
-gl_context_init(struct gl_context *gl, 
-        gl_proc_t *(*get_proc_address)(const u8 *proc_name))
+gl_init(struct gl *gl, gl_get_proc_address_t *get_proc_address)
 {
-
-    gl_proc_t **gl_functions;
-    *(void **)&gl_functions = gl;
-
-    for (i32 i = 0; i < LENGTH(gl_function_names); i++) {
-        gl_functions[i] = get_proc_address((const u8 *)gl_function_names[i]);
-        if (!gl_functions[i]) {
+    u32 proc_count = LENGTH(gl_proc_names);
+    gl_proc_t **proc = (gl_proc_t **)gl;
+    const u8 **proc_name = (const u8 **)gl_proc_names;
+    while (proc_count-- > 0) {
+        if (!(*proc++ = get_proc_address(*proc_name++))) {
             return -1;
         }
     }
