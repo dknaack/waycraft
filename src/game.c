@@ -33,8 +33,6 @@ game_init(struct game_state *game)
 {
     struct memory_arena *arena = &game->arena;
 
-#define WORLD_SIZE 32
-#define WORLD_HEIGHT 8
     u32 size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
     game->world.chunks = arena_alloc(arena, size, struct chunk);
     game->world.width  = WORLD_SIZE;
