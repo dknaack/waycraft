@@ -6,6 +6,17 @@
 #define GL_FALSE 0
 #define GL_TRUE 1
 
+#define GL_ZERO 0
+#define GL_ONE 1
+#define GL_SRC_COLOR 0x0300
+#define GL_ONE_MINUS_SRC_COLOR 0x0301
+#define GL_SRC_ALPHA 0x0302
+#define GL_ONE_MINUS_SRC_ALPHA 0x0303
+#define GL_DST_ALPHA 0x0304
+#define GL_ONE_MINUS_DST_ALPHA 0x0305
+#define GL_DST_COLOR 0x0306
+#define GL_ONE_MINUS_DST_COLOR 0x0307
+#define GL_SRC_ALPHA_SATURATE 0x0308
 #define GL_TRIANGLES 0x0004
 #define GL_TRIANGLE_STRIP 0x0005
 #define GL_TRIANGLE_FAN 0x0006
@@ -25,6 +36,7 @@
 #define GL_CULL_FACE_MODE 0x0B45
 #define GL_FRONT_FACE 0x0B46
 #define GL_DEPTH_TEST 0x0B71
+#define GL_BLEND 0x0BE2
 #define GL_BYTE 0x1400
 #define GL_UNSIGNED_BYTE 0x1401
 #define GL_SHORT 0x1402
@@ -139,6 +151,8 @@ struct gl_context {
     void (*Enable)(GLenum cap);
     void (*Disable)(GLenum cap);
     void (*CullFace)(GLenum mode);
+    void (*EGLImageTargetTexture2DOES)(GLenum target, EGLImage image);
+    void (*BlendFunc)(GLenum sfactor, GLenum dfactor);
 
     void *context;
 };

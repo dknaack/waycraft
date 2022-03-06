@@ -45,6 +45,8 @@ static const char *gl_function_names[] = {
     "glEnable",
     "glDisable",
     "glCullFace",
+    "glEGLImageTargetTexture2DOES",
+    "glBlendFunc",
 };
 
 typedef void gl_proc_t(void);
