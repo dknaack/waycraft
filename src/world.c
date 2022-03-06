@@ -86,9 +86,14 @@ world_at(const struct world *world, f32 x, f32 y, f32 z)
     if ((0 <= cx && cx < world->width) && 
             (0 <= cy && cy < world->height) && 
             (0 <= cz && cz < world->depth)) {
-        u32 width = world->width;
+        u32 width  = world->width;
         u32 height = world->height;
+        u32 depth  = world->depth;
+
         u32 chunk_index = (cz * height + cy) * width + cx;
+        u32 chunk_count = width * height * depth;
+        assert(chunk_index < chunk_count);
+
         struct chunk *chunk = &world->chunks[chunk_index];
         if (!chunk->blocks) {
             vec3 world_position = world->position;
