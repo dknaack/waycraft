@@ -97,7 +97,7 @@
 #define GL_COMPILE_STATUS 0x8B81
 #define GL_LINK_STATUS 0x8B82
 
-struct gl_context {
+struct gl {
     void (*Viewport)(GLint x, GLint y, GLsizei width, GLsizei height);
     void (*Clear)(GLbitfield mask);
     void (*ClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
@@ -159,9 +159,9 @@ struct gl_context {
 
 struct x11_window;
 
-static struct gl_context gl;
+static struct gl gl;
 
-static i32 gl_context_init(struct gl_context *gl,
+static i32 gl_init(struct gl *gl,
         void (* (*get_proc_address)(const u8 *proc_name))(void));
 
 static u32 gl_shader_create(const u8 *src, u32 type);
