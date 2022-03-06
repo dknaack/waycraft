@@ -1,4 +1,6 @@
 waycraft
 tags
 etc/
+xdg-shell-protocol.c
+xdg-shell-protocol.h
 *.o
