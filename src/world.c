@@ -188,10 +188,9 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
                         size * (z - 0.5 - depth / 2.));
 
                 u32 block_type = world_at(world, x, y, z);
-                switch (block_type){
-                case BLOCK_AIR:
+                if (block_type == BLOCK_AIR) {
                     continue;
-                case BLOCK_GRASS:
+                } else if (block_type == BLOCK_GRASS) {
                     block_texcoords(BLOCK_DIRT, uv);
                     if (!world_at(world, x, y - 1, z)) {
                         mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
@@ -209,23 +208,7 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
                         mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
                                 uv[0], uv[1], uv[2], uv[3]);
                     }
-
-                    if (!world_at(world, x - 1, y, z)) {
-                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
-
-                    if (!world_at(world, x, y, z + 1)) {
-                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
-
-                    if (!world_at(world, x, y, z - 1)) {
-                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
-                    break;
-                default:
+                } else {
                     block_texcoords(block_type, uv);
                     if (!world_at(world, x, y - 1, z)) {
                         mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
@@ -241,21 +224,21 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
                         mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
                                 uv[0], uv[1], uv[2], uv[3]);
                     }
+                }
 
-                    if (!world_at(world, x - 1, y, z)) {
-                        mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
+                if (!world_at(world, x - 1, y, z)) {
+                    mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
+                            uv[0], uv[1], uv[2], uv[3]);
+                }
 
-                    if (!world_at(world, x, y, z + 1)) {
-                        mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
+                if (!world_at(world, x, y, z + 1)) {
+                    mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
+                            uv[0], uv[1], uv[2], uv[3]);
+                }
 
-                    if (!world_at(world, x, y, z - 1)) {
-                        mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
-                                uv[0], uv[1], uv[2], uv[3]);
-                    }
+                if (!world_at(world, x, y, z - 1)) {
+                    mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
+                            uv[0], uv[1], uv[2], uv[3]);
                 }
             }
         }
