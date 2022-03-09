@@ -45,7 +45,11 @@ struct game_state {
     } shader;
     u32 program;
 
-    vec3 player_velocity;
+    struct {
+        vec3 position;
+        vec3 velocity;
+        u8 is_jumping;
+    } player;
 };
 
 static i32 game_init(struct game_state *game);
