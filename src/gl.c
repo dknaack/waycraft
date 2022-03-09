@@ -9,6 +9,7 @@ static const char *gl_proc_names[] = {
     "glBindBuffer",
     "glDeleteBuffers",
     "glBufferData",
+    "glBufferSubData",
     "glGenVertexArrays",
     "glDeleteVertexArrays",
     "glBindVertexArray",
@@ -47,6 +48,8 @@ static const char *gl_proc_names[] = {
     "glCullFace",
     "glEGLImageTargetTexture2DOES",
     "glBlendFunc",
+    "glPolygonMode",
+    "glLineWidth",
 };
 
 typedef void gl_proc_t(void);

@@ -44,6 +44,8 @@
 #define GL_INT 0x1404
 #define GL_UNSIGNED_INT 0x1405
 #define GL_FLOAT 0x1406
+#define GL_LINE 0x1B01
+#define GL_FILL 0x1B02
 #define GL_NEAREST 0x2600
 #define GL_LINEAR 0x2601
 #define GL_TEXTURE_MAG_FILTER 0x2800
@@ -106,6 +108,8 @@ struct gl {
     void (*DeleteBuffers)(GLsizei n, const GLuint *buffers);
     void (*BufferData)(GLenum target, GLsizeiptr size, const void *data, 
             GLenum usage);
+    void (*BufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size,
+            const void *data);
     void (*GenVertexArrays)(GLsizei n, GLuint *arrays);
     void (*DeleteVertexArrays)(GLsizei n, const GLuint *arrays);
     void (*BindVertexArray)(GLuint array);
@@ -153,6 +157,8 @@ struct gl {
     void (*CullFace)(GLenum mode);
     void (*EGLImageTargetTexture2DOES)(GLenum target, EGLImage image);
     void (*BlendFunc)(GLenum sfactor, GLenum dfactor);
+    void (*PolygonMode)(GLenum face, GLenum mode);
+    void (*LineWidth)(GLfloat width);
 
     void *context;
 };
