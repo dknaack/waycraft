@@ -143,10 +143,6 @@ block_texcoords(enum block_type block, vec2 *uv)
 static void
 chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh *mesh)
 {
-    i32 depth  = world->depth;
-    i32 height = world->height;
-    i32 width  = world->width;
-
     f32 xmin, ymin, zmin;
     world_position_of_chunk(world, chunk, &xmin, &ymin, &zmin);
     for (i32 z = zmin; z < zmin + CHUNK_SIZE; z++) {
@@ -154,39 +150,15 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
             for (i32 x = xmin; x < xmin + CHUNK_SIZE; x++) {
                 vec2 uv[4];
 
-                vec3 pos0 = VEC3(
-                        x + 0.5 - width / 2., 
-                        y + 0.5 - height, 
-                        z + 0.5 - depth / 2.);
-                vec3 pos1 = VEC3(
-                        x - 0.5 - width / 2.,
-                        y + 0.5 - height,
-                        z + 0.5 - depth / 2.);
-                vec3 pos2 = VEC3(
-                        x + 0.5 - width / 2.,
-                        y - 0.5 - height,
-                        z + 0.5 - depth / 2.);
-                vec3 pos3 = VEC3(
-                        x - 0.5 - width / 2.,
-                        y - 0.5 - height,
-                        z + 0.5 - depth / 2.);
+                vec3 pos0 = VEC3(x + 0.5, y + 0.5, z + 0.5);
+                vec3 pos1 = VEC3(x - 0.5, y + 0.5, z + 0.5);
+                vec3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
+                vec3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
 
-                vec3 pos4 = VEC3(
-                        x + 0.5 - width / 2., 
-                        y + 0.5 - height, 
-                        z - 0.5 - depth / 2.);
-                vec3 pos5 = VEC3(
-                        x - 0.5 - width / 2.,
-                        y + 0.5 - height,
-                        z - 0.5 - depth / 2.);
-                vec3 pos6 = VEC3(
-                        x + 0.5 - width / 2.,
-                        y - 0.5 - height,
-                        z - 0.5 - depth / 2.);
-                vec3 pos7 = VEC3(
-                        x - 0.5 - width / 2.,
-                        y - 0.5 - height,
-                        z - 0.5 - depth / 2.);
+                vec3 pos4 = VEC3(x + 0.5, y + 0.5, z - 0.5);
+                vec3 pos5 = VEC3(x - 0.5, y + 0.5, z - 0.5);
+                vec3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
+                vec3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
 
                 u32 block_type = world_at(world, x, y, z);
                 if (block_type == BLOCK_AIR) {
