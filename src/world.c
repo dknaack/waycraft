@@ -21,7 +21,7 @@ enum block_type {
 static inline f32
 normalize_height(f32 value)
 {
-    f32 x = 0.5 * (value + 1);
+    f32 x = 0.8 * (value + 1);
 
     return x;
 }
@@ -43,10 +43,10 @@ chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
                 u32 i = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
                 if (y + 1 == height && cy + y > 0) {
                     blocks[i] = BLOCK_GRASS;
-                } else if (y + 2 >= height && (cy + y > 3 || cy + y < -2)) {
-                    blocks[i] = BLOCK_DIRT;
-                } else if (y + 2 >= height) {
+                } else if (y + 2 >= height && (cy + ymax <= 2 && cy + ymax >= -2)) {
                     blocks[i] = BLOCK_SAND;
+                } else if (y + 2 >= height) {
+                    blocks[i] = BLOCK_DIRT;
                 } else {
                     blocks[i] = BLOCK_STONE;
                 }
