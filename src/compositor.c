@@ -36,6 +36,7 @@
 #include "x11.c"
 #include "x11_egl.c"
 #include "xdg-shell-protocol.c"
+#include "debug.c"
 
 #define WL_COMPOSITOR_VERSION 5
 #define WL_REGION_VERSION 1
