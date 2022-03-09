@@ -783,7 +783,7 @@ main(void)
         gl.BindVertexArray(server.vertex_array);
         struct surface *surface;
         wl_list_for_each(surface, &server.surfaces, link) {
-            f32 virtual_screen_size = 2048;
+            f32 virtual_screen_size = 20.48;
             f32 x      = surface->x / virtual_screen_size;
             f32 y      = surface->y / virtual_screen_size;
             f32 width  = surface->width / virtual_screen_size;
