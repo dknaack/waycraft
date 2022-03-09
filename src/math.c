@@ -3,6 +3,12 @@
 #include "types.h"
 #include "math.h"
 
+static float
+lerp(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
 /*
  * vec2 function definitions
  */
@@ -90,6 +96,12 @@ vec3_div(vec3 a, vec3 b)
 }
 
 vec3
+vec3_modf(vec3 a, float f)
+{
+    return VEC3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f));
+}
+
+vec3
 vec3_mulf(vec3 a, float f)
 {
     return VEC3(a.x * f, a.y * f, a.z * f);
@@ -126,6 +138,18 @@ vec3
 vec3_norm(vec3 a)
 {
     return vec3_divf(a, vec3_len(a));
+}
+
+vec3
+vec3_floor(vec3 a)
+{
+    return VEC3(floorf(a.x), floorf(a.y), floorf(a.z));
+}
+
+vec3
+vec3_lerp(vec3 a, vec3 b, float t)
+{
+    return VEC3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }
 
 /*
