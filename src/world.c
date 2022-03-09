@@ -56,15 +56,11 @@ chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
 }
 
 static u32
-chunk_at(const struct chunk *chunk, f32 x, f32 y, f32 z)
+chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
-    i32 ix = x;
-    i32 iy = y;
-    i32 iz = z;
-
-    if ((0 <= ix && ix < CHUNK_SIZE) && (0 <= iy && iy < CHUNK_SIZE) && 
-            (0 <= iz && iz < CHUNK_SIZE)) {
-        return chunk->blocks[(iz * CHUNK_SIZE + iy) * CHUNK_SIZE + ix];
+    if ((0 <= x && x < CHUNK_SIZE) && (0 <= y && y < CHUNK_SIZE) && 
+            (0 <= z && z < CHUNK_SIZE)) {
+        return chunk->blocks[(z * CHUNK_SIZE + y) * CHUNK_SIZE + x];
     } else {
         return 0;
     }
