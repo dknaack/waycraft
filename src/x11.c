@@ -1,4 +1,5 @@
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 
 #include "x11.h"
 #include "game.h"
@@ -26,7 +27,7 @@ x11_window_init(struct x11_window *window)
     window->drawable = XCreateSimpleWindow(window->display, root, 0, 0,
             800, 600, 0, 0, 0);
     mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask | 
-        KeyReleaseMask | ExposureMask | PointerMotionMask |
+        KeymapStateMask | ExposureMask | PointerMotionMask |
         StructureNotifyMask;
     XSelectInput(window->display, window->drawable, mask);
     XMapWindow(window->display, window->drawable);
@@ -78,7 +79,6 @@ u32
 x11_get_key_state(u8 *key_vector, u8 key_code)
 {
     u32 result = (key_vector[key_code / 8] & (1 << (key_code % 8))) != 0;
-    printf("%d: %d\n", key_code, result);
     return result;
 }
 
@@ -101,7 +101,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     };
 
     u8 key_vector[32] = {0};
-    XQueryKeymap(window->display, key_vector);
+    XQueryKeymap(window->display, (char *)key_vector);
     for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
         u8 key_code = XKeysymToKeycode(window->display, 
                 keys_to_check[i].key_sym);
