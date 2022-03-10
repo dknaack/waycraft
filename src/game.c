@@ -109,107 +109,50 @@ aabb_distance_to_aabb(struct aabb a, struct aabb b)
     return result;
 }
 
-void
-player_update(struct game_state *game, struct game_input *input)
+vec3
+player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f32 speed)
 {
-    static const vec3 blocks_to_check[] = {
-        {{-1, -1, -1}},
-        {{-1, -1,  0}},
-        {{-1, -1,  1}},
-        {{-1,  0, -1}},
-        {{-1,  0,  0}},
-        {{-1,  0,  1}},
-        {{-1,  1, -1}},
-        {{-1,  1,  0}},
-        {{-1,  1,  1}},
-        {{ 0, -1, -1}},
-        {{ 0, -1,  0}},
-        {{ 0, -1,  1}},
-        {{ 0,  0, -1}},
-        {{ 0,  0,  1}},
-        {{ 0,  1, -1}},
-        {{ 0,  1,  1}},
-        {{ 1, -1, -1}},
-        {{ 1, -1,  0}},
-        {{ 1, -1,  1}},
-        {{ 1,  0, -1}},
-        {{ 1,  0,  0}},
-        {{ 1,  0,  1}},
-        {{ 1,  1, -1}},
-        {{ 1,  1,  0}},
-        {{ 1,  1,  1}},
-    };
+    vec3 direction = VEC3(0, 0, 0);
+    f32 haxis = input->controller.move_right - input->controller.move_left;
+    f32 vaxis = input->controller.move_up - input->controller.move_down;
+
+    if (haxis || vaxis) {
+        front = vec3_mulf(front, vaxis);
+        right = vec3_mulf(right, haxis);
+        front.y = right.y = 0;
+
+        direction = vec3_mulf(vec3_norm(vec3_add(front, right)), speed);
+    }
+
+    return direction;
+}
+
+void
+player_move(struct game_state *game, struct game_input *input)
+{
+    struct player *player = &game->player;
+    struct camera *camera = &game->camera;
 
     f32 dt = input->dt;
 
-    vec3 position = game->player.position;
-    vec3 velocity = game->player.velocity;
+    vec3 position = player->position;
+    vec3 velocity = player->velocity;
+    vec3 direction = player_direction_from_input(
+            input, camera->front, camera->right, camera->speed);
+    velocity.x = direction.x * dt;
+    velocity.z = direction.z * dt;
 
-    if (input->controller.jump) {
-        velocity.y += 10.f * dt;
+    if (input->controller.jump && game->player.frames_since_jump < 5) {
+        velocity.y += 3.2f * dt;
+        player->frames_since_jump++;
+        player->is_jumping = 1;
     }
 
-    f32 haxis = input->controller.move_right - input->controller.move_left;
-    f32 vaxis = input->controller.move_up - input->controller.move_down;
-    f32 speed = game->camera.speed * dt;
-    if (haxis || vaxis) {
-        vec3 front = vec3_mulf(game->camera.front, vaxis);
-        vec3 right = vec3_mulf(game->camera.right, haxis);
-        front.y = right.y = 0;
+    vec3 new_position = vec3_add(position, velocity);
 
-        vec3 direction = vec3_mulf(vec3_norm(vec3_add(front, right)), speed);
-        velocity.x = direction.x;
-        velocity.z = direction.z;
-    } else {
-        velocity.x = velocity.z = 0;
-    }
-
-    velocity.y -= 0.9 * dt;
-    position = vec3_add(position, velocity);
-
-    struct aabb player_aabb;
-    f32 player_aabb_size = 0.25;
-    vec3 player_min_offset = VEC3(player_aabb_size, 0, player_aabb_size);
-    vec3 player_max_offset = VEC3(player_aabb_size, 2, player_aabb_size);
-    player_aabb.min = vec3_sub(position, player_min_offset);
-    player_aabb.max = vec3_add(position, player_max_offset);
-
-    debug_set_color(0, 1, 0);
-    debug_cube(player_aabb.min, player_aabb.max);
-
-    i32 is_colliding = 0;
-    vec3 player_block = vec3_add(vec3_floor(position), VEC3(0.5, 0.5, 0.5));
-    for (u32 i = 0; i < LENGTH(blocks_to_check); i++) {
-        vec3 block_offset = blocks_to_check[i];
-
-        struct aabb block_aabb;
-        block_aabb.min = vec3_add(player_block, block_offset);
-        block_aabb.max = vec3_add(block_aabb.min, VEC3(1, 1, 1));
-
-        debug_set_color(1, 1, 0);
-        vec3 block = vec3_lerp(block_aabb.min, block_aabb.max, 0.5);
-        if (!world_at(&game->world, block.x, block.y, block.z) != 0) {
-            debug_cube(block_aabb.min, block_aabb.max);
-            continue;
-        }
-
-        debug_set_color(1, 0, 0);
-        debug_cube(block_aabb.min, block_aabb.max);
-        if (aabb_intersects_aabb(player_aabb, block_aabb)) {
-            is_colliding = 1;
-            break;
-        }
-    }
-
-    if (is_colliding) {
-        velocity.x = velocity.z = 0;
-        position = vec3_sub(position, velocity);
-        velocity.y = 0;
-    }
-
-    game->player.velocity = velocity;
-    game->player.position = position;
-    game->camera.position = vec3_add(position, VEC3(0, 1.75, 0)); 
+    player->velocity = velocity;
+    player->position = new_position;
+    camera->position = vec3_add(new_position, VEC3(0, 1.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
@@ -221,7 +164,7 @@ game_update(struct game_state *game, struct game_input *input)
     mat4 view = game->camera.view;
     mat4 model = mat4_id(1);
 
-    player_update(game, input);
+    player_move(game, input);
     world_update(&game->world, game->camera.position);
 
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);
@@ -239,7 +182,7 @@ game_update(struct game_state *game, struct game_input *input)
 void
 game_finish(struct game_state *game)
 {
+    gl.DeleteProgram(game->shader.program);
     world_finish(&game->world);
     arena_finish(&game->arena);
-    gl.DeleteProgram(game->shader.program);
 }

@@ -45,10 +45,11 @@ struct game_state {
     } shader;
     u32 program;
 
-    struct {
+    struct player {
         vec3 position;
         vec3 velocity;
         u8 is_jumping;
+        u8 frames_since_jump;
     } player;
 };
 
