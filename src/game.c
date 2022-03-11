@@ -132,6 +132,7 @@ player_move(struct game_state *game, struct game_input *input)
 {
     struct player *player = &game->player;
     struct camera *camera = &game->camera;
+    struct world *world = &game->world;
 
     f32 dt = input->dt;
 
@@ -150,9 +151,74 @@ player_move(struct game_state *game, struct game_input *input)
 
     vec3 new_position = vec3_add(position, velocity);
 
+    if (!player->is_grounded && velocity.y < 10) {
+        velocity.y -= 0.9f * dt;
+    }
+
+    struct aabb player_aabb;
+    vec3 player_center = new_position;
+    vec3 player_size = VEC3(0.25, 1.f, 0.25f);
+    player_aabb.min = vec3_sub(player_center, player_size);
+    player_aabb.max = vec3_add(player_center, player_size);
+
+    i32 player_block_x = player_center.x;
+    i32 player_block_y = player_center.y;
+    i32 player_block_z = player_center.z;
+
+    i32 min_block_x = player_aabb.min.x - 0.5;
+    i32 min_block_y = player_aabb.min.y - 0.5;
+    i32 min_block_z = player_aabb.min.z - 0.5;
+
+    i32 max_block_x = player_aabb.max.x + 0.5;
+    i32 max_block_y = player_aabb.max.y + 0.5;
+    i32 max_block_z = player_aabb.max.z + 0.5;
+    
+    assert(min_block_x <= max_block_x);
+    assert(min_block_y <= max_block_y);
+    assert(min_block_z <= max_block_z);
+
+    i32 is_colliding = 0;
+    i32 is_grounded = 0;
+    for (i32 z = min_block_z; z <= max_block_z; z++) {
+        for (i32 y = min_block_y; y <= max_block_y; y++) {
+            for (i32 x = min_block_x; x <= max_block_x; x++) {
+                struct aabb block_aabb;
+                block_aabb.min = VEC3(x - 0.5, y - 0.5, z - 0.5);
+                block_aabb.max = VEC3(x + 0.5, y + 0.5, z + 0.5);
+
+                if (world_at(world, x, y, z) == 0) {
+                    //debug_set_color(1, 1, 0);
+                    //debug_cube(block_aabb.min, block_aabb.max);
+                } else {
+                    //debug_set_color(1, 0, 0);
+                    //debug_cube(block_aabb.min, block_aabb.max);
+
+                    if (aabb_intersects_aabb(block_aabb, player_aabb)) {
+                        is_colliding = 1;
+                        if (y <= player_block_y) {
+                            is_grounded = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (is_colliding) {
+        velocity.y = 0;
+
+        debug_set_color(1, 0, 0);
+        debug_cube(player_aabb.min, player_aabb.max);
+        new_position = position;
+    } else {
+        debug_set_color(0, 1, 0);
+        debug_cube(player_aabb.min, player_aabb.max);
+    }
+
+    player->is_grounded = is_colliding;
     player->velocity = velocity;
     player->position = new_position;
-    camera->position = vec3_add(new_position, VEC3(0, 1.75, 0)); 
+    camera->position = vec3_add(new_position, VEC3(0, 0.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
