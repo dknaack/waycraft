@@ -74,19 +74,25 @@ vec2_dot(vec2 a, vec2 b)
 vec3
 vec3_add(vec3 a, vec3 b)
 {
-    return VEC3(a.x + b.x, a.y + b.y, a.z + b.z);
+    return VEC3(a.x + b.x,
+                a.y + b.y,
+                a.z + b.z);
 }
 
 vec3
 vec3_sub(vec3 a, vec3 b)
 {
-    return VEC3(a.x - b.x, a.y - b.y, a.z - b.z);
+    return VEC3(a.x - b.x,
+                a.y - b.y,
+                a.z - b.z);
 }
 
 vec3
 vec3_mul(vec3 a, vec3 b)
 {
-    return VEC3(a.x * b.x, a.y * b.y, a.z * b.z);
+    return VEC3(a.x * b.x,
+                a.y * b.y,
+                a.z * b.z);
 }
 
 vec3
@@ -104,7 +110,9 @@ vec3_modf(vec3 a, float f)
 vec3
 vec3_mulf(vec3 a, float f)
 {
-    return VEC3(a.x * f, a.y * f, a.z * f);
+    return VEC3(a.x * f,
+                a.y * f,
+                a.z * f);
 }
 
 vec3
@@ -122,7 +130,9 @@ vec3_len(vec3 a)
 float
 vec3_dot(vec3 a, vec3 b)
 {
-    return a.x * b.x + a.y * b.y + a.z * a.z;
+    return (a.x * b.x +
+            a.y * b.y +
+            a.z * b.z);
 }
 
 vec3

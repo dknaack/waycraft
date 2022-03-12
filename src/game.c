@@ -127,6 +127,52 @@ player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f3
     return direction;
 }
 
+// NOTE: assumes ray starts outside the aabb and intersects the aabb
+f32
+aabb_ray_intersection_point(struct aabb aabb, vec3 start, vec3 direction,
+                            vec3 *normal)
+{
+    f32 tx = -0.1f;
+    f32 ty = -0.1f;
+    f32 tz = -0.1f; 
+    f32 tmin = 0.f;
+
+    if (direction.x < 0) {
+        tx = (aabb.max.x - start.x) / direction.x;
+    } else if (direction.x > 0) {
+        tx = (aabb.min.x - start.x) / direction.x;
+    }
+
+    if (tmin < tx) {
+        tmin = tx;
+        *normal = VEC3(SIGN(direction.x), 0, 0);
+    }
+
+    if (direction.y < 0) {
+        ty = (aabb.max.y - start.y) / direction.y;
+    } else if (direction.y > 0) {
+        ty = (aabb.min.y - start.y) / direction.y;
+    }
+
+    if (tmin < ty) {
+        tmin = ty;
+        *normal = VEC3(0, SIGN(direction.y), 0);
+    }
+
+    if (direction.z < 0) {
+        tz = (aabb.max.z - start.z) / direction.z;
+    } else if (direction.z > 0) {
+        tz = (aabb.min.z - start.z) / direction.z;
+    }
+
+    if (tmin < tz) {
+        tmin = tz;
+        *normal = VEC3(0, 0, SIGN(direction.z));
+    }
+
+    return MAX(tmin - 0.01f, 0.f);
+}
+
 void
 player_move(struct game_state *game, struct game_input *input)
 {
@@ -136,7 +182,6 @@ player_move(struct game_state *game, struct game_input *input)
 
     f32 dt = input->dt;
 
-    vec3 position = player->position;
     vec3 velocity = player->velocity;
     vec3 direction = player_direction_from_input(input, camera->front,
                                                  camera->right, camera->speed);
@@ -149,67 +194,99 @@ player_move(struct game_state *game, struct game_input *input)
         player->is_jumping = 1;
     }
 
-    vec3 new_position = vec3_add(position, velocity);
 
     if (velocity.y < 10) {
         velocity.y -= 0.9f * dt;
     }
 
-    struct aabb player_aabb;
-    vec3 player_center = new_position;
+    vec3 old_player_pos = player->position;
+    vec3 new_player_pos = vec3_add(old_player_pos, velocity);
+
     vec3 player_size = VEC3(0.25, 1.f, 0.25f);
-    player_aabb.min = vec3_sub(player_center, player_size);
-    player_aabb.max = vec3_add(player_center, player_size);
+    vec3 old_player_min = vec3_sub(old_player_pos, player_size);
+    vec3 old_player_max = vec3_add(old_player_pos, player_size);
+    vec3 new_player_min = vec3_sub(new_player_pos, player_size);
+    vec3 new_player_max = vec3_add(new_player_pos, player_size);
 
-    i32 min_block_x = floorf(player_aabb.min.x + 0.5);
-    i32 min_block_y = floorf(player_aabb.min.y + 0.5);
-    i32 min_block_z = floorf(player_aabb.min.z + 0.5);
+    i32 min_block_x = floorf(MIN(old_player_min.x, new_player_min.x) + 0.4);
+    i32 min_block_y = floorf(MIN(old_player_min.y, new_player_min.y) + 0.4);
+    i32 min_block_z = floorf(MIN(old_player_min.z, new_player_min.z) + 0.4);
 
-    i32 max_block_x = floorf(player_aabb.max.x + 0.5);
-    i32 max_block_y = floorf(player_aabb.max.y + 0.5);
-    i32 max_block_z = floorf(player_aabb.max.z + 0.5);
-    
+    i32 max_block_x = floorf(MAX(old_player_max.x, new_player_max.x) + 1.5);
+    i32 max_block_y = floorf(MAX(old_player_max.y, new_player_max.y) + 1.5);
+    i32 max_block_z = floorf(MAX(old_player_max.z, new_player_max.z) + 1.5);
+
     assert(min_block_x <= max_block_x);
     assert(min_block_y <= max_block_y);
     assert(min_block_z <= max_block_z);
 
-    i32 is_colliding = 0;
     vec3 block_size = VEC3(0.5, 0.5, 0.5);
     vec3 block_offset = vec3_add(player_size, block_size);
 
     struct aabb block_aabb;
     block_aabb.min = vec3_mulf(block_offset, -1.f);
     block_aabb.max = vec3_mulf(block_offset,  1.f);
-    for (i32 z = min_block_z; z <= max_block_z; z++) {
-        for (i32 y = min_block_y; y <= max_block_y; y++) {
-            for (i32 x = min_block_x; x <= max_block_x; x++) {
-                vec3 block = VEC3(x, y, z);
-                vec3 relative_position = vec3_sub(new_position, block);
 
-                if (world_at(world, x, y, z) != 0 && 
-                    aabb_contains_point(block_aabb, relative_position)) {
-                    is_colliding = 1;
+    f32 t_remaining = 1.f;
+    for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
+        vec3 normal = VEC3(0, 0, 0);
+        f32 t_min = 1.f;
+
+        for (i32 z = min_block_z; z <= max_block_z; z++) {
+            for (i32 y = min_block_y; y <= max_block_y; y++) {
+                for (i32 x = min_block_x; x <= max_block_x; x++) {
+                    vec3 block = VEC3(x, y, z);
+                    vec3 relative_old_pos = 
+                        vec3_sub(old_player_pos, block);
+                    vec3 relative_new_pos = 
+                        vec3_add(relative_old_pos, velocity);
+
+                    if (world_at(world, x, y, z) != 0 &&
+                        aabb_contains_point(block_aabb, relative_new_pos)) 
+                    {
+
+                        vec3 current_normal = VEC3(0, 0, 0);
+                        f32 t = aabb_ray_intersection_point(
+                            block_aabb, relative_old_pos, 
+                            velocity, &current_normal);
+                        if (t_min > t) {
+                            t_min = t;
+                            normal = current_normal;
+                        }
+
+                        debug_set_color(1, 1, 0);
+                        debug_cube(vec3_add(block_aabb.min, block),
+                                   vec3_add(block_aabb.max, block));
+                    }
                 }
             }
         }
+
+        vec3 new_player_pos = vec3_add(old_player_pos, 
+                                       vec3_mulf(velocity, t_min));
+        debug_line(old_player_pos, new_player_pos);
+        old_player_pos = new_player_pos;
+        velocity = vec3_sub(velocity, 
+                            vec3_mulf(normal, vec3_dot(normal, velocity)));
+        t_remaining -= t_min * t_remaining;
     }
 
-    if (is_colliding) {
-        velocity.y = 0;
-
-        debug_set_color(1, 0, 0);
-        debug_cube(player_aabb.min, player_aabb.max);
-        new_position = position;
-        player->frames_since_jump = 0;
+    if (velocity.y == 0) {
         player->is_jumping = 0;
-    } else {
-        debug_set_color(0, 1, 0);
-        debug_cube(player_aabb.min, player_aabb.max);
+        player->frames_since_jump = 0;
     }
+
+    debug_set_color(1, 0, 1);
+    debug_cube(vec3_sub(old_player_pos, player_size),
+               vec3_add(old_player_pos, player_size));
+
+    debug_set_color(0, 0, 1);
+    debug_cube(vec3_sub(new_player_pos, player_size),
+               vec3_add(new_player_pos, player_size));
 
     player->velocity = velocity;
-    player->position = new_position;
-    camera->position = vec3_add(new_position, VEC3(0, 0.75, 0)); 
+    player->position = old_player_pos;
+    camera->position = vec3_add(player->position, VEC3(0, 0.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
