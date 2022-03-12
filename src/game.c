@@ -16,8 +16,8 @@ static const u8 *vert_shader_source = (u8 *)
     "uniform mat4 view;"
     "uniform mat4 projection;"
     "void main() {"
-        "gl_Position = projection * view * model * vec4(pos, 1.);"
-        "coords = in_coords;"
+    "    gl_Position = projection * view * model * vec4(pos, 1.);"
+    "    coords = in_coords;"
     "}";
 
 static const u8 *frag_shader_source = (u8 *)
@@ -26,7 +26,7 @@ static const u8 *frag_shader_source = (u8 *)
     "out vec4 frag_color;"
     "uniform sampler2D tex;"
     "void main() {"
-        "frag_color = texture(tex, coords);"
+    "    frag_color = texture(tex, coords);"
     "}";
 
 i32
@@ -76,17 +76,17 @@ struct aabb {
 };
 
 i32
-aabb_intersects_aabb(struct aabb a, struct aabb b)
+aabb_contains_point(struct aabb aabb, vec3 point)
 {
-    return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
-           (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
-           (a.min.z <= b.max.z && a.max.z >= b.min.z);
+    return (aabb.min.x <= point.x && point.x <= aabb.max.x &&
+            aabb.min.y <= point.y && point.y <= aabb.max.y &&
+            aabb.min.z <= point.z && point.z <= aabb.max.z);
 }
 
 vec3
 aabb_distance_to_aabb(struct aabb a, struct aabb b)
 {
-    vec3 result = {0};
+    vec3 result = {{ INFINITY, INFINITY, INFINITY }};
 
     if (a.min.x < b.min.x) {
         result.x = b.min.x - a.max.x;
@@ -138,8 +138,8 @@ player_move(struct game_state *game, struct game_input *input)
 
     vec3 position = player->position;
     vec3 velocity = player->velocity;
-    vec3 direction = player_direction_from_input(
-            input, camera->front, camera->right, camera->speed);
+    vec3 direction = player_direction_from_input(input, camera->front,
+                                                 camera->right, camera->speed);
     velocity.x = direction.x * dt;
     velocity.z = direction.z * dt;
 
@@ -151,7 +151,7 @@ player_move(struct game_state *game, struct game_input *input)
 
     vec3 new_position = vec3_add(position, velocity);
 
-    if (!player->is_grounded && velocity.y < 10) {
+    if (velocity.y < 10) {
         velocity.y -= 0.9f * dt;
     }
 
@@ -161,43 +161,33 @@ player_move(struct game_state *game, struct game_input *input)
     player_aabb.min = vec3_sub(player_center, player_size);
     player_aabb.max = vec3_add(player_center, player_size);
 
-    i32 player_block_x = player_center.x;
-    i32 player_block_y = player_center.y;
-    i32 player_block_z = player_center.z;
+    i32 min_block_x = floorf(player_aabb.min.x + 0.5);
+    i32 min_block_y = floorf(player_aabb.min.y + 0.5);
+    i32 min_block_z = floorf(player_aabb.min.z + 0.5);
 
-    i32 min_block_x = player_aabb.min.x - 0.5;
-    i32 min_block_y = player_aabb.min.y - 0.5;
-    i32 min_block_z = player_aabb.min.z - 0.5;
-
-    i32 max_block_x = player_aabb.max.x + 0.5;
-    i32 max_block_y = player_aabb.max.y + 0.5;
-    i32 max_block_z = player_aabb.max.z + 0.5;
+    i32 max_block_x = floorf(player_aabb.max.x + 0.5);
+    i32 max_block_y = floorf(player_aabb.max.y + 0.5);
+    i32 max_block_z = floorf(player_aabb.max.z + 0.5);
     
     assert(min_block_x <= max_block_x);
     assert(min_block_y <= max_block_y);
     assert(min_block_z <= max_block_z);
 
     i32 is_colliding = 0;
-    i32 is_grounded = 0;
+    vec3 block_size = VEC3(0.5, 0.5, 0.5);
+    vec3 block_offset = vec3_add(player_size, block_size);
     for (i32 z = min_block_z; z <= max_block_z; z++) {
         for (i32 y = min_block_y; y <= max_block_y; y++) {
             for (i32 x = min_block_x; x <= max_block_x; x++) {
+                vec3 block = VEC3(x, y, z);
+
                 struct aabb block_aabb;
-                block_aabb.min = VEC3(x - 0.5, y - 0.5, z - 0.5);
-                block_aabb.max = VEC3(x + 0.5, y + 0.5, z + 0.5);
+                block_aabb.min = vec3_sub(block, block_offset);
+                block_aabb.max = vec3_add(block, block_offset);
 
-                if (world_at(world, x, y, z) == 0) {
-                    //debug_set_color(1, 1, 0);
-                    //debug_cube(block_aabb.min, block_aabb.max);
-                } else {
-                    //debug_set_color(1, 0, 0);
-                    //debug_cube(block_aabb.min, block_aabb.max);
-
-                    if (aabb_intersects_aabb(block_aabb, player_aabb)) {
+                if (world_at(world, x, y, z) != 0) {
+                    if (aabb_contains_point(block_aabb, new_position)) {
                         is_colliding = 1;
-                        if (y <= player_block_y) {
-                            is_grounded = 1;
-                        }
                     }
                 }
             }
@@ -210,12 +200,13 @@ player_move(struct game_state *game, struct game_input *input)
         debug_set_color(1, 0, 0);
         debug_cube(player_aabb.min, player_aabb.max);
         new_position = position;
+        player->frames_since_jump = 0;
+        player->is_jumping = 0;
     } else {
         debug_set_color(0, 1, 0);
         debug_cube(player_aabb.min, player_aabb.max);
     }
 
-    player->is_grounded = is_colliding;
     player->velocity = velocity;
     player->position = new_position;
     camera->position = vec3_add(new_position, VEC3(0, 0.75, 0)); 
