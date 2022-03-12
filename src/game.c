@@ -176,19 +176,19 @@ player_move(struct game_state *game, struct game_input *input)
     i32 is_colliding = 0;
     vec3 block_size = VEC3(0.5, 0.5, 0.5);
     vec3 block_offset = vec3_add(player_size, block_size);
+
+    struct aabb block_aabb;
+    block_aabb.min = vec3_mulf(block_offset, -1.f);
+    block_aabb.max = vec3_mulf(block_offset,  1.f);
     for (i32 z = min_block_z; z <= max_block_z; z++) {
         for (i32 y = min_block_y; y <= max_block_y; y++) {
             for (i32 x = min_block_x; x <= max_block_x; x++) {
                 vec3 block = VEC3(x, y, z);
+                vec3 relative_position = vec3_sub(new_position, block);
 
-                struct aabb block_aabb;
-                block_aabb.min = vec3_sub(block, block_offset);
-                block_aabb.max = vec3_add(block, block_offset);
-
-                if (world_at(world, x, y, z) != 0) {
-                    if (aabb_contains_point(block_aabb, new_position)) {
-                        is_colliding = 1;
-                    }
+                if (world_at(world, x, y, z) != 0 && 
+                    aabb_contains_point(block_aabb, relative_position)) {
+                    is_colliding = 1;
                 }
             }
         }
