@@ -189,7 +189,7 @@ player_move(struct game_state *game, struct game_input *input)
     velocity.z = direction.z * dt;
 
     if (input->controller.jump && game->player.frames_since_jump < 5) {
-        velocity.y += 3.3f * dt;
+        velocity.y += 3.9f * dt;
         player->frames_since_jump++;
         player->is_jumping = 1;
     }
