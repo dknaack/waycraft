@@ -106,42 +106,23 @@ f32
 box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
                             vec3 *normal)
 {
-    f32 tx = -0.1f;
-    f32 ty = -0.1f;
-    f32 tz = -0.1f; 
     f32 tmin = 0.f;
+    vec3 t0 = {0};
 
-    if (direction.x < 0) {
-        tx = (box.max.x - start.x) / direction.x;
-    } else if (direction.x > 0) {
-        tx = (box.min.x - start.x) / direction.x;
-    }
+    for (u32 i = 0; i < 3; i++) {
+        i32 sign = 0;
+        if (direction.e[i] < 0) {
+            t0.e[i] = (box.max.e[i] - start.e[i]) / direction.e[i];
+            sign = 1;
+        } else if (direction.e[i] > 0) {
+            t0.e[i] = (box.min.e[i] - start.e[i]) / direction.e[i];
+            sign = -1;
+        }
 
-    if (tmin < tx) {
-        tmin = tx;
-        *normal = VEC3(SIGN(direction.x), 0, 0);
-    }
-
-    if (direction.y < 0) {
-        ty = (box.max.y - start.y) / direction.y;
-    } else if (direction.y > 0) {
-        ty = (box.min.y - start.y) / direction.y;
-    }
-
-    if (tmin < ty) {
-        tmin = ty;
-        *normal = VEC3(0, SIGN(direction.y), 0);
-    }
-
-    if (direction.z < 0) {
-        tz = (box.max.z - start.z) / direction.z;
-    } else if (direction.z > 0) {
-        tz = (box.min.z - start.z) / direction.z;
-    }
-
-    if (tmin < tz) {
-        tmin = tz;
-        *normal = VEC3(0, 0, SIGN(direction.z));
+        if (tmin < t0.e[i]) {
+            tmin = t0.e[i];
+            *normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+        }
     }
 
     return MAX(tmin - 0.01f, 0.f);
