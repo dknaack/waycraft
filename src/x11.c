@@ -24,8 +24,8 @@ x11_window_init(struct x11_window *window)
     window->gc = DefaultGC(window->display, screen);
     window->width = 800;
     window->height = 600;
-    window->drawable = XCreateSimpleWindow(window->display, root, 0, 0,
-            800, 600, 0, 0, 0);
+    window->drawable = XCreateSimpleWindow(window->display, root, 
+                                           0, 0, 800, 600, 0, 0, 0);
     mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask | 
         KeymapStateMask | ExposureMask | PointerMotionMask |
         StructureNotifyMask;
@@ -40,16 +40,18 @@ x11_window_init(struct x11_window *window)
     }
 
     window->xic = XCreateIC(window->xim, XNInputStyle,
-            XIMPreeditNothing | XIMStatusNothing,
-            XNClientWindow, &window->drawable, NULL);
+                            XIMPreeditNothing | XIMStatusNothing,
+                            XNClientWindow, &window->drawable, NULL);
 #endif
 
     window->net_wm_name = XInternAtom(window->display, "_NET_WM_NAME", False);
-    window->wm_delete_win = XInternAtom(window->display, "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(window->display, window->drawable, &window->wm_delete_win, 1);
+    window->wm_delete_win = XInternAtom(window->display, 
+                                        "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(window->display, window->drawable, 
+                    &window->wm_delete_win, 1);
 
-    if (Xutf8TextListToTextProperty(window->display, &title, 1, XUTF8StringStyle,
-                &prop) != Success) {
+    if (Xutf8TextListToTextProperty(window->display, &title, 1, 
+                                    XUTF8StringStyle, &prop) != Success) {
         fprintf(stderr, "Failed to convert title\n");
         return -1;
     }
@@ -58,10 +60,6 @@ x11_window_init(struct x11_window *window)
     XSetTextProperty(window->display, window->drawable, &prop, window->net_wm_name);
     XFree(prop.value);
 
-    mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
-        FocusChangeMask | EnterWindowMask | LeaveWindowMask;
-    XGrabPointer(window->display, DefaultRootWindow(window->display), False, 
-                mask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
     window->is_open = 1;
     window->lock_cursor = 1;
 
@@ -104,7 +102,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     XQueryKeymap(window->display, (char *)key_vector);
     for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
         u8 key_code = XKeysymToKeycode(window->display, 
-                keys_to_check[i].key_sym);
+                                       keys_to_check[i].key_sym);
         if (x11_get_key_state(key_vector, key_code)) {
             *keys_to_check[i].pressed = 1;
         }
@@ -128,14 +126,15 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             dy = event.xmotion.y - input->mouse.y;
             input->mouse.x = event.xmotion.x;
             input->mouse.y = event.xmotion.y;
-            if (input->mouse.x == window->width / 2 && 
-                    input->mouse.y == window->height / 2) {
-                break;
+
+            i32 mouse_was_warped = (input->mouse.x == window->width / 2 && 
+                                    input->mouse.y == window->height / 2);
+            if (!mouse_was_warped) {
+                // TODO: convert to relative coordinates?
+                input->mouse.dx = dx;
+                input->mouse.dy = dy;
             }
 
-            // TODO: convert to relative coordinates?
-            input->mouse.dx = dx;
-            input->mouse.dy = dy;
             break;
         case ButtonPress:
             window->lock_cursor = 1;
@@ -151,7 +150,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
 
     if (window->lock_cursor) {
         XWarpPointer(window->display, 0, window->drawable, 0, 0, 0, 0,
-                window->width / 2, window->height / 2);
+                     window->width / 2, window->height / 2);
         while (XPending(window->display)) {
             XNextEvent(window->display, &event);
         }

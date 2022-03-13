@@ -21,7 +21,11 @@ enum block_type {
 static inline f32
 normalize_height(f32 value)
 {
-    f32 x = 0.8 * (value + 1);
+    f32 x = value + 0.8;
+
+    if (x < 1.0) {
+        x *= MIN(MAX(x, 0.6), 1.0);
+    }
 
     return x;
 }
@@ -51,6 +55,13 @@ chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
                     blocks[i] = BLOCK_STONE;
                 }
             }
+
+            if (cy < 0) {
+                for (i32 y = ymax; y < CHUNK_SIZE; y++) {
+                    u32 i = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+                    blocks[i] = BLOCK_WATER;
+                }
+            }
         }
     }
 }
@@ -58,9 +69,13 @@ chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
 static u32
 chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
-    if ((0 <= x && x < CHUNK_SIZE) && (0 <= y && y < CHUNK_SIZE) && 
-            (0 <= z && z < CHUNK_SIZE)) {
-        return chunk->blocks[(z * CHUNK_SIZE + y) * CHUNK_SIZE + x];
+    u32 is_inside_chunk = ((0 <= x && x < CHUNK_SIZE) && 
+                           (0 <= y && y < CHUNK_SIZE) && 
+                           (0 <= z && z < CHUNK_SIZE));
+    if (is_inside_chunk) {
+        u32 index = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+
+        return chunk->blocks[index];
     } else {
         return 0;
     }
@@ -81,9 +96,10 @@ world_at(const struct world *world, f32 x, f32 y, f32 z)
     y = fmodf(y, CHUNK_SIZE);
     z = fmodf(z, CHUNK_SIZE);
 
-    if ((0 <= cx && cx < world->width) && 
-            (0 <= cy && cy < world->height) && 
-            (0 <= cz && cz < world->depth)) {
+    i32 chunk_is_inside_world = ((0 <= cx && cx < world->width) && 
+                                 (0 <= cy && cy < world->height) && 
+                                 (0 <= cz && cz < world->depth));
+    if (chunk_is_inside_world) {
         u32 width  = world->width;
         u32 height = world->height;
         u32 depth  = world->depth;
@@ -113,7 +129,7 @@ world_at(const struct world *world, f32 x, f32 y, f32 z)
 
 static void
 world_position_of_chunk(const struct world *world, const struct chunk *chunk,
-        f32 *x, f32 *y, f32 *z)
+                        f32 *x, f32 *y, f32 *z)
 
 {
     vec3 world_position = world->position;
@@ -163,51 +179,51 @@ chunk_generate_mesh(struct chunk *chunk, const struct world *world, struct mesh 
                     block_texcoords(BLOCK_DIRT, uv);
                     if (!world_at(world, x, y - 1, z)) {
                         mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     block_texcoords(BLOCK_GRASS_TOP, uv);
                     if (!world_at(world, x, y + 1, z)) {
                         mesh_push_quad(mesh, pos4, pos5, pos0, pos1,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     block_texcoords(BLOCK_GRASS, uv);
                     if (!world_at(world, x + 1, y, z)) {
                         mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
                 } else {
                     block_texcoords(block_type, uv);
                     if (!world_at(world, x, y - 1, z)) {
                         mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     if (!world_at(world, x, y + 1, z)) {
                         mesh_push_quad(mesh, pos4, pos5, pos0, pos1,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
 
                     if (!world_at(world, x + 1, y, z)) {
                         mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
-                                uv[0], uv[1], uv[2], uv[3]);
+                                       uv[0], uv[1], uv[2], uv[3]);
                     }
                 }
 
                 if (!world_at(world, x - 1, y, z)) {
                     mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
-                            uv[0], uv[1], uv[2], uv[3]);
+                                   uv[0], uv[1], uv[2], uv[3]);
                 }
 
                 if (!world_at(world, x, y, z + 1)) {
                     mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
-                            uv[0], uv[1], uv[2], uv[3]);
+                                   uv[0], uv[1], uv[2], uv[3]);
                 }
 
                 if (!world_at(world, x, y, z - 1)) {
                     mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
-                            uv[0], uv[1], uv[2], uv[3]);
+                                   uv[0], uv[1], uv[2], uv[3]);
                 }
             }
         }
@@ -296,20 +312,18 @@ world_update(struct world *world, vec3 player_position)
         u32 vbo = chunk->vbo;
         gl.BindBuffer(GL_ARRAY_BUFFER, vbo);
         gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count * 
-                sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
+                      sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
 
         u32 ebo = chunk->ebo;
         gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count * 
-                sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
+                      sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
 
-        gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-                sizeof(struct vertex), 
-                (const void *)offsetof(struct vertex, position));
+        gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+                               (const void *)offsetof(struct vertex, position));
         gl.EnableVertexAttribArray(0);
-        gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 
-                sizeof(struct vertex), 
-                (const void *)offsetof(struct vertex, texcoord));
+        gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+                               (const void *)offsetof(struct vertex, texcoord));
         gl.EnableVertexAttribArray(1);
         chunk->index_count = mesh->index_count;
     }

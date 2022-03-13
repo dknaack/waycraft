@@ -52,9 +52,6 @@ static const char *gl_proc_names[] = {
     "glLineWidth",
 };
 
-typedef void gl_proc_t(void);
-typedef gl_proc_t *gl_get_proc_address_t(const u8 *proc_name);
-
 static i32
 gl_init(struct gl *gl, gl_get_proc_address_t *get_proc_address)
 {

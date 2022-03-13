@@ -107,38 +107,39 @@ struct gl {
     void (*BindBuffer)(GLenum target, GLuint buffer);
     void (*DeleteBuffers)(GLsizei n, const GLuint *buffers);
     void (*BufferData)(GLenum target, GLsizeiptr size, const void *data, 
-            GLenum usage);
+                       GLenum usage);
     void (*BufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size,
-            const void *data);
+                          const void *data);
     void (*GenVertexArrays)(GLsizei n, GLuint *arrays);
     void (*DeleteVertexArrays)(GLsizei n, const GLuint *arrays);
     void (*BindVertexArray)(GLuint array);
     void (*VertexAttribPointer)(GLuint index, GLint size, GLenum type, 
-            GLboolean normalized, GLsizei stride, const void *pointer);
+                                GLboolean normalized, GLsizei stride,
+                                const void *pointer);
     void (*EnableVertexAttribArray)(GLuint index);
     GLuint (*CreateShader)(GLenum type);
     void (*ShaderSource)(GLuint shader, GLsizei count, 
-            const GLchar *const *string, const GLint *length);
+                         const GLchar *const *string, const GLint *length);
     void (*CompileShader)(GLuint shader);
     void (*GetShaderiv)(GLuint shader, GLenum pname, GLint *params);
     void (*GetShaderInfoLog)(GLuint shader, GLsizei bufSize, GLsizei *length,
-            GLchar *infoLog);
+                             GLchar *infoLog);
     void (*DeleteShader)(GLuint shader);
     GLuint (*CreateProgram)(void);
     void (*AttachShader)(GLuint program, GLuint shader);
     void (*LinkProgram)(GLuint program);
     void (*GetProgramiv)(GLuint program, GLenum pname, GLint *params);
     void (*GetProgramInfoLog)(GLuint program, GLsizei bufSize, GLsizei *length,
-            GLchar *infoLog);
+                              GLchar *infoLog);
     void (*UseProgram)(GLuint program);
     void (*DeleteProgram)(GLuint program);
     void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
     void (*DrawElements)(GLenum mode, GLsizei count, GLenum type, 
-            const void *indices);
+                         const void *indices);
     void (*GenTextures)(GLsizei n, GLuint *textures);
     void (*TexImage2D)(GLenum target, GLint level, GLint internalformat,
-            GLsizei width, GLsizei height, GLint border, GLenum format, 
-            GLenum type, const void *pixels);
+                       GLsizei width, GLsizei height, GLint border,
+                       GLenum format, GLenum type, const void *pixels);
     void (*DeleteTextures)(GLsizei n, const GLuint *textures);
     void (*BindTexture)(GLenum target, GLuint texture);
     void (*ActiveTexture)(GLenum texture);
@@ -149,9 +150,9 @@ struct gl {
     void (*Uniform2f)(GLint location, GLfloat v0, GLfloat v1);
     void (*Uniform3f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
     void (*Uniform4f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2,
-            GLfloat v3);
+                      GLfloat v3);
     void (*UniformMatrix4fv)(GLint location, GLsizei count, 
-            GLboolean transpose, const GLfloat *value);
+                             GLboolean transpose, const GLfloat *value);
     void (*Enable)(GLenum cap);
     void (*Disable)(GLenum cap);
     void (*CullFace)(GLenum mode);
@@ -165,10 +166,13 @@ struct gl {
 
 struct x11_window;
 
+typedef void gl_proc_t(void);
+typedef gl_proc_t *gl_get_proc_address_t(const u8 *proc_name);
+
 static struct gl gl;
 
 static i32 gl_init(struct gl *gl,
-        void (* (*get_proc_address)(const u8 *proc_name))(void));
+                   gl_get_proc_address_t *gl_get_proc_address);
 
 static u32 gl_shader_create(const u8 *src, u32 type);
 static void gl_shader_error(u32 shader, u8 *buffer, u32 size);
