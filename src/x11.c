@@ -60,9 +60,9 @@ x11_window_init(struct x11_window *window)
     window->gc = DefaultGC(window->display, screen);
     window->width = 800;
     window->height = 600;
-    window->drawable = XCreateSimpleWindow(window->display, root, 
+    window->drawable = XCreateSimpleWindow(window->display, root,
                                            0, 0, 800, 600, 0, 0, 0);
-    mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask | 
+    mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask |
         KeymapStateMask | ExposureMask | PointerMotionMask |
         StructureNotifyMask;
     XSelectInput(window->display, window->drawable, mask);
@@ -128,7 +128,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     u8 key_vector[32] = {0};
     XQueryKeymap(window->display, (char *)key_vector);
     for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
-        u8 key_code = XKeysymToKeycode(window->display, 
+        u8 key_code = XKeysymToKeycode(window->display,
                                        keys_to_check[i].key_sym);
         if (x11_get_key_state(key_vector, key_code)) {
             *keys_to_check[i].pressed = 1;
@@ -154,7 +154,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             input->mouse.x = event.xmotion.x;
             input->mouse.y = event.xmotion.y;
 
-            i32 mouse_was_warped = (input->mouse.x == window->width / 2 && 
+            i32 mouse_was_warped = (input->mouse.x == window->width / 2 &&
                                     input->mouse.y == window->height / 2);
             if (!mouse_was_warped) {
                 // TODO: convert to relative coordinates?
