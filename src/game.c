@@ -70,21 +70,21 @@ game_init(struct game_state *game)
     return 0;
 }
 
-struct aabb {
+struct box {
     vec3 min;
     vec3 max;
 };
 
 i32
-aabb_contains_point(struct aabb aabb, vec3 point)
+box_contains_point(struct box box, vec3 point)
 {
-    return (aabb.min.x <= point.x && point.x <= aabb.max.x &&
-            aabb.min.y <= point.y && point.y <= aabb.max.y &&
-            aabb.min.z <= point.z && point.z <= aabb.max.z);
+    return (box.min.x <= point.x && point.x <= box.max.x &&
+            box.min.y <= point.y && point.y <= box.max.y &&
+            box.min.z <= point.z && point.z <= box.max.z);
 }
 
 vec3
-aabb_distance_to_aabb(struct aabb a, struct aabb b)
+box_distance_to_box(struct box a, struct box b)
 {
     vec3 result = {{ INFINITY, INFINITY, INFINITY }};
 
@@ -127,9 +127,9 @@ player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f3
     return direction;
 }
 
-// NOTE: assumes ray starts outside the aabb and intersects the aabb
+// NOTE: assumes ray starts outside the box and intersects the box
 f32
-aabb_ray_intersection_point(struct aabb aabb, vec3 start, vec3 direction,
+box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
                             vec3 *normal)
 {
     f32 tx = -0.1f;
@@ -138,9 +138,9 @@ aabb_ray_intersection_point(struct aabb aabb, vec3 start, vec3 direction,
     f32 tmin = 0.f;
 
     if (direction.x < 0) {
-        tx = (aabb.max.x - start.x) / direction.x;
+        tx = (box.max.x - start.x) / direction.x;
     } else if (direction.x > 0) {
-        tx = (aabb.min.x - start.x) / direction.x;
+        tx = (box.min.x - start.x) / direction.x;
     }
 
     if (tmin < tx) {
@@ -149,9 +149,9 @@ aabb_ray_intersection_point(struct aabb aabb, vec3 start, vec3 direction,
     }
 
     if (direction.y < 0) {
-        ty = (aabb.max.y - start.y) / direction.y;
+        ty = (box.max.y - start.y) / direction.y;
     } else if (direction.y > 0) {
-        ty = (aabb.min.y - start.y) / direction.y;
+        ty = (box.min.y - start.y) / direction.y;
     }
 
     if (tmin < ty) {
@@ -160,9 +160,9 @@ aabb_ray_intersection_point(struct aabb aabb, vec3 start, vec3 direction,
     }
 
     if (direction.z < 0) {
-        tz = (aabb.max.z - start.z) / direction.z;
+        tz = (box.max.z - start.z) / direction.z;
     } else if (direction.z > 0) {
-        tz = (aabb.min.z - start.z) / direction.z;
+        tz = (box.min.z - start.z) / direction.z;
     }
 
     if (tmin < tz) {
@@ -223,9 +223,9 @@ player_move(struct game_state *game, struct game_input *input)
     vec3 block_size = VEC3(0.5, 0.5, 0.5);
     vec3 block_offset = vec3_add(player_size, block_size);
 
-    struct aabb block_aabb;
-    block_aabb.min = vec3_mulf(block_offset, -1.f);
-    block_aabb.max = vec3_mulf(block_offset,  1.f);
+    struct box block_bounds;
+    block_bounds.min = vec3_mulf(block_offset, -1.f);
+    block_bounds.max = vec3_mulf(block_offset,  1.f);
 
     f32 t_remaining = 1.f;
     for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
@@ -241,12 +241,12 @@ player_move(struct game_state *game, struct game_input *input)
                     vec3 relative_new_pos = 
                         vec3_add(relative_old_pos, velocity);
                     if (world_at(world, x, y, z) != 0 &&
-                        aabb_contains_point(block_aabb, relative_new_pos)) 
+                        box_contains_point(block_bounds, relative_new_pos)) 
                     {
 
                         vec3 current_normal = VEC3(0, 0, 0);
-                        f32 t = aabb_ray_intersection_point(
-                            block_aabb, relative_old_pos, 
+                        f32 t = box_ray_intersection_point(
+                            block_bounds, relative_old_pos, 
                             velocity, &current_normal);
                         if (t_min > t) {
                             t_min = t;
