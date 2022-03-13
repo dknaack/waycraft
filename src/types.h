@@ -64,6 +64,7 @@ typedef union {
 #define MOD(a, n) (((a) % (n) + (n)) % (n))
 #define MIN(a, b) ((a) < (b)? (a) : (b))
 #define MAX(a, b) ((a) > (b)? (a) : (b))
+#define SIGN(x)   ((x) < 0? -1 : 1)
 #define LENGTH(x) (sizeof(x)/sizeof((x)[0]))
 #define DEG2RAD(deg) ((deg) / 180.f * PI)
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
