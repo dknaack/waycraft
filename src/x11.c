@@ -4,6 +4,23 @@
 #include "x11.h"
 #include "game.h"
 
+static void
+x11_hide_cursor(struct x11_window *window)
+{
+    Cursor cursor;
+    Pixmap empty_pixmap;
+    XColor black = {0};
+    static u8 empty_data[8] = {0};
+
+    empty_pixmap = XCreateBitmapFromData(window->display, window->drawable,
+                                         (const char *)empty_data, 8, 8);
+    cursor = XCreatePixmapCursor(window->display, empty_pixmap, empty_pixmap,
+                                 &black, &black, 0, 0);
+    XDefineCursor(window->display, window->drawable, cursor);
+    XFreeCursor(window->display, cursor);
+    XFreePixmap(window->display, empty_pixmap);
+}
+
 i32
 x11_window_init(struct x11_window *window)
 {
@@ -59,6 +76,8 @@ x11_window_init(struct x11_window *window)
     XSetWMName(window->display, window->drawable, &prop);
     XSetTextProperty(window->display, window->drawable, &prop, window->net_wm_name);
     XFree(prop.value);
+
+    x11_hide_cursor(window);
 
     window->is_open = 1;
     window->lock_cursor = 1;
