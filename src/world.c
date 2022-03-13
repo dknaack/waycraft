@@ -369,6 +369,27 @@ world_finish(struct world *world)
 }
 
 void
-world_destroy_block(struct world *world, i32 x, i32 y, i32 z)
+world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
 {
+    struct chunk *chunk = world_get_chunk(world, x, y, z);
+    if (chunk) {
+        vec3 block_pos = vec3_modf(VEC3(x, y, z), CHUNK_SIZE);
+        i32 block_x = floorf(block_pos.x);
+        i32 block_y = floorf(block_pos.y);
+        i32 block_z = floorf(block_pos.z);
+        
+        u32 i = (block_z * CHUNK_SIZE + block_y) * CHUNK_SIZE + block_x;
+        chunk->blocks[i] = BLOCK_AIR;
+
+        struct mesh *mesh = &world->mesh;
+        chunk_generate_mesh(chunk, world, mesh);
+        gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
+        gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count * 
+                      sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
+        gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
+        gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
+                      sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
+
+        chunk->index_count = mesh->index_count;
+    }
 }
