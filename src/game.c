@@ -84,32 +84,6 @@ box_contains_point(struct box box, vec3 point)
 }
 
 vec3
-box_distance_to_box(struct box a, struct box b)
-{
-    vec3 result = {{ INFINITY, INFINITY, INFINITY }};
-
-    if (a.min.x < b.min.x) {
-        result.x = b.min.x - a.max.x;
-    } else if (a.min.x > b.min.x) {
-        result.x = a.min.x - b.max.x;
-    }
-
-    if (a.min.y < b.min.y) {
-        result.y = b.min.y - a.max.y;
-    } else if (a.min.y > b.min.y) {
-        result.y = a.min.y - b.max.y;
-    }
-
-    if (a.min.z < b.min.z) {
-        result.z = b.min.z - a.max.z;
-    } else if (a.min.z > b.min.z) {
-        result.z = a.min.z - b.max.z;
-    }
-
-    return result;
-}
-
-vec3
 player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f32 speed)
 {
     vec3 direction = VEC3(0, 0, 0);
