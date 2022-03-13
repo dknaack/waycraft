@@ -240,7 +240,6 @@ player_move(struct game_state *game, struct game_input *input)
                         vec3_sub(old_player_pos, block);
                     vec3 relative_new_pos = 
                         vec3_add(relative_old_pos, velocity);
-
                     if (world_at(world, x, y, z) != 0 &&
                         aabb_contains_point(block_aabb, relative_new_pos)) 
                     {
@@ -253,10 +252,6 @@ player_move(struct game_state *game, struct game_input *input)
                             t_min = t;
                             normal = current_normal;
                         }
-
-                        debug_set_color(1, 1, 0);
-                        debug_cube(vec3_add(block_aabb.min, block),
-                                   vec3_add(block_aabb.max, block));
                     }
                 }
             }
@@ -264,7 +259,6 @@ player_move(struct game_state *game, struct game_input *input)
 
         vec3 new_player_pos = vec3_add(old_player_pos, 
                                        vec3_mulf(velocity, t_min));
-        debug_line(old_player_pos, new_player_pos);
         old_player_pos = new_player_pos;
         velocity = vec3_sub(velocity, 
                             vec3_mulf(normal, vec3_dot(normal, velocity)));
@@ -275,14 +269,6 @@ player_move(struct game_state *game, struct game_input *input)
         player->is_jumping = 0;
         player->frames_since_jump = 0;
     }
-
-    debug_set_color(1, 0, 1);
-    debug_cube(vec3_sub(old_player_pos, player_size),
-               vec3_add(old_player_pos, player_size));
-
-    debug_set_color(0, 0, 1);
-    debug_cube(vec3_sub(new_player_pos, player_size),
-               vec3_add(new_player_pos, player_size));
 
     player->velocity = velocity;
     player->position = old_player_pos;
