@@ -21,11 +21,30 @@ x11_hide_cursor(struct x11_window *window)
     XFreePixmap(window->display, empty_pixmap);
 }
 
+static i32
+x11_window_set_title(struct x11_window *window, char *title)
+{
+    XTextProperty prop;
+
+    window->net_wm_name = XInternAtom(window->display, "_NET_WM_NAME", False);
+    if (Xutf8TextListToTextProperty(window->display, &title, 1,
+                                    XUTF8StringStyle, &prop) != Success) {
+        fprintf(stderr, "Failed to convert title\n");
+        return -1;
+    }
+
+    XSetWMName(window->display, window->drawable, &prop);
+    XSetTextProperty(window->display, window->drawable, &prop,
+                     window->net_wm_name);
+    XFree(prop.value);
+
+    return 0;
+}
+
 i32
 x11_window_init(struct x11_window *window)
 {
-    char *title = "Hello, world!";
-    XTextProperty prop;
+    char *title = "Waycraft";
     Window root;
     u32 mask, screen;
 
@@ -61,27 +80,16 @@ x11_window_init(struct x11_window *window)
                             XNClientWindow, &window->drawable, NULL);
 #endif
 
-    window->net_wm_name = XInternAtom(window->display, "_NET_WM_NAME", False);
-    window->wm_delete_win = XInternAtom(window->display, 
+    window->wm_delete_win = XInternAtom(window->display,
                                         "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(window->display, window->drawable, 
+    XSetWMProtocols(window->display, window->drawable,
                     &window->wm_delete_win, 1);
 
-    if (Xutf8TextListToTextProperty(window->display, &title, 1, 
-                                    XUTF8StringStyle, &prop) != Success) {
-        fprintf(stderr, "Failed to convert title\n");
-        return -1;
-    }
-
-    XSetWMName(window->display, window->drawable, &prop);
-    XSetTextProperty(window->display, window->drawable, &prop, window->net_wm_name);
-    XFree(prop.value);
-
+    x11_window_set_title(window, title);
     x11_hide_cursor(window);
 
     window->is_open = 1;
     window->lock_cursor = 1;
-
     return 0;
 }
 
