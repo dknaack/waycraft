@@ -138,6 +138,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
 
+        u32 is_pressed = 0;
         switch (event.type) {
         case ClientMessage:
             if (event.xclient.data.l[0] == window->wm_delete_win) {
@@ -164,7 +165,15 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
 
             break;
         case ButtonPress:
+            is_pressed = 1;
+        case ButtonRelease:
             window->lock_cursor = 1;
+
+            u32 button_index = event.xbutton.button;
+            if (button_index < 5) {
+                input->mouse.buttons[button_index] = is_pressed;
+            }
+            break;
         case KeyPress:
             key = XLookupKeysym(&event.xkey, 0);
             if (key == XK_Escape) {
