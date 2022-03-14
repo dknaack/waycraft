@@ -6,6 +6,7 @@
 #include "game.h"
 #include "noise.h"
 #include "world.h"
+#include "timer.h"
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
@@ -104,28 +105,42 @@ player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f3
 // NOTE: assumes ray starts outside the box and intersects the box
 f32
 box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
-                            vec3 *normal)
+                           vec3 *normal_min, vec3 *normal_max, 
+                           f32 *out_tmin, f32 *out_tmax)
 {
     f32 tmin = 0.f;
+    f32 tmax = INFINITY;
     vec3 t0 = {0};
+    vec3 t1 = {0};
 
     for (u32 i = 0; i < 3; i++) {
         i32 sign = 0;
         if (direction.e[i] < 0) {
             t0.e[i] = (box.max.e[i] - start.e[i]) / direction.e[i];
+            t1.e[i] = (box.min.e[i] - start.e[i]) / direction.e[i];
             sign = 1;
         } else if (direction.e[i] > 0) {
             t0.e[i] = (box.min.e[i] - start.e[i]) / direction.e[i];
+            t1.e[i] = (box.max.e[i] - start.e[i]) / direction.e[i];
             sign = -1;
         }
 
+        vec3 normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+
         if (tmin < t0.e[i]) {
             tmin = t0.e[i];
-            *normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+            *normal_min = normal;
+        }
+
+        if (tmax > t1.e[i]) {
+            tmax = t1.e[i];
+            *normal_max = vec3_neg(normal);
         }
     }
 
-    return MAX(tmin - 0.01f, 0.f);
+    *out_tmin = tmin;
+    *out_tmax = tmax;
+    return tmin < tmax;
 }
 
 void
@@ -157,7 +172,7 @@ player_move(struct game_state *game, struct game_input *input)
     vec3 old_player_pos = player->position;
     vec3 new_player_pos = vec3_add(old_player_pos, velocity);
 
-    vec3 player_size = VEC3(0.25, 1.f, 0.25f);
+    vec3 player_size = VEC3(0.25, 0.99f, 0.25f);
     vec3 old_player_min = vec3_sub(old_player_pos, player_size);
     vec3 old_player_max = vec3_add(old_player_pos, player_size);
     vec3 new_player_min = vec3_sub(new_player_pos, player_size);
@@ -199,13 +214,16 @@ player_move(struct game_state *game, struct game_input *input)
                         box_contains_point(block_bounds, relative_new_pos)) 
                     {
 
-                        vec3 current_normal = VEC3(0, 0, 0);
-                        f32 t = box_ray_intersection_point(
+                        vec3 normal_min = {0};
+                        vec3 normal_max;
+                        f32 t, tmax;
+                        box_ray_intersection_point(
                             block_bounds, relative_old_pos, 
-                            velocity, &current_normal);
+                            velocity, &normal_min, &normal_max, &t, &tmax);
+                        t = MAX(t - 0.01f, 0);
                         if (t_min > t) {
                             t_min = t;
-                            normal = current_normal;
+                            normal = normal_min;
                         }
                     }
                 }
@@ -242,6 +260,44 @@ game_update(struct game_state *game, struct game_input *input)
     player_move(game, input);
     world_update(&game->world, game->camera.position);
 
+    vec3 block = vec3_round(game->camera.position);
+    vec3 block_size = {{ 0.5, 0.5, 0.5 }};
+    struct box selected_block;
+    selected_block.min = vec3_sub(block, block_size);
+    selected_block.max = vec3_add(block, block_size);
+
+    vec3 start = game->camera.position;
+    vec3 direction = game->camera.front;
+
+    i32 has_selected_block = 0;
+    for (u32 i = 0; i < 10; i++) {
+        vec3 normal_min, normal_max;
+        f32 tmin = 0.f;
+        f32 tmax = INFINITY;
+
+        box_ray_intersection_point(selected_block, start, direction,
+                                   &normal_min, &normal_max, &tmin, &tmax);
+        if (tmin > 5.f) {
+            break;
+        }
+
+        if (world_at(&game->world, block.x, block.y, block.z) == 0) {
+            block = vec3_add(block, normal_max);
+            selected_block.min = vec3_add(selected_block.min, normal_max);
+            selected_block.max = vec3_add(selected_block.max, normal_max);
+        } else {
+            has_selected_block = 1;
+            debug_set_color(0, 0, 0);
+            debug_cube(selected_block.min, selected_block.max);
+            break;
+        }
+    }
+
+
+    if (has_selected_block && input->mouse.buttons[1]) {
+        world_destroy_block(&game->world, block.x, block.y, block.z);
+    }
+
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl.UseProgram(game->shader.program);
@@ -250,7 +306,6 @@ game_update(struct game_state *game, struct game_input *input)
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
     world_render(&game->world);
     debug_render(view, projection);
-
     return 0;
 }
 
