@@ -1,13 +1,15 @@
 #include "debug.h"
 #include "gl.h"
 
+#define DEBUG_VERTEX_BUFFER_SIZE MB(8)
+
 struct debug_vertex {
     vec3 position;
     vec3 color;
 };
 
 struct debug_state {
-    struct debug_vertex vertices[8192];
+    struct debug_vertex *vertices;
     u32 vertex_count;
     u32 program;
     u32 model;
@@ -46,6 +48,7 @@ static struct debug_state debug = {0};
 void
 debug_init(void)
 {
+    debug.vertices = calloc(DEBUG_VERTEX_BUFFER_SIZE, 1);
     debug.vertex_count = 0;
 
     gl.LineWidth(4.f);
@@ -60,7 +63,7 @@ debug_init(void)
     gl.GenBuffers(1, &debug.vertex_buffer);
     gl.BindVertexArray(debug.vertex_array);
     gl.BindBuffer(GL_ARRAY_BUFFER, debug.vertex_buffer);
-    gl.BufferData(GL_ARRAY_BUFFER, sizeof(debug.vertices), 0, GL_STREAM_DRAW);
+    gl.BufferData(GL_ARRAY_BUFFER, DEBUG_VERTEX_BUFFER_SIZE, 0, GL_STREAM_DRAW);
 
     gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
             sizeof(struct debug_vertex), 
@@ -82,7 +85,8 @@ void
 debug_line(vec3 start, vec3 end)
 {
     struct debug_vertex *vertex = debug.vertices + debug.vertex_count;
-    assert(debug.vertex_count < 8192);
+    assert(debug.vertex_count * 
+           sizeof(struct debug_vertex) < DEBUG_VERTEX_BUFFER_SIZE);
 
     vertex->position = start;
     vertex->color    = debug.color;
