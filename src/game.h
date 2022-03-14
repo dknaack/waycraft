@@ -18,6 +18,7 @@ struct game_input {
     struct {
         f32 dx, dy;
         f32 x, y;
+        u8 buttons[5];
     } mouse;
 
     struct {
