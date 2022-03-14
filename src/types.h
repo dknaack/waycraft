@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <assert.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -53,9 +54,6 @@ typedef union {
     struct { i32 x, y, z; };
     f32 e[3];
 } ivec3;
-
-#define assert(expr) ((expr) ? (void)0 : (void)(*(volatile int *)0 = 0))
-#define static_assert(expr, msg) _Static_assert(expr, msg)
 
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
