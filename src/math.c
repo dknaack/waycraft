@@ -157,6 +157,18 @@ vec3_floor(vec3 a)
 }
 
 vec3
+vec3_round(vec3 a)
+{
+    return VEC3(roundf(a.x), roundf(a.y), roundf(a.z));
+}
+
+vec3
+vec3_neg(vec3 a)
+{
+    return VEC3(-a.x, -a.y, -a.z);
+}
+
+vec3
 vec3_lerp(vec3 a, vec3 b, float t)
 {
     return VEC3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));

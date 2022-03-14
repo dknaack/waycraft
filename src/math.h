@@ -22,6 +22,8 @@ vec3 vec3_cross(vec3 a, vec3 b);
 vec3 vec3_mulf(vec3 a, float f);
 vec3 vec3_norm(vec3 a);
 vec3 vec3_floor(vec3 a);
+vec3 vec3_round(vec3 a);
+vec3 vec3_neg(vec3 a);
 vec3 vec3_lerp(vec3 a, vec3 b, float t);
 
 f32  vec4_len(vec4 v);
