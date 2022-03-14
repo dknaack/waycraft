@@ -3,9 +3,14 @@
 
 #include "mesh.h"
 
-#define WORLD_SIZE 32
+#define WORLD_SIZE 16
 #define WORLD_HEIGHT 8
 #define CHUNK_SIZE 16
+
+enum chunk_state {
+    CHUNK_INITIALIZED = 0x1,
+    CHUNK_MODIFIED    = 0x2,
+};
 
 /* 
  * NOTE: world and chunks should be initialized to zero 
@@ -15,7 +20,10 @@ struct world {
     u8 *blocks;
 
     struct mesh mesh;
-    u32 loaded_chunk_count;
+    u32 *unloaded_chunks;
+    u32 unloaded_chunk_count;
+    u32 unloaded_chunk_start;
+    u32 chunk_count;
     u32 width;
     u32 height;
     u32 depth;
@@ -29,14 +37,16 @@ struct chunk {
     u8 *blocks;
     u32 vao, vbo, ebo;
     u32 index_count;
+    u8 flags;
 };
 
 struct memory_arena;
 
 i32 world_init(struct world *world, struct memory_arena *arena);
-u32 world_at(const struct world *world, f32 x, f32 y, f32 z);
+u32 world_at(struct world *world, f32 x, f32 y, f32 z);
 void world_update(struct world *world, vec3 player_position);
 void world_render(const struct world *world);
 void world_finish(struct world *world);
+void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
 
 #endif /* WORLD_H */ 
