@@ -270,8 +270,9 @@ game_update(struct game_state *game, struct game_input *input)
     vec3 direction = game->camera.front;
 
     i32 has_selected_block = 0;
+    vec3 normal_min = {0};
+    vec3 normal_max = {0};
     for (u32 i = 0; i < 10; i++) {
-        vec3 normal_min, normal_max;
         f32 tmin = 0.f;
         f32 tmax = INFINITY;
 
@@ -294,8 +295,20 @@ game_update(struct game_state *game, struct game_input *input)
     }
 
 
-    if (has_selected_block && input->mouse.buttons[1]) {
-        world_destroy_block(&game->world, block.x, block.y, block.z);
+    if (has_selected_block) {
+        if (input->mouse.buttons[1]) {
+            world_destroy_block(&game->world, block.x, block.y, block.z);
+        } 
+
+        block = vec3_add(block, normal_min);
+        debug_set_color(1, 1, 0);
+        debug_line(block, vec3_add(block, normal_min));
+        debug_cube(vec3_sub(block, block_size),
+                   vec3_add(block, block_size));
+
+        if (input->mouse.buttons[3]) {
+            world_place_block(&game->world, block.x, block.y, block.z, BLOCK_STONE);
+        }
     }
 
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);

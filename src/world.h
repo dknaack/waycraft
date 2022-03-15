@@ -7,6 +7,19 @@
 #define WORLD_HEIGHT 8
 #define CHUNK_SIZE 16
 
+enum block_type {
+    BLOCK_AIR,
+    BLOCK_STONE,
+    BLOCK_DIRT,
+    BLOCK_GRASS,
+    BLOCK_GRASS_TOP,
+    BLOCK_PLANKS,
+    BLOCK_OAK_LOG,
+    BLOCK_OAK_LEAVES,
+    BLOCK_SAND,
+    BLOCK_WATER,
+};
+
 enum chunk_state {
     CHUNK_INITIALIZED = 0x1,
     CHUNK_MODIFIED    = 0x2,
@@ -48,5 +61,7 @@ void world_update(struct world *world, vec3 player_position);
 void world_render(const struct world *world);
 void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
+void world_place_block(struct world *world, f32 x, f32 y, f32 z, 
+                       enum block_type block);
 
 #endif /* WORLD_H */ 

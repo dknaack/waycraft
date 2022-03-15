@@ -7,19 +7,6 @@
 #include "debug.h"
 #include "timer.h"
 
-enum block_type {
-    BLOCK_AIR,
-    BLOCK_STONE,
-    BLOCK_DIRT,
-    BLOCK_GRASS,
-    BLOCK_GRASS_TOP,
-    BLOCK_PLANKS,
-    BLOCK_OAK_LOG,
-    BLOCK_OAK_LEAVES,
-    BLOCK_SAND,
-    BLOCK_WATER,
-};
-
 static inline f32
 normalize_height(f32 value)
 {
@@ -105,15 +92,17 @@ world_get_chunk_position(const struct world *world, const struct chunk *chunk)
 static void
 world_unload_chunk(struct world *world, struct chunk *chunk)
 {
-    u32 is_already_modified = chunk->flags & CHUNK_MODIFIED;
-    if (!is_already_modified) {
-        chunk->flags |= CHUNK_MODIFIED;
+    if (chunk) {
+        u32 is_already_modified = chunk->flags & CHUNK_MODIFIED;
+        if (!is_already_modified) {
+            chunk->flags |= CHUNK_MODIFIED;
 
-        u32 chunk_index = chunk - world->chunks;
-        u32 index = world->unloaded_chunk_count++;
-        assert(index < world->chunk_count);
+            u32 chunk_index = chunk - world->chunks;
+            u32 index = world->unloaded_chunk_count++;
+            assert(index < world->chunk_count);
 
-        world->unloaded_chunks[index] = chunk_index;
+            world->unloaded_chunks[index] = chunk_index;
+        }
     }
 }
 
@@ -417,6 +406,13 @@ world_finish(struct world *world)
 void
 world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
 {
+    world_place_block(world, x, y, z, BLOCK_AIR);
+}
+
+void
+world_place_block(struct world *world, f32 x, f32 y, f32 z, 
+                  enum block_type block_type)
+{
     vec3 point = {{ x, y, z }};
     struct chunk *chunk = world_get_chunk(world, x, y, z);
     if (chunk) {
@@ -424,7 +420,7 @@ world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
         ivec3 block = ivec3_vec3(vec3_floor(block_pos));
         
         u32 i = (block.z * CHUNK_SIZE + block.y) * CHUNK_SIZE + block.x;
-        chunk->blocks[i] = BLOCK_AIR;
+        chunk->blocks[i] = block_type;
         world_unload_chunk(world, chunk);
 
         struct chunk *next_chunk = 0;
