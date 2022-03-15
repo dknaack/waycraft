@@ -301,11 +301,6 @@ game_update(struct game_state *game, struct game_input *input)
         } 
 
         block = vec3_add(block, normal_min);
-        debug_set_color(1, 1, 0);
-        debug_line(block, vec3_add(block, normal_min));
-        debug_cube(vec3_sub(block, block_size),
-                   vec3_add(block, block_size));
-
         if (input->mouse.buttons[3]) {
             world_place_block(&game->world, block.x, block.y, block.z, BLOCK_STONE);
         }
