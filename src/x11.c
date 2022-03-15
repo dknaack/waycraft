@@ -135,6 +135,10 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
         }
     }
 
+    for (u32 i = 0; i < LENGTH(input->mouse.buttons); i++) {
+        input->mouse.buttons[i] = 0;
+    }
+
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
 
