@@ -7,6 +7,18 @@
 #include "debug.h"
 #include "timer.h"
 
+inline u32
+block_is_empty(enum block_type block)
+{
+    return block == BLOCK_AIR || block == BLOCK_WATER;
+}
+
+static inline u32
+block_is_air(enum block_type block)
+{
+    return block == BLOCK_AIR;
+}
+
 static inline f32
 normalize_height(f32 value)
 {
@@ -215,50 +227,54 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
             for (i32 x = min.x; x < max.x; x++) {
                 vec2 uv[4];
 
-                vec3 pos0 = VEC3(x + 0.5, y + 0.5, z + 0.5);
-                vec3 pos1 = VEC3(x - 0.5, y + 0.5, z + 0.5);
-                vec3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
-                vec3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
-
-                vec3 pos4 = VEC3(x + 0.5, y + 0.5, z - 0.5);
-                vec3 pos5 = VEC3(x - 0.5, y + 0.5, z - 0.5);
-                vec3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
-                vec3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
-
                 u32 block = world_at(world, x, y, z);
                 if (block == BLOCK_AIR) {
                     continue;
                 }
 
+                f32 yoff = block == BLOCK_WATER && world_at(world, x, y + 1, z) == BLOCK_AIR ? -0.1 : 0;
+                vec3 pos0 = VEC3(x + 0.5, y + yoff + 0.5, z + 0.5);
+                vec3 pos1 = VEC3(x - 0.5, y + yoff + 0.5, z + 0.5);
+                vec3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
+                vec3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
+
+                vec3 pos4 = VEC3(x + 0.5, y + yoff + 0.5, z - 0.5);
+                vec3 pos5 = VEC3(x - 0.5, y + yoff + 0.5, z - 0.5);
+                vec3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
+                vec3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
+
+                u32 (*is_empty)(enum block_type) = 
+                    block == BLOCK_WATER ? block_is_air : block_is_empty;
+
                 block_texcoords_bottom(block, uv);
-                if (!world_at(world, x, y - 1, z)) {
+                if (is_empty(world_at(world, x, y - 1, z))) {
                     mesh_push_quad(mesh, pos7, pos6, pos3, pos2,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }
 
                 block_texcoords_top(block, uv);
-                if (!world_at(world, x, y + 1, z)) {
+                if (is_empty(world_at(world, x, y + 1, z))) {
                     mesh_push_quad(mesh, pos4, pos5, pos0, pos1,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }
 
                 block_texcoords_side(block, uv);
-                if (!world_at(world, x + 1, y, z)) {
+                if (is_empty(world_at(world, x + 1, y, z))) {
                     mesh_push_quad(mesh, pos4, pos0, pos6, pos2,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }
 
-                if (!world_at(world, x - 1, y, z)) {
+                if (is_empty(world_at(world, x - 1, y, z))) {
                     mesh_push_quad(mesh, pos1, pos5, pos3, pos7,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }
 
-                if (!world_at(world, x, y, z + 1)) {
+                if (is_empty(world_at(world, x, y, z + 1))) {
                     mesh_push_quad(mesh, pos0, pos1, pos2, pos3,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }
 
-                if (!world_at(world, x, y, z - 1)) {
+                if (is_empty(world_at(world, x, y, z - 1))) {
                     mesh_push_quad(mesh, pos5, pos4, pos7, pos6,
                                    uv[0], uv[1], uv[2], uv[3]);
                 }

@@ -64,4 +64,6 @@ void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
 void world_place_block(struct world *world, f32 x, f32 y, f32 z, 
                        enum block_type block);
 
+u32 block_is_empty(enum block_type block);
+
 #endif /* WORLD_H */ 
