@@ -174,8 +174,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             window->lock_cursor = 1;
 
             u32 button_index = event.xbutton.button;
-            if (button_index < 5) {
-                input->mouse.buttons[button_index] = is_pressed;
+            if (button_index < 8) {
+                input->mouse.buttons[button_index] |= is_pressed;
             }
             break;
         case KeyPress:
