@@ -18,7 +18,7 @@ struct game_input {
     struct {
         f32 dx, dy;
         f32 x, y;
-        u8 buttons[5];
+        u8 buttons[8];
     } mouse;
 
     struct {
@@ -51,6 +51,7 @@ struct game_state {
         vec3 velocity;
         u8 is_jumping;
         u8 frames_since_jump;
+        enum block_type selected_block;
     } player;
 };
 

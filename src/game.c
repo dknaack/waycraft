@@ -210,7 +210,7 @@ player_move(struct game_state *game, struct game_input *input)
                         vec3_sub(old_player_pos, block);
                     vec3 relative_new_pos = 
                         vec3_add(relative_old_pos, velocity);
-                    if (world_at(world, x, y, z) != 0 &&
+                    if (!block_is_empty(world_at(world, x, y, z)) &&
                         box_contains_point(block_bounds, relative_new_pos)) 
                     {
 
@@ -250,24 +250,32 @@ player_move(struct game_state *game, struct game_input *input)
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
 
-i32
-game_update(struct game_state *game, struct game_input *input)
+static void
+player_update(struct player *player, struct camera *camera,
+              struct world *world, struct game_input *input)
 {
-    mat4 projection = game->camera.projection;
-    mat4 view = game->camera.view;
-    mat4 model = mat4_id(1);
+    static enum block_type blocks_in_inventory[8] = {
+        BLOCK_STONE,
+        BLOCK_DIRT,
+        BLOCK_GRASS,
+        BLOCK_SAND,
+        BLOCK_PLANKS,
+        BLOCK_OAK_LOG,
+        BLOCK_OAK_LEAVES,
+        BLOCK_WATER,
+    };
 
-    player_move(game, input);
-    world_update(&game->world, game->camera.position);
 
-    vec3 block = vec3_round(game->camera.position);
+    vec3 block = vec3_round(camera->position);
+    block.y += 1.f;
+
     vec3 block_size = {{ 0.5, 0.5, 0.5 }};
     struct box selected_block;
     selected_block.min = vec3_sub(block, block_size);
     selected_block.max = vec3_add(block, block_size);
 
-    vec3 start = game->camera.position;
-    vec3 direction = game->camera.front;
+    vec3 start = camera->position;
+    vec3 direction = camera->front;
 
     i32 has_selected_block = 0;
     vec3 normal_min = {0};
@@ -282,7 +290,7 @@ game_update(struct game_state *game, struct game_input *input)
             break;
         }
 
-        if (world_at(&game->world, block.x, block.y, block.z) == 0) {
+        if (block_is_empty(world_at(world, block.x, block.y, block.z))) {
             block = vec3_add(block, normal_max);
             selected_block.min = vec3_add(selected_block.min, normal_max);
             selected_block.max = vec3_add(selected_block.max, normal_max);
@@ -294,17 +302,50 @@ game_update(struct game_state *game, struct game_input *input)
         }
     }
 
+    if (input->mouse.buttons[5]) {
+        player->selected_block++;
+        player->selected_block %= LENGTH(blocks_in_inventory);
+    }
+    
+    if (input->mouse.buttons[4] && player->selected_block > 0) {
+        if (player->selected_block == 0) {
+            player->selected_block = LENGTH(blocks_in_inventory);
+        } else {
+            player->selected_block--;
+        }
+    }
 
     if (has_selected_block) {
         if (input->mouse.buttons[1]) {
-            world_destroy_block(&game->world, block.x, block.y, block.z);
+            world_destroy_block(world, block.x, block.y, block.z);
         } 
 
         block = vec3_add(block, normal_min);
-        if (input->mouse.buttons[3]) {
-            world_place_block(&game->world, block.x, block.y, block.z, BLOCK_STONE);
+        vec3 player_size = VEC3(0.25, 0.99f, 0.25f);
+        vec3 player_pos = player->position;
+        struct box block_bounds;
+        vec3 bounds_size = vec3_add(block_size, player_size);
+        block_bounds.min = vec3_sub(block, bounds_size);
+        block_bounds.max = vec3_add(block, bounds_size);
+        u32 can_place_block = !box_contains_point(block_bounds, player_pos);
+        if (can_place_block && input->mouse.buttons[3]) {
+            u32 selected_block = blocks_in_inventory[player->selected_block];
+            world_place_block(world, block.x, block.y, block.z,
+                              selected_block);
         }
     }
+}
+
+i32
+game_update(struct game_state *game, struct game_input *input)
+{
+    mat4 projection = game->camera.projection;
+    mat4 view = game->camera.view;
+    mat4 model = mat4_id(1);
+
+    player_move(game, input);
+    player_update(&game->player, &game->camera, &game->world, input);
+    world_update(&game->world, game->camera.position);
 
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
