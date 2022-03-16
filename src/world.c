@@ -14,9 +14,9 @@ block_is_empty(enum block_type block)
 }
 
 static inline u32
-block_is_air(enum block_type block)
+block_is_not_water(enum block_type block)
 {
-    return block == BLOCK_AIR;
+    return block != BLOCK_WATER;
 }
 
 static inline f32
@@ -243,8 +243,8 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
                 vec3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
                 vec3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
 
-                u32 (*is_empty)(enum block_type) = 
-                    block == BLOCK_WATER ? block_is_air : block_is_empty;
+                u32 (*is_empty)(enum block_type block) =
+                    block == BLOCK_WATER ? block_is_not_water : block_is_empty;
 
                 block_texcoords_bottom(block, uv);
                 if (is_empty(world_at(world, x, y - 1, z))) {
