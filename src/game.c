@@ -44,10 +44,10 @@ game_init(struct game_state *game)
     game->world.depth  = WORLD_SIZE;
     f32 offset = -WORLD_SIZE * CHUNK_SIZE / 2.f;
     f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
-    game->world.position = VEC3(offset, yoffset, offset);
+    game->world.position = V3(offset, yoffset, offset);
     world_init(&game->world, arena);
-    camera_init(&game->camera, VEC3(0, 20, 0), 10.f, 65.f);
-    game->player.position = VEC3(0, 20, 0);
+    camera_init(&game->camera, V3(0, 20, 0), 10.f, 65.f);
+    game->player.position = V3(0, 20, 0);
 
     gl.Enable(GL_DEPTH_TEST);
     gl.Enable(GL_CULL_FACE);
@@ -87,7 +87,7 @@ box_contains_point(struct box box, v3 point)
 v3
 player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 speed)
 {
-    v3 direction = VEC3(0, 0, 0);
+    v3 direction = V3(0, 0, 0);
     f32 haxis = input->controller.move_right - input->controller.move_left;
     f32 vaxis = input->controller.move_up - input->controller.move_down;
 
@@ -125,7 +125,7 @@ box_ray_intersection_point(struct box box, v3 start, v3 direction,
             sign = -1;
         }
 
-        v3 normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+        v3 normal = V3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
 
         if (tmin < t0.e[i]) {
             tmin = t0.e[i];
@@ -172,7 +172,7 @@ player_move(struct game_state *game, struct game_input *input)
     v3 old_player_pos = player->position;
     v3 new_player_pos = v3_add(old_player_pos, velocity);
 
-    v3 player_size = VEC3(0.25, 0.99f, 0.25f);
+    v3 player_size = V3(0.25, 0.99f, 0.25f);
     v3 old_player_min = v3_sub(old_player_pos, player_size);
     v3 old_player_max = v3_add(old_player_pos, player_size);
     v3 new_player_min = v3_sub(new_player_pos, player_size);
@@ -190,7 +190,7 @@ player_move(struct game_state *game, struct game_input *input)
     assert(min_block_y <= max_block_y);
     assert(min_block_z <= max_block_z);
 
-    v3 block_size = VEC3(0.5, 0.5, 0.5);
+    v3 block_size = V3(0.5, 0.5, 0.5);
     v3 block_offset = v3_add(player_size, block_size);
 
     struct box block_bounds;
@@ -199,13 +199,13 @@ player_move(struct game_state *game, struct game_input *input)
 
     f32 t_remaining = 1.f;
     for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
-        v3 normal = VEC3(0, 0, 0);
+        v3 normal = V3(0, 0, 0);
         f32 t_min = 1.f;
 
         for (i32 z = min_block_z; z <= max_block_z; z++) {
             for (i32 y = min_block_y; y <= max_block_y; y++) {
                 for (i32 x = min_block_x; x <= max_block_x; x++) {
-                    v3 block = VEC3(x, y, z);
+                    v3 block = V3(x, y, z);
                     v3 relative_old_pos = 
                         v3_sub(old_player_pos, block);
                     v3 relative_new_pos = 
@@ -245,7 +245,7 @@ player_move(struct game_state *game, struct game_input *input)
 
     player->velocity = velocity;
     player->position = old_player_pos;
-    camera->position = v3_add(player->position, VEC3(0, 0.75, 0)); 
+    camera->position = v3_add(player->position, V3(0, 0.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
@@ -319,7 +319,7 @@ player_update(struct player *player, struct camera *camera,
         } 
 
         block = v3_add(block, normal_min);
-        v3 player_size = VEC3(0.25, 0.99f, 0.25f);
+        v3 player_size = V3(0.25, 0.99f, 0.25f);
         v3 player_pos = player->position;
         struct box block_bounds;
         v3 bounds_size = v3_add(block_size, player_size);

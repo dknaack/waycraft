@@ -8,9 +8,9 @@ camera_init(struct camera *c, v3 position, f32 speed, f32 fov)
 {
     c->view = c->projection = m4x4_id(1.f);
     c->position = position;
-    c->front = VEC3(0, 0, 1);
-    c->up = VEC3(0, 1, 0);
-    c->right = VEC3(1, 0, 0);
+    c->front = V3(0, 0, 1);
+    c->up = V3(0, 1, 0);
+    c->right = V3(1, 0, 0);
     c->yaw = c->pitch = 0.f;
     c->speed = speed;
     c->fov = fov;
@@ -37,7 +37,7 @@ camera_rotate(struct camera *c, f32 dx, f32 dy)
 	c->front.z = sinf(DEG2RAD(c->yaw)) * cosf(DEG2RAD(c->pitch));
 
 	c->front = v3_norm(c->front);
-    c->right = v3_norm(v3_cross(c->front, VEC3(0, 1, 0)));
+    c->right = v3_norm(v3_cross(c->front, V3(0, 1, 0)));
     c->up    = v3_norm(v3_cross(c->right, c->front));
 	c->view  = m4x4_look_at(c->position, v3_add(c->position, c->front), c->up);
 }

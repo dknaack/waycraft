@@ -16,37 +16,37 @@ lerp(float a, float b, float t)
 v2
 v2_add(v2 a, v2 b)
 {
-    return VEC2(a.x + b.x, a.y + b.y);
+    return V2(a.x + b.x, a.y + b.y);
 }
 
 v2
 v2_sub(v2 a, v2 b)
 {
-    return VEC2(a.x - b.x, a.y - b.y);
+    return V2(a.x - b.x, a.y - b.y);
 }
 
 v2
 v2_mul(v2 a, v2 b)
 {
-    return VEC2(a.x * b.x, a.y * b.y);
+    return V2(a.x * b.x, a.y * b.y);
 }
 
 v2
 v2_div(v2 a, v2 b)
 {
-    return VEC2(a.x / b.x, a.y / b.y);
+    return V2(a.x / b.x, a.y / b.y);
 }
 
 v2
 v2_mulf(v2 a, float f)
 {
-    return VEC2(a.x * f, a.y * f);
+    return V2(a.x * f, a.y * f);
 }
 
 v2
 v2_divf(v2 a, float f)
 {
-    return VEC2(a.x / f, a.y / f);
+    return V2(a.x / f, a.y / f);
 }
 
 v2
@@ -74,7 +74,7 @@ v2_dot(v2 a, v2 b)
 v3
 v3_add(v3 a, v3 b)
 {
-    return VEC3(a.x + b.x,
+    return V3(a.x + b.x,
                 a.y + b.y,
                 a.z + b.z);
 }
@@ -82,7 +82,7 @@ v3_add(v3 a, v3 b)
 v3
 v3_sub(v3 a, v3 b)
 {
-    return VEC3(a.x - b.x,
+    return V3(a.x - b.x,
                 a.y - b.y,
                 a.z - b.z);
 }
@@ -90,7 +90,7 @@ v3_sub(v3 a, v3 b)
 v3
 v3_mul(v3 a, v3 b)
 {
-    return VEC3(a.x * b.x,
+    return V3(a.x * b.x,
                 a.y * b.y,
                 a.z * b.z);
 }
@@ -98,19 +98,19 @@ v3_mul(v3 a, v3 b)
 v3
 v3_div(v3 a, v3 b)
 {
-    return VEC3(a.x / b.x, a.y / b.y, a.z / b.z);
+    return V3(a.x / b.x, a.y / b.y, a.z / b.z);
 }
 
 v3
 v3_modf(v3 a, float f)
 {
-    return VEC3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f));
+    return V3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f));
 }
 
 v3
 v3_mulf(v3 a, float f)
 {
-    return VEC3(a.x * f,
+    return V3(a.x * f,
                 a.y * f,
                 a.z * f);
 }
@@ -118,7 +118,7 @@ v3_mulf(v3 a, float f)
 v3
 v3_divf(v3 a, float f)
 {
-    return VEC3(a.x / f, a.y / f, a.z / f);
+    return V3(a.x / f, a.y / f, a.z / f);
 }
 
 float
@@ -138,7 +138,7 @@ v3_dot(v3 a, v3 b)
 v3
 v3_cross(v3 a, v3 b)
 {
-    return VEC3(
+    return V3(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x);
@@ -153,25 +153,25 @@ v3_norm(v3 a)
 v3
 v3_floor(v3 a)
 {
-    return VEC3(floorf(a.x), floorf(a.y), floorf(a.z));
+    return V3(floorf(a.x), floorf(a.y), floorf(a.z));
 }
 
 v3
 v3_round(v3 a)
 {
-    return VEC3(roundf(a.x), roundf(a.y), roundf(a.z));
+    return V3(roundf(a.x), roundf(a.y), roundf(a.z));
 }
 
 v3
 v3_neg(v3 a)
 {
-    return VEC3(-a.x, -a.y, -a.z);
+    return V3(-a.x, -a.y, -a.z);
 }
 
 v3
 v3_lerp(v3 a, v3 b, float t)
 {
-    return VEC3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
+    return V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }
 
 /*
@@ -181,37 +181,37 @@ v3_lerp(v3 a, v3 b, float t)
 v4
 v4_add(v4 a, v4 b)
 {
-    return VEC4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+    return V4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
 
 v4
 v4_sub(v4 a, v4 b)
 {
-    return VEC4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+    return V4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
 }
 
 v4
 v4_mul(v4 a, v4 b)
 {
-    return VEC4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
+    return V4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
 }
 
 v4
 v4_div(v4 a, v4 b)
 {
-    return VEC4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
+    return V4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
 }
 
 v4
 v4_mulf(v4 a, float f)
 {
-    return VEC4(a.x * f, a.y * f, a.z * f, a.w * f);
+    return V4(a.x * f, a.y * f, a.z * f, a.w * f);
 }
 
 v4
 v4_divf(v4 a, float f)
 {
-    return VEC4(a.x / f, a.y / f, a.z / f, a.w / f);
+    return V4(a.x / f, a.y / f, a.z / f, a.w / f);
 }
 
 v4
@@ -283,7 +283,7 @@ m4x4_mulf(m4x4 a, float f)
 m4x4
 m4x4_transpose(m4x4 a)
 {
-    return MAT4(
+    return M4X4(
         a.e[0], a.e[4], a.e[ 8], a.e[12],
         a.e[1], a.e[5], a.e[ 9], a.e[13],
         a.e[2], a.e[6], a.e[10], a.e[14],
@@ -293,7 +293,7 @@ m4x4_transpose(m4x4 a)
 m4x4
 m4x4_id(float f)
 {
-    return MAT4(
+    return M4X4(
         f, 0, 0, 0,
         0, f, 0, 0,
         0, 0, f, 0,
@@ -303,7 +303,7 @@ m4x4_id(float f)
 m4x4
 m4x4_translate(float x, float y, float z)
 {
-    return MAT4(
+    return M4X4(
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
@@ -313,7 +313,7 @@ m4x4_translate(float x, float y, float z)
 m4x4
 m4x4_scale(float x, float y, float z)
 {
-    return MAT4(
+    return M4X4(
         x, 0, 0, 0,
         0, y, 0, 0,
         0, 0, z, 0,
@@ -377,13 +377,13 @@ m4x4_rotate(v3 axis, float angle)
 
     m4x4 m1 = m4x4_scale(cos, cos, cos);
 
-    m4x4 m2 = MAT4(
+    m4x4 m2 = M4X4(
             a.x * a.x, a.x * a.y, a.x * a.z, 0,
             a.y * a.x, a.y * a.y, a.y * a.z, 0,
             a.z * a.x, a.z * a.y, a.z * a.z, 0,
             0,         0,         0,         0);
 
-    m4x4 m3 = MAT4(
+    m4x4 m3 = M4X4(
                0, -a.z,  a.y, 0,
              a.z,    0, -a.x, 0,
             -a.y,  a.x,    0, 0,

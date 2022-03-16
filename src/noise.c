@@ -24,7 +24,7 @@ noise_random_gradient(i32 ix, i32 iy)
     a *= 2048419325;
 
     f32 random = a * (3.14159265 / ~(~0u >> 1));
-    return VEC2(cosf(random), sinf(random));
+    return V2(cosf(random), sinf(random));
 }
 
 f32

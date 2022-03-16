@@ -160,7 +160,7 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 static v3
 world_get_block_position(const struct world *world, f32 x, f32 y, f32 z)
 {
-    v3 relative_pos = v3_sub(VEC3(x, y, z), world->position);
+    v3 relative_pos = v3_sub(V3(x, y, z), world->position);
     v3 block_pos = v3_modf(relative_pos, CHUNK_SIZE);
 
     return block_pos;
@@ -184,10 +184,10 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 static void
 block_texcoords(enum block_type block, v2 *uv)
 {
-    uv[0] = v2_mulf(v2_add(VEC2(block, 0), VEC2(0, 0)), 1 / 16.f);
-    uv[1] = v2_mulf(v2_add(VEC2(block, 0), VEC2(1, 0)), 1 / 16.f);
-    uv[2] = v2_mulf(v2_add(VEC2(block, 0), VEC2(0, 1)), 1 / 16.f);
-    uv[3] = v2_mulf(v2_add(VEC2(block, 0), VEC2(1, 1)), 1 / 16.f);
+    uv[0] = v2_mulf(v2_add(V2(block, 0), V2(0, 0)), 1 / 16.f);
+    uv[1] = v2_mulf(v2_add(V2(block, 0), V2(1, 0)), 1 / 16.f);
+    uv[2] = v2_mulf(v2_add(V2(block, 0), V2(0, 1)), 1 / 16.f);
+    uv[3] = v2_mulf(v2_add(V2(block, 0), V2(1, 1)), 1 / 16.f);
 }
 
 static void
@@ -220,7 +220,7 @@ static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 {
     v3 min = world_get_chunk_position(world, chunk);
-    v3 max = v3_add(min, VEC3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
+    v3 max = v3_add(min, V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
 
     for (i32 z = min.z; z < max.z; z++) {
         for (i32 y = min.y; y < max.y; y++) {
@@ -233,15 +233,15 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
                 }
 
                 f32 yoff = block == BLOCK_WATER && world_at(world, x, y + 1, z) == BLOCK_AIR ? -0.1 : 0;
-                v3 pos0 = VEC3(x + 0.5, y + yoff + 0.5, z + 0.5);
-                v3 pos1 = VEC3(x - 0.5, y + yoff + 0.5, z + 0.5);
-                v3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
-                v3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
+                v3 pos0 = V3(x + 0.5, y + yoff + 0.5, z + 0.5);
+                v3 pos1 = V3(x - 0.5, y + yoff + 0.5, z + 0.5);
+                v3 pos2 = V3(x + 0.5, y - 0.5, z + 0.5);
+                v3 pos3 = V3(x - 0.5, y - 0.5, z + 0.5);
 
-                v3 pos4 = VEC3(x + 0.5, y + yoff + 0.5, z - 0.5);
-                v3 pos5 = VEC3(x - 0.5, y + yoff + 0.5, z - 0.5);
-                v3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
-                v3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
+                v3 pos4 = V3(x + 0.5, y + yoff + 0.5, z - 0.5);
+                v3 pos5 = V3(x - 0.5, y + yoff + 0.5, z - 0.5);
+                v3 pos6 = V3(x + 0.5, y - 0.5, z - 0.5);
+                v3 pos7 = V3(x - 0.5, y - 0.5, z - 0.5);
 
                 u32 (*is_empty)(enum block_type block) =
                     block == BLOCK_WATER ? block_is_not_water : block_is_empty;
@@ -442,7 +442,7 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
         struct chunk *next_chunk = 0;
         v3 offset, next;
         for (u32 i = 0; i < 3; i++) {
-            offset = VEC3(i == 0, i == 1, i == 2);
+            offset = V3(i == 0, i == 1, i == 2);
             next = v3_add(point, offset);
             next_chunk = world_get_chunk(world, next.x, next.y, next.z);
             world_unload_chunk(world, next_chunk);

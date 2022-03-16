@@ -67,10 +67,10 @@ typedef union {
 #define DEG2RAD(deg) ((deg) / 180.f * PI)
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
-#define MAT4(...)        (m4x4){{ __VA_ARGS__ }}
-#define VEC4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
-#define VEC3(x, y, z)    (v3){{ (x), (y), (z) }}
-#define VEC2(x, y)       (v2){{ (x), (y) }}
+#define M4X4(...)      (m4x4){{ __VA_ARGS__ }}
+#define V4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
+#define V3(x, y, z)    (v3){{ (x), (y), (z) }}
+#define V2(x, y)       (v2){{ (x), (y) }}
 
 #define PI 3.14159265359f
 
