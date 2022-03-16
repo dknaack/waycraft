@@ -10,7 +10,7 @@ smoothstep(f32 a, f32 b, f32 t)
     return (b - a) * ((t * (t * 6 - 15) + 10) * t * t * t) + a;
 }
 
-vec2
+v2
 noise_random_gradient(i32 ix, i32 iy)
 {
     u32 w = 8 * sizeof(u32);
@@ -30,7 +30,7 @@ noise_random_gradient(i32 ix, i32 iy)
 f32
 noise_gradient(i32 ix, i32 iy, f32 x, f32 y)
 {
-    vec2 gradient = noise_random_gradient(ix, iy);
+    v2 gradient = noise_random_gradient(ix, iy);
 
     f32 dx = x - (f32)ix;
     f32 dy = y - (f32)iy;

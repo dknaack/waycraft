@@ -26,7 +26,7 @@ typedef unsigned long  ulong;
 typedef union {
     struct { f32 x, y; };
     f32 e[2];
-} vec2;
+} v2;
 
 typedef union {
     struct { f32 x, y, z; };
@@ -70,7 +70,7 @@ typedef union {
 #define MAT4(...)        (mat4){{ __VA_ARGS__ }}
 #define VEC4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define VEC3(x, y, z)    (v3){{ (x), (y), (z) }}
-#define VEC2(x, y)       (vec2){{ (x), (y) }}
+#define VEC2(x, y)       (v2){{ (x), (y) }}
 
 #define PI 3.14159265359f
 

@@ -3,14 +3,14 @@
 
 #include "types.h"
 
-f32  vec2_len(vec2 a);
-f32  vec2_dot(vec2 a, vec2 b);
-vec2 vec2_add(vec2 a, vec2 b);
-vec2 vec2_sub(vec2 a, vec2 b);
-vec2 vec2_mul(vec2 a, vec2 b);
-vec2 vec2_div(vec2 a, vec2 b);
-vec2 vec2_mulf(vec2 a, float f);
-vec2 vec2_norm(vec2 a);
+f32  v2_len(v2 a);
+f32  v2_dot(v2 a, v2 b);
+v2 v2_add(v2 a, v2 b);
+v2 v2_sub(v2 a, v2 b);
+v2 v2_mul(v2 a, v2 b);
+v2 v2_div(v2 a, v2 b);
+v2 v2_mulf(v2 a, float f);
+v2 v2_norm(v2 a);
 
 f32  v3_len(v3 a);
 f32  v3_dot(v3 a, v3 b);

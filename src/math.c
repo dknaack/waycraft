@@ -10,59 +10,59 @@ lerp(float a, float b, float t)
 }
 
 /*
- * vec2 function definitions
+ * v2 function definitions
  */
 
-vec2
-vec2_add(vec2 a, vec2 b)
+v2
+v2_add(v2 a, v2 b)
 {
     return VEC2(a.x + b.x, a.y + b.y);
 }
 
-vec2
-vec2_sub(vec2 a, vec2 b)
+v2
+v2_sub(v2 a, v2 b)
 {
     return VEC2(a.x - b.x, a.y - b.y);
 }
 
-vec2
-vec2_mul(vec2 a, vec2 b)
+v2
+v2_mul(v2 a, v2 b)
 {
     return VEC2(a.x * b.x, a.y * b.y);
 }
 
-vec2
-vec2_div(vec2 a, vec2 b)
+v2
+v2_div(v2 a, v2 b)
 {
     return VEC2(a.x / b.x, a.y / b.y);
 }
 
-vec2
-vec2_mulf(vec2 a, float f)
+v2
+v2_mulf(v2 a, float f)
 {
     return VEC2(a.x * f, a.y * f);
 }
 
-vec2
-vec2_divf(vec2 a, float f)
+v2
+v2_divf(v2 a, float f)
 {
     return VEC2(a.x / f, a.y / f);
 }
 
-vec2
-vec2_norm(vec2 a)
+v2
+v2_norm(v2 a)
 {
-    return vec2_divf(a, vec2_len(a));
+    return v2_divf(a, v2_len(a));
 }
 
 float
-vec2_len(vec2 a)
+v2_len(v2 a)
 {
     return sqrtf(a.x * a.x + a.y * a.y);
 }
 
 float
-vec2_dot(vec2 a, vec2 b)
+v2_dot(v2 a, v2 b)
 {
     return a.x * b.x + a.y * b.y;
 }

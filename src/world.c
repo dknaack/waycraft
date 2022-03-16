@@ -182,16 +182,16 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 }
 
 static void
-block_texcoords(enum block_type block, vec2 *uv)
+block_texcoords(enum block_type block, v2 *uv)
 {
-    uv[0] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(0, 0)), 1 / 16.f);
-    uv[1] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(1, 0)), 1 / 16.f);
-    uv[2] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(0, 1)), 1 / 16.f);
-    uv[3] = vec2_mulf(vec2_add(VEC2(block, 0), VEC2(1, 1)), 1 / 16.f);
+    uv[0] = v2_mulf(v2_add(VEC2(block, 0), VEC2(0, 0)), 1 / 16.f);
+    uv[1] = v2_mulf(v2_add(VEC2(block, 0), VEC2(1, 0)), 1 / 16.f);
+    uv[2] = v2_mulf(v2_add(VEC2(block, 0), VEC2(0, 1)), 1 / 16.f);
+    uv[3] = v2_mulf(v2_add(VEC2(block, 0), VEC2(1, 1)), 1 / 16.f);
 }
 
 static void
-block_texcoords_top(enum block_type block, vec2 *uv)
+block_texcoords_top(enum block_type block, v2 *uv)
 {
     if (block == BLOCK_GRASS) {
         block_texcoords(BLOCK_GRASS_TOP, uv);
@@ -201,13 +201,13 @@ block_texcoords_top(enum block_type block, vec2 *uv)
 }
 
 static void
-block_texcoords_side(enum block_type block, vec2 *uv)
+block_texcoords_side(enum block_type block, v2 *uv)
 {
     block_texcoords(block, uv);
 }
 
 static void
-block_texcoords_bottom(enum block_type block, vec2 *uv)
+block_texcoords_bottom(enum block_type block, v2 *uv)
 {
     if (block == BLOCK_GRASS) {
         block_texcoords(BLOCK_DIRT, uv);
@@ -225,7 +225,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
     for (i32 z = min.z; z < max.z; z++) {
         for (i32 y = min.y; y < max.y; y++) {
             for (i32 x = min.x; x < max.x; x++) {
-                vec2 uv[4];
+                v2 uv[4];
 
                 u32 block = world_at(world, x, y, z);
                 if (block == BLOCK_AIR) {

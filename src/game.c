@@ -11,8 +11,8 @@
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
     "layout (location = 0) in v3 pos;"
-    "layout (location = 1) in vec2 in_coords;"
-    "out vec2 coords;"
+    "layout (location = 1) in v2 in_coords;"
+    "out v2 coords;"
     "uniform mat4 model;"
     "uniform mat4 view;"
     "uniform mat4 projection;"
@@ -23,7 +23,7 @@ static const u8 *vert_shader_source = (u8 *)
 
 static const u8 *frag_shader_source = (u8 *)
     "#version 330 core\n"
-    "in vec2 coords;"
+    "in v2 coords;"
     "out v4 frag_color;"
     "uniform sampler2D tex;"
     "void main() {"

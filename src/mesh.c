@@ -3,7 +3,7 @@
 void
 mesh_push_quad(struct mesh *mesh, 
         v3 pos0, v3 pos1, v3 pos2, v3 pos3,
-        vec2 uv0, vec2 uv1, vec2 uv2, vec2 uv3)
+        v2 uv0, v2 uv1, v2 uv2, v2 uv3)
 {
     u32 vertex_count = mesh->vertex_count;
     struct vertex *out_vertex = mesh->vertices + vertex_count;
