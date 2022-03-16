@@ -10,7 +10,7 @@
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
-    "layout (location = 0) in vec3 pos;"
+    "layout (location = 0) in v3 pos;"
     "layout (location = 1) in vec2 in_coords;"
     "out vec2 coords;"
     "uniform mat4 model;"
@@ -72,31 +72,31 @@ game_init(struct game_state *game)
 }
 
 struct box {
-    vec3 min;
-    vec3 max;
+    v3 min;
+    v3 max;
 };
 
 i32
-box_contains_point(struct box box, vec3 point)
+box_contains_point(struct box box, v3 point)
 {
     return (box.min.x <= point.x && point.x <= box.max.x &&
             box.min.y <= point.y && point.y <= box.max.y &&
             box.min.z <= point.z && point.z <= box.max.z);
 }
 
-vec3
-player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f32 speed)
+v3
+player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 speed)
 {
-    vec3 direction = VEC3(0, 0, 0);
+    v3 direction = VEC3(0, 0, 0);
     f32 haxis = input->controller.move_right - input->controller.move_left;
     f32 vaxis = input->controller.move_up - input->controller.move_down;
 
     if (haxis || vaxis) {
-        front = vec3_mulf(front, vaxis);
-        right = vec3_mulf(right, haxis);
+        front = v3_mulf(front, vaxis);
+        right = v3_mulf(right, haxis);
         front.y = right.y = 0;
 
-        direction = vec3_mulf(vec3_norm(vec3_add(front, right)), speed);
+        direction = v3_mulf(v3_norm(v3_add(front, right)), speed);
     }
 
     return direction;
@@ -104,14 +104,14 @@ player_direction_from_input(struct game_input *input, vec3 front, vec3 right, f3
 
 // NOTE: assumes ray starts outside the box and intersects the box
 f32
-box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
-                           vec3 *normal_min, vec3 *normal_max, 
+box_ray_intersection_point(struct box box, v3 start, v3 direction,
+                           v3 *normal_min, v3 *normal_max, 
                            f32 *out_tmin, f32 *out_tmax)
 {
     f32 tmin = 0.f;
     f32 tmax = INFINITY;
-    vec3 t0 = {0};
-    vec3 t1 = {0};
+    v3 t0 = {0};
+    v3 t1 = {0};
 
     for (u32 i = 0; i < 3; i++) {
         i32 sign = 0;
@@ -125,7 +125,7 @@ box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
             sign = -1;
         }
 
-        vec3 normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+        v3 normal = VEC3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
 
         if (tmin < t0.e[i]) {
             tmin = t0.e[i];
@@ -134,7 +134,7 @@ box_ray_intersection_point(struct box box, vec3 start, vec3 direction,
 
         if (tmax > t1.e[i]) {
             tmax = t1.e[i];
-            *normal_max = vec3_neg(normal);
+            *normal_max = v3_neg(normal);
         }
     }
 
@@ -152,8 +152,8 @@ player_move(struct game_state *game, struct game_input *input)
 
     f32 dt = input->dt;
 
-    vec3 velocity = player->velocity;
-    vec3 direction = player_direction_from_input(input, camera->front,
+    v3 velocity = player->velocity;
+    v3 direction = player_direction_from_input(input, camera->front,
                                                  camera->right, camera->speed);
     velocity.x = direction.x * dt;
     velocity.z = direction.z * dt;
@@ -169,14 +169,14 @@ player_move(struct game_state *game, struct game_input *input)
         velocity.y -= 0.9f * dt;
     }
 
-    vec3 old_player_pos = player->position;
-    vec3 new_player_pos = vec3_add(old_player_pos, velocity);
+    v3 old_player_pos = player->position;
+    v3 new_player_pos = v3_add(old_player_pos, velocity);
 
-    vec3 player_size = VEC3(0.25, 0.99f, 0.25f);
-    vec3 old_player_min = vec3_sub(old_player_pos, player_size);
-    vec3 old_player_max = vec3_add(old_player_pos, player_size);
-    vec3 new_player_min = vec3_sub(new_player_pos, player_size);
-    vec3 new_player_max = vec3_add(new_player_pos, player_size);
+    v3 player_size = VEC3(0.25, 0.99f, 0.25f);
+    v3 old_player_min = v3_sub(old_player_pos, player_size);
+    v3 old_player_max = v3_add(old_player_pos, player_size);
+    v3 new_player_min = v3_sub(new_player_pos, player_size);
+    v3 new_player_max = v3_add(new_player_pos, player_size);
 
     i32 min_block_x = floorf(MIN(old_player_min.x, new_player_min.x) + 0.4);
     i32 min_block_y = floorf(MIN(old_player_min.y, new_player_min.y) + 0.4);
@@ -190,32 +190,32 @@ player_move(struct game_state *game, struct game_input *input)
     assert(min_block_y <= max_block_y);
     assert(min_block_z <= max_block_z);
 
-    vec3 block_size = VEC3(0.5, 0.5, 0.5);
-    vec3 block_offset = vec3_add(player_size, block_size);
+    v3 block_size = VEC3(0.5, 0.5, 0.5);
+    v3 block_offset = v3_add(player_size, block_size);
 
     struct box block_bounds;
-    block_bounds.min = vec3_mulf(block_offset, -1.f);
-    block_bounds.max = vec3_mulf(block_offset,  1.f);
+    block_bounds.min = v3_mulf(block_offset, -1.f);
+    block_bounds.max = v3_mulf(block_offset,  1.f);
 
     f32 t_remaining = 1.f;
     for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
-        vec3 normal = VEC3(0, 0, 0);
+        v3 normal = VEC3(0, 0, 0);
         f32 t_min = 1.f;
 
         for (i32 z = min_block_z; z <= max_block_z; z++) {
             for (i32 y = min_block_y; y <= max_block_y; y++) {
                 for (i32 x = min_block_x; x <= max_block_x; x++) {
-                    vec3 block = VEC3(x, y, z);
-                    vec3 relative_old_pos = 
-                        vec3_sub(old_player_pos, block);
-                    vec3 relative_new_pos = 
-                        vec3_add(relative_old_pos, velocity);
+                    v3 block = VEC3(x, y, z);
+                    v3 relative_old_pos = 
+                        v3_sub(old_player_pos, block);
+                    v3 relative_new_pos = 
+                        v3_add(relative_old_pos, velocity);
                     if (!block_is_empty(world_at(world, x, y, z)) &&
                         box_contains_point(block_bounds, relative_new_pos)) 
                     {
 
-                        vec3 normal_min = {0};
-                        vec3 normal_max;
+                        v3 normal_min = {0};
+                        v3 normal_max;
                         f32 t, tmax;
                         box_ray_intersection_point(
                             block_bounds, relative_old_pos, 
@@ -230,11 +230,11 @@ player_move(struct game_state *game, struct game_input *input)
             }
         }
 
-        vec3 new_player_pos = vec3_add(old_player_pos, 
-                                       vec3_mulf(velocity, t_min));
+        v3 new_player_pos = v3_add(old_player_pos, 
+                                       v3_mulf(velocity, t_min));
         old_player_pos = new_player_pos;
-        velocity = vec3_sub(velocity, 
-                            vec3_mulf(normal, vec3_dot(normal, velocity)));
+        velocity = v3_sub(velocity, 
+                            v3_mulf(normal, v3_dot(normal, velocity)));
         t_remaining -= t_min * t_remaining;
     }
 
@@ -245,7 +245,7 @@ player_move(struct game_state *game, struct game_input *input)
 
     player->velocity = velocity;
     player->position = old_player_pos;
-    camera->position = vec3_add(player->position, VEC3(0, 0.75, 0)); 
+    camera->position = v3_add(player->position, VEC3(0, 0.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
@@ -266,18 +266,18 @@ player_update(struct player *player, struct camera *camera,
     };
 
 
-    vec3 block = vec3_round(camera->position);
-    vec3 block_size = {{ 0.5, 0.5, 0.5 }};
+    v3 block = v3_round(camera->position);
+    v3 block_size = {{ 0.5, 0.5, 0.5 }};
     struct box selected_block;
-    selected_block.min = vec3_sub(block, block_size);
-    selected_block.max = vec3_add(block, block_size);
+    selected_block.min = v3_sub(block, block_size);
+    selected_block.max = v3_add(block, block_size);
 
-    vec3 start = camera->position;
-    vec3 direction = camera->front;
+    v3 start = camera->position;
+    v3 direction = camera->front;
 
     i32 has_selected_block = 0;
-    vec3 normal_min = {0};
-    vec3 normal_max = {0};
+    v3 normal_min = {0};
+    v3 normal_max = {0};
     for (u32 i = 0; i < 10; i++) {
         f32 tmin = 0.f;
         f32 tmax = INFINITY;
@@ -289,9 +289,9 @@ player_update(struct player *player, struct camera *camera,
         }
 
         if (block_is_empty(world_at(world, block.x, block.y, block.z))) {
-            block = vec3_add(block, normal_max);
-            selected_block.min = vec3_add(selected_block.min, normal_max);
-            selected_block.max = vec3_add(selected_block.max, normal_max);
+            block = v3_add(block, normal_max);
+            selected_block.min = v3_add(selected_block.min, normal_max);
+            selected_block.max = v3_add(selected_block.max, normal_max);
         } else {
             has_selected_block = 1;
             debug_set_color(0, 0, 0);
@@ -318,13 +318,13 @@ player_update(struct player *player, struct camera *camera,
             world_destroy_block(world, block.x, block.y, block.z);
         } 
 
-        block = vec3_add(block, normal_min);
-        vec3 player_size = VEC3(0.25, 0.99f, 0.25f);
-        vec3 player_pos = player->position;
+        block = v3_add(block, normal_min);
+        v3 player_size = VEC3(0.25, 0.99f, 0.25f);
+        v3 player_pos = player->position;
         struct box block_bounds;
-        vec3 bounds_size = vec3_add(block_size, player_size);
-        block_bounds.min = vec3_sub(block, bounds_size);
-        block_bounds.max = vec3_add(block, bounds_size);
+        v3 bounds_size = v3_add(block_size, player_size);
+        block_bounds.min = v3_sub(block, bounds_size);
+        block_bounds.max = v3_add(block, bounds_size);
         u32 can_place_block = !box_contains_point(block_bounds, player_pos);
         if (can_place_block && input->mouse.buttons[3]) {
             u32 selected_block = blocks_in_inventory[player->selected_block];

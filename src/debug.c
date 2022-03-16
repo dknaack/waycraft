@@ -4,8 +4,8 @@
 #define DEBUG_VERTEX_BUFFER_SIZE MB(8)
 
 struct debug_vertex {
-    vec3 position;
-    vec3 color;
+    v3 position;
+    v3 color;
 };
 
 struct debug_state {
@@ -17,17 +17,17 @@ struct debug_state {
     u32 projection;
     u32 vertex_array;
     u32 vertex_buffer;
-    vec3 color;
+    v3 color;
 };
 
 static const u8 *debug_vertex_shader_source = (u8 *)
     "#version 330\n"
-    "layout (location = 0) in vec3 in_pos;"
-    "layout (location = 1) in vec3 in_color;"
+    "layout (location = 0) in v3 in_pos;"
+    "layout (location = 1) in v3 in_color;"
     "uniform mat4 model;"
     "uniform mat4 view;"
     "uniform mat4 projection;"
-    "out vec3 color;"
+    "out v3 color;"
     "void main() {"
     "   gl_Position = projection * view * model * vec4(in_pos, 1.);"
     "   color = in_color;"
@@ -36,7 +36,7 @@ static const u8 *debug_vertex_shader_source = (u8 *)
 
 static const u8 *debug_fragment_shader_source = (u8 *)
     "#version 330\n"
-    "in vec3 color;\n"
+    "in v3 color;\n"
     "out vec4 frag_color;\n"
     "void main() {"
     "   frag_color = vec4(color, 1.);"
@@ -82,7 +82,7 @@ debug_set_color(f32 r, f32 g, f32 b)
 }
 
 void
-debug_line(vec3 start, vec3 end)
+debug_line(v3 start, v3 end)
 {
     struct debug_vertex *vertex = debug.vertices + debug.vertex_count;
     assert(debug.vertex_count * 
@@ -100,16 +100,16 @@ debug_line(vec3 start, vec3 end)
 }
 
 void
-debug_cube(vec3 min, vec3 max)
+debug_cube(v3 min, v3 max)
 {
-    vec3 pos0 = VEC3(min.x, min.y, min.z);
-    vec3 pos1 = VEC3(max.x, min.y, min.z);
-    vec3 pos2 = VEC3(min.x, max.y, min.z);
-    vec3 pos3 = VEC3(max.x, max.y, min.z);
-    vec3 pos4 = VEC3(min.x, min.y, max.z);
-    vec3 pos5 = VEC3(max.x, min.y, max.z);
-    vec3 pos6 = VEC3(min.x, max.y, max.z);
-    vec3 pos7 = VEC3(max.x, max.y, max.z);
+    v3 pos0 = VEC3(min.x, min.y, min.z);
+    v3 pos1 = VEC3(max.x, min.y, min.z);
+    v3 pos2 = VEC3(min.x, max.y, min.z);
+    v3 pos3 = VEC3(max.x, max.y, min.z);
+    v3 pos4 = VEC3(min.x, min.y, max.z);
+    v3 pos5 = VEC3(max.x, min.y, max.z);
+    v3 pos6 = VEC3(min.x, max.y, max.z);
+    v3 pos7 = VEC3(max.x, max.y, max.z);
 
     debug_line(pos0, pos1);
     debug_line(pos0, pos2);

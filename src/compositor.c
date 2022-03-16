@@ -37,6 +37,7 @@
 #include "x11_egl.c"
 #include "xdg-shell-protocol.c"
 #include "debug.c"
+#include "timer.c"
 
 #define WL_COMPOSITOR_VERSION 5
 #define WL_REGION_VERSION 1
@@ -781,12 +782,15 @@ main(void)
         }
 
         /* draw the windows */
+        gl.UseProgram(game.shader.program);
         gl.BindVertexArray(server.vertex_array);
+        gl.UniformMatrix4fv(game.shader.view, 1, GL_FALSE, game.camera.view.e);
+        gl.UniformMatrix4fv(game.shader.projection, 1, GL_FALSE, game.camera.projection.e);
         struct surface *surface;
         wl_list_for_each(surface, &server.surfaces, link) {
-            f32 virtual_screen_size = 20.48;
+            f32 virtual_screen_size = 204.8;
             f32 x      = surface->x / virtual_screen_size;
-            f32 y      = surface->y / virtual_screen_size;
+            f32 y      = surface->y / virtual_screen_size + 20.;
             f32 width  = surface->width / virtual_screen_size;
             f32 height = surface->height / virtual_screen_size;
 

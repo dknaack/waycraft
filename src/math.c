@@ -68,75 +68,75 @@ vec2_dot(vec2 a, vec2 b)
 }
 
 /*
- * vec3 function definitions
+ * v3 function definitions
  */
 
-vec3
-vec3_add(vec3 a, vec3 b)
+v3
+v3_add(v3 a, v3 b)
 {
     return VEC3(a.x + b.x,
                 a.y + b.y,
                 a.z + b.z);
 }
 
-vec3
-vec3_sub(vec3 a, vec3 b)
+v3
+v3_sub(v3 a, v3 b)
 {
     return VEC3(a.x - b.x,
                 a.y - b.y,
                 a.z - b.z);
 }
 
-vec3
-vec3_mul(vec3 a, vec3 b)
+v3
+v3_mul(v3 a, v3 b)
 {
     return VEC3(a.x * b.x,
                 a.y * b.y,
                 a.z * b.z);
 }
 
-vec3
-vec3_div(vec3 a, vec3 b)
+v3
+v3_div(v3 a, v3 b)
 {
     return VEC3(a.x / b.x, a.y / b.y, a.z / b.z);
 }
 
-vec3
-vec3_modf(vec3 a, float f)
+v3
+v3_modf(v3 a, float f)
 {
     return VEC3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f));
 }
 
-vec3
-vec3_mulf(vec3 a, float f)
+v3
+v3_mulf(v3 a, float f)
 {
     return VEC3(a.x * f,
                 a.y * f,
                 a.z * f);
 }
 
-vec3
-vec3_divf(vec3 a, float f)
+v3
+v3_divf(v3 a, float f)
 {
     return VEC3(a.x / f, a.y / f, a.z / f);
 }
 
 float
-vec3_len(vec3 a)
+v3_len(v3 a)
 {
     return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z);
 }
 
 float
-vec3_dot(vec3 a, vec3 b)
+v3_dot(v3 a, v3 b)
 {
     return (a.x * b.x +
             a.y * b.y +
             a.z * b.z);
 }
 
-vec3
-vec3_cross(vec3 a, vec3 b)
+v3
+v3_cross(v3 a, v3 b)
 {
     return VEC3(
         a.y * b.z - a.z * b.y,
@@ -144,32 +144,32 @@ vec3_cross(vec3 a, vec3 b)
         a.x * b.y - a.y * b.x);
 }
 
-vec3
-vec3_norm(vec3 a)
+v3
+v3_norm(v3 a)
 {
-    return vec3_divf(a, vec3_len(a));
+    return v3_divf(a, v3_len(a));
 }
 
-vec3
-vec3_floor(vec3 a)
+v3
+v3_floor(v3 a)
 {
     return VEC3(floorf(a.x), floorf(a.y), floorf(a.z));
 }
 
-vec3
-vec3_round(vec3 a)
+v3
+v3_round(v3 a)
 {
     return VEC3(roundf(a.x), roundf(a.y), roundf(a.z));
 }
 
-vec3
-vec3_neg(vec3 a)
+v3
+v3_neg(v3 a)
 {
     return VEC3(-a.x, -a.y, -a.z);
 }
 
-vec3
-vec3_lerp(vec3 a, vec3 b, float t)
+v3
+v3_lerp(v3 a, v3 b, float t)
 {
     return VEC3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }
@@ -343,13 +343,13 @@ mat4_perspective(float fov, float aspect, float near, float far)
 }
 
 mat4
-mat4_look_at(vec3 eye, vec3 target, vec3 up)
+mat4_look_at(v3 eye, v3 target, v3 up)
 {
     mat4 result = {0};
 
-    vec3 z = vec3_norm(vec3_sub(eye, target));
-    vec3 x = vec3_norm(vec3_cross(up, z));
-    vec3 y = vec3_cross(z, x);
+    v3 z = v3_norm(v3_sub(eye, target));
+    v3 x = v3_norm(v3_cross(up, z));
+    v3 y = v3_cross(z, x);
 
     result.e[0]  = x.x;
     result.e[1]  = y.x;
@@ -369,9 +369,9 @@ mat4_look_at(vec3 eye, vec3 target, vec3 up)
 }
 
 mat4
-mat4_rotate(vec3 axis, float angle)
+mat4_rotate(v3 axis, float angle)
 {
-    vec3 a = vec3_norm(axis);
+    v3 a = v3_norm(axis);
     float cos = cosf(angle);
     float sin = sinf(angle);
 
@@ -393,7 +393,7 @@ mat4_rotate(vec3 axis, float angle)
 }
 
 ivec3
-ivec3_vec3(vec3 a)
+ivec3_vec3(v3 a)
 {
     ivec3 result;
 

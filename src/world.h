@@ -43,7 +43,7 @@ struct world {
     u32 texture;
     // NOTE: bottom left corner of the world, such that (0, 0, 0) relative to
     // world is the first chunk (0, 0, 0)
-    vec3 position;
+    v3 position;
 };
 
 struct chunk {
@@ -57,7 +57,7 @@ struct memory_arena;
 
 i32 world_init(struct world *world, struct memory_arena *arena);
 u32 world_at(struct world *world, f32 x, f32 y, f32 z);
-void world_update(struct world *world, vec3 player_position);
+void world_update(struct world *world, v3 player_position);
 void world_render(const struct world *world);
 void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);

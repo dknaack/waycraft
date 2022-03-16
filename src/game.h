@@ -8,8 +8,8 @@
 
 struct window {
     vec4 rotation;
-    vec3 scale;
-    vec3 position;
+    v3 scale;
+    v3 position;
     u32 width, height;
     u32 texture;
 };
@@ -47,8 +47,8 @@ struct game_state {
     u32 program;
 
     struct player {
-        vec3 position;
-        vec3 velocity;
+        v3 position;
+        v3 velocity;
         u8 is_jumping;
         u8 frames_since_jump;
         enum block_type selected_block;

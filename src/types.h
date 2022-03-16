@@ -32,7 +32,7 @@ typedef union {
     struct { f32 x, y, z; };
     struct { f32 r, g, b; };
     f32 e[3];
-} vec3;
+} v3;
 
 typedef union {
     struct { f32 x, y, z, w; };
@@ -69,7 +69,7 @@ typedef union {
 
 #define MAT4(...)        (mat4){{ __VA_ARGS__ }}
 #define VEC4(x, y, z, w) (vec4){{ (x), (y), (z), (w) }}
-#define VEC3(x, y, z)    (vec3){{ (x), (y), (z) }}
+#define VEC3(x, y, z)    (v3){{ (x), (y), (z) }}
 #define VEC2(x, y)       (vec2){{ (x), (y) }}
 
 #define PI 3.14159265359f

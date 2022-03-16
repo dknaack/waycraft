@@ -4,7 +4,7 @@
 #include "camera.h"
 
 void
-camera_init(struct camera *c, vec3 position, f32 speed, f32 fov)
+camera_init(struct camera *c, v3 position, f32 speed, f32 fov)
 {
     c->view = c->projection = mat4_id(1.f);
     c->position = position;
@@ -36,8 +36,8 @@ camera_rotate(struct camera *c, f32 dx, f32 dy)
 	c->front.y = sinf(DEG2RAD(c->pitch));
 	c->front.z = sinf(DEG2RAD(c->yaw)) * cosf(DEG2RAD(c->pitch));
 
-	c->front = vec3_norm(c->front);
-    c->right = vec3_norm(vec3_cross(c->front, VEC3(0, 1, 0)));
-    c->up    = vec3_norm(vec3_cross(c->right, c->front));
-	c->view  = mat4_look_at(c->position, vec3_add(c->position, c->front), c->up);
+	c->front = v3_norm(c->front);
+    c->right = v3_norm(v3_cross(c->front, VEC3(0, 1, 0)));
+    c->up    = v3_norm(v3_cross(c->right, c->front));
+	c->view  = mat4_look_at(c->position, v3_add(c->position, c->front), c->up);
 }

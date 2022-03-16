@@ -84,16 +84,16 @@ chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
     return result;
 }
 
-static vec3
+static v3
 world_get_chunk_position(const struct world *world, const struct chunk *chunk)
 {
-    vec3 world_position = world->position;
+    v3 world_position = world->position;
     i32 index  = chunk - world->chunks;
     i32 width  = world->width;
     i32 height = world->height;
     i32 depth  = world->depth;
 
-    vec3 result;
+    v3 result;
     result.x = world_position.x + CHUNK_SIZE * (index % width);
     result.y = world_position.y + CHUNK_SIZE * (index / width % height);
     result.z = world_position.z + CHUNK_SIZE * (index / width / height % depth);
@@ -145,7 +145,7 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 
         chunk = &world->chunks[chunk_index];
         if (!chunk->blocks) {
-            vec3 chunk_pos = world_get_chunk_position(world, chunk);
+            v3 chunk_pos = world_get_chunk_position(world, chunk);
 
             u64 offset = chunk_index * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
             u8 *blocks = world->blocks + offset;
@@ -157,11 +157,11 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
     return chunk;
 }
 
-static vec3
+static v3
 world_get_block_position(const struct world *world, f32 x, f32 y, f32 z)
 {
-    vec3 relative_pos = vec3_sub(VEC3(x, y, z), world->position);
-    vec3 block_pos = vec3_modf(relative_pos, CHUNK_SIZE);
+    v3 relative_pos = v3_sub(VEC3(x, y, z), world->position);
+    v3 block_pos = v3_modf(relative_pos, CHUNK_SIZE);
 
     return block_pos;
 }
@@ -174,7 +174,7 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
     struct chunk *chunk = world_get_chunk(world, x, y, z);
 
     if (chunk) {
-        vec3 block_pos = world_get_block_position(world, x, y, z);
+        v3 block_pos = world_get_block_position(world, x, y, z);
         result = chunk_at(chunk, block_pos.x, block_pos.y, block_pos.z);
     }
 
@@ -219,8 +219,8 @@ block_texcoords_bottom(enum block_type block, vec2 *uv)
 static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 {
-    vec3 min = world_get_chunk_position(world, chunk);
-    vec3 max = vec3_add(min, VEC3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
+    v3 min = world_get_chunk_position(world, chunk);
+    v3 max = v3_add(min, VEC3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
 
     for (i32 z = min.z; z < max.z; z++) {
         for (i32 y = min.y; y < max.y; y++) {
@@ -233,15 +233,15 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
                 }
 
                 f32 yoff = block == BLOCK_WATER && world_at(world, x, y + 1, z) == BLOCK_AIR ? -0.1 : 0;
-                vec3 pos0 = VEC3(x + 0.5, y + yoff + 0.5, z + 0.5);
-                vec3 pos1 = VEC3(x - 0.5, y + yoff + 0.5, z + 0.5);
-                vec3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
-                vec3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
+                v3 pos0 = VEC3(x + 0.5, y + yoff + 0.5, z + 0.5);
+                v3 pos1 = VEC3(x - 0.5, y + yoff + 0.5, z + 0.5);
+                v3 pos2 = VEC3(x + 0.5, y - 0.5, z + 0.5);
+                v3 pos3 = VEC3(x - 0.5, y - 0.5, z + 0.5);
 
-                vec3 pos4 = VEC3(x + 0.5, y + yoff + 0.5, z - 0.5);
-                vec3 pos5 = VEC3(x - 0.5, y + yoff + 0.5, z - 0.5);
-                vec3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
-                vec3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
+                v3 pos4 = VEC3(x + 0.5, y + yoff + 0.5, z - 0.5);
+                v3 pos5 = VEC3(x - 0.5, y + yoff + 0.5, z - 0.5);
+                v3 pos6 = VEC3(x + 0.5, y - 0.5, z - 0.5);
+                v3 pos7 = VEC3(x - 0.5, y - 0.5, z - 0.5);
 
                 u32 (*is_empty)(enum block_type block) =
                     block == BLOCK_WATER ? block_is_not_water : block_is_empty;
@@ -338,7 +338,7 @@ world_init(struct world *world, struct memory_arena *arena)
 }
 
 void
-world_update(struct world *world, vec3 player_position)
+world_update(struct world *world, v3 player_position)
 {
     struct mesh *mesh = &world->mesh;
     struct chunk *chunks = world->chunks;
@@ -429,25 +429,25 @@ void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
                   enum block_type block_type)
 {
-    vec3 point = {{ x, y, z }};
+    v3 point = {{ x, y, z }};
     struct chunk *chunk = world_get_chunk(world, x, y, z);
     if (chunk) {
-        vec3 block_pos = world_get_block_position(world, x, y, z);
-        ivec3 block = ivec3_vec3(vec3_floor(block_pos));
+        v3 block_pos = world_get_block_position(world, x, y, z);
+        ivec3 block = ivec3_vec3(v3_floor(block_pos));
 
         u32 i = (block.z * CHUNK_SIZE + block.y) * CHUNK_SIZE + block.x;
         chunk->blocks[i] = block_type;
         world_unload_chunk(world, chunk);
 
         struct chunk *next_chunk = 0;
-        vec3 offset, next;
+        v3 offset, next;
         for (u32 i = 0; i < 3; i++) {
             offset = VEC3(i == 0, i == 1, i == 2);
-            next = vec3_add(point, offset);
+            next = v3_add(point, offset);
             next_chunk = world_get_chunk(world, next.x, next.y, next.z);
             world_unload_chunk(world, next_chunk);
 
-            next = vec3_sub(point, offset);
+            next = v3_sub(point, offset);
             next_chunk = world_get_chunk(world, next.x, next.y, next.z);
             world_unload_chunk(world, next_chunk);
         }
