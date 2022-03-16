@@ -4,7 +4,7 @@
 #include "types.h"
 
 struct camera {
-    mat4 view, projection;
+    m4x4 view, projection;
     v3 position;
     v3 right, front, up;
     f32 speed;

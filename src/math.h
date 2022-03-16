@@ -35,16 +35,16 @@ v4 v4_div(v4 a, v4 b);
 v4 v4_mulf(v4 a, float f);
 v4 v4_norm(v4 a);
 
-mat4 mat4_id(float f);
-mat4 mat4_scale(float x, float y, float z);
-mat4 mat4_translate(float x, float y, float z);
-mat4 mat4_rotate(v3 axis, float angle);
-mat4 mat4_look_at(v3 eye, v3 target, v3 up);
-mat4 mat4_add(mat4 a, mat4 b);
-mat4 mat4_sub(mat4 a, mat4 b);
-mat4 mat4_mulf(mat4 a, float f);
-mat4 mat4_mul(mat4 a, mat4 b);
-mat4 mat4_perspective(float fov, float aspect, float near, float far);
+m4x4 m4x4_id(float f);
+m4x4 m4x4_scale(float x, float y, float z);
+m4x4 m4x4_translate(float x, float y, float z);
+m4x4 m4x4_rotate(v3 axis, float angle);
+m4x4 m4x4_look_at(v3 eye, v3 target, v3 up);
+m4x4 m4x4_add(m4x4 a, m4x4 b);
+m4x4 m4x4_sub(m4x4 a, m4x4 b);
+m4x4 m4x4_mulf(m4x4 a, float f);
+m4x4 m4x4_mul(m4x4 a, m4x4 b);
+m4x4 m4x4_perspective(float fov, float aspect, float near, float far);
 
 v3i v3i_vec3(v3 a);
 

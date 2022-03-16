@@ -128,7 +128,7 @@ debug_cube(v3 min, v3 max)
 }
 
 void
-debug_render(mat4 view, mat4 projection)
+debug_render(m4x4 view, m4x4 projection)
 {
     gl.Disable(GL_DEPTH_TEST);
     gl.PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -139,7 +139,7 @@ debug_render(mat4 view, mat4 projection)
             debug.vertex_count * sizeof(struct debug_vertex), debug.vertices);
 
     gl.UseProgram(debug.program);
-    gl.UniformMatrix4fv(debug.model, 1, GL_FALSE, mat4_id(1).e);
+    gl.UniformMatrix4fv(debug.model, 1, GL_FALSE, m4x4_id(1).e);
     gl.UniformMatrix4fv(debug.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(debug.view, 1, GL_FALSE, view.e);
 

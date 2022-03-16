@@ -233,11 +233,11 @@ v4_dot(v4 a, v4 b)
 }
 
 /*
- * mat4 function definitions
+ * m4x4 function definitions
  */
 
-mat4
-mat4_add(mat4 a, mat4 b)
+m4x4
+m4x4_add(m4x4 a, m4x4 b)
 {
     unsigned int i;
 
@@ -246,8 +246,8 @@ mat4_add(mat4 a, mat4 b)
     return a;
 }
 
-mat4
-mat4_sub(mat4 a, mat4 b)
+m4x4
+m4x4_sub(m4x4 a, m4x4 b)
 {
     unsigned int i;
 
@@ -257,11 +257,11 @@ mat4_sub(mat4 a, mat4 b)
     return a;
 }
 
-mat4
-mat4_mul(mat4 a, mat4 b)
+m4x4
+m4x4_mul(m4x4 a, m4x4 b)
 {
     unsigned int i, j, k;
-    mat4 result = {0};
+    m4x4 result = {0};
 
     for (i = 0; i < 4; i++)
         for (j = 0; j < 4; j++)
@@ -270,8 +270,8 @@ mat4_mul(mat4 a, mat4 b)
     return result;
 }
 
-mat4
-mat4_mulf(mat4 a, float f)
+m4x4
+m4x4_mulf(m4x4 a, float f)
 {
     unsigned int i;
 
@@ -280,8 +280,8 @@ mat4_mulf(mat4 a, float f)
     return a;
 }
 
-mat4
-mat4_transpose(mat4 a)
+m4x4
+m4x4_transpose(m4x4 a)
 {
     return MAT4(
         a.e[0], a.e[4], a.e[ 8], a.e[12],
@@ -290,8 +290,8 @@ mat4_transpose(mat4 a)
         a.e[3], a.e[7], a.e[11], a.e[15]);
 }
 
-mat4
-mat4_id(float f)
+m4x4
+m4x4_id(float f)
 {
     return MAT4(
         f, 0, 0, 0,
@@ -300,8 +300,8 @@ mat4_id(float f)
         0, 0, 0, 1);
 }
 
-mat4
-mat4_translate(float x, float y, float z)
+m4x4
+m4x4_translate(float x, float y, float z)
 {
     return MAT4(
         1, 0, 0, 0,
@@ -310,8 +310,8 @@ mat4_translate(float x, float y, float z)
         x, y, z, 1);
 }
 
-mat4
-mat4_scale(float x, float y, float z)
+m4x4
+m4x4_scale(float x, float y, float z)
 {
     return MAT4(
         x, 0, 0, 0,
@@ -320,10 +320,10 @@ mat4_scale(float x, float y, float z)
         0, 0, 0, 1);
 }
 
-mat4
-mat4_perspective(float fov, float aspect, float near, float far)
+m4x4
+m4x4_perspective(float fov, float aspect, float near, float far)
 {
-    mat4 result = {0};
+    m4x4 result = {0};
 
     float top = near * tanf(fov * PI / 180.f * 0.5f);
     float right = top * aspect;
@@ -342,10 +342,10 @@ mat4_perspective(float fov, float aspect, float near, float far)
     return result;
 }
 
-mat4
-mat4_look_at(v3 eye, v3 target, v3 up)
+m4x4
+m4x4_look_at(v3 eye, v3 target, v3 up)
 {
-    mat4 result = {0};
+    m4x4 result = {0};
 
     v3 z = v3_norm(v3_sub(eye, target));
     v3 x = v3_norm(v3_cross(up, z));
@@ -365,31 +365,31 @@ mat4_look_at(v3 eye, v3 target, v3 up)
 
     result.e[15] = 1.f;
 
-    return mat4_mul(result, mat4_translate(-eye.x, -eye.y, -eye.z));
+    return m4x4_mul(result, m4x4_translate(-eye.x, -eye.y, -eye.z));
 }
 
-mat4
-mat4_rotate(v3 axis, float angle)
+m4x4
+m4x4_rotate(v3 axis, float angle)
 {
     v3 a = v3_norm(axis);
     float cos = cosf(angle);
     float sin = sinf(angle);
 
-    mat4 m1 = mat4_scale(cos, cos, cos);
+    m4x4 m1 = m4x4_scale(cos, cos, cos);
 
-    mat4 m2 = MAT4(
+    m4x4 m2 = MAT4(
             a.x * a.x, a.x * a.y, a.x * a.z, 0,
             a.y * a.x, a.y * a.y, a.y * a.z, 0,
             a.z * a.x, a.z * a.y, a.z * a.z, 0,
             0,         0,         0,         0);
 
-    mat4 m3 = MAT4(
+    m4x4 m3 = MAT4(
                0, -a.z,  a.y, 0,
              a.z,    0, -a.x, 0,
             -a.y,  a.x,    0, 0,
                0,    0,    0, 0);
 
-    return mat4_add(m1, mat4_add(mat4_mulf(m2, 1.f - cos), mat4_mulf(m3, sin)));
+    return m4x4_add(m1, m4x4_add(m4x4_mulf(m2, 1.f - cos), m4x4_mulf(m3, sin)));
 }
 
 v3i

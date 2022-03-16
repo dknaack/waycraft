@@ -794,9 +794,9 @@ main(void)
             f32 width  = surface->width / virtual_screen_size;
             f32 height = surface->height / virtual_screen_size;
 
-            mat4 model = mat4_mul(
-                    mat4_translate(x, y, 0),
-                    mat4_scale(width, height, 1));
+            m4x4 model = m4x4_mul(
+                    m4x4_translate(x, y, 0),
+                    m4x4_scale(width, height, 1));
             gl.UniformMatrix4fv(game.shader.model, 1, GL_FALSE, model.e);
             gl.BindTexture(GL_TEXTURE_2D, surface->texture);
             gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

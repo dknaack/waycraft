@@ -43,7 +43,7 @@ typedef union {
 typedef struct {
     f32 e[16];
     f32 r[4][4];
-} mat4;
+} m4x4;
 
 typedef struct {
     f32 e[9];
@@ -67,7 +67,7 @@ typedef union {
 #define DEG2RAD(deg) ((deg) / 180.f * PI)
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
-#define MAT4(...)        (mat4){{ __VA_ARGS__ }}
+#define MAT4(...)        (m4x4){{ __VA_ARGS__ }}
 #define VEC4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define VEC3(x, y, z)    (v3){{ (x), (y), (z) }}
 #define VEC2(x, y)       (v2){{ (x), (y) }}

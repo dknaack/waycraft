@@ -13,9 +13,9 @@ static const u8 *vert_shader_source = (u8 *)
     "layout (location = 0) in v3 pos;"
     "layout (location = 1) in v2 in_coords;"
     "out v2 coords;"
-    "uniform mat4 model;"
-    "uniform mat4 view;"
-    "uniform mat4 projection;"
+    "mat4 model;"
+    "mat4 view;"
+    "mat4 projection;"
     "void main() {"
     "    gl_Position = projection * view * model * v4(pos, 1.);"
     "    coords = in_coords;"
@@ -337,9 +337,9 @@ player_update(struct player *player, struct camera *camera,
 i32
 game_update(struct game_state *game, struct game_input *input)
 {
-    mat4 projection = game->camera.projection;
-    mat4 view = game->camera.view;
-    mat4 model = mat4_id(1);
+    m4x4 projection = game->camera.projection;
+    m4x4 view = game->camera.view;
+    m4x4 model = m4x4_id(1);
 
     player_move(game, input);
     player_update(&game->player, &game->camera, &game->world, input);
