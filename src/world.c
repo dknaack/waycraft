@@ -433,7 +433,7 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
     struct chunk *chunk = world_get_chunk(world, x, y, z);
     if (chunk) {
         v3 block_pos = world_get_block_position(world, x, y, z);
-        ivec3 block = ivec3_vec3(v3_floor(block_pos));
+        v3i block = v3i_vec3(v3_floor(block_pos));
 
         u32 i = (block.z * CHUNK_SIZE + block.y) * CHUNK_SIZE + block.x;
         chunk->blocks[i] = block_type;

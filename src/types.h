@@ -53,7 +53,7 @@ typedef struct {
 typedef union {
     struct { i32 x, y, z; };
     f32 e[3];
-} ivec3;
+} v3i;
 
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
