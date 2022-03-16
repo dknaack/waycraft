@@ -22,24 +22,24 @@ struct debug_state {
 
 static const u8 *debug_vertex_shader_source = (u8 *)
     "#version 330\n"
-    "layout (location = 0) in v3 in_pos;"
-    "layout (location = 1) in v3 in_color;"
+    "layout (location = 0) in vec3 in_pos;"
+    "layout (location = 1) in vec3 in_color;"
     "uniform mat4 model;"
     "uniform mat4 view;"
     "uniform mat4 projection;"
-    "out v3 color;"
+    "out vec3 color;"
     "void main() {"
-    "   gl_Position = projection * view * model * v4(in_pos, 1.);"
+    "   gl_Position = projection * view * model * vec4(in_pos, 1.);"
     "   color = in_color;"
     "}"
     ;
 
 static const u8 *debug_fragment_shader_source = (u8 *)
     "#version 330\n"
-    "in v3 color;\n"
-    "out v4 frag_color;\n"
+    "in vec3 color;\n"
+    "out vec4 frag_color;\n"
     "void main() {"
-    "   frag_color = v4(color, 1.);"
+    "   frag_color = vec4(color, 1.);"
     "}"
     ;
 

@@ -10,21 +10,21 @@
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
-    "layout (location = 0) in v3 pos;"
-    "layout (location = 1) in v2 in_coords;"
-    "out v2 coords;"
-    "mat4 model;"
-    "mat4 view;"
-    "mat4 projection;"
+    "layout (location = 0) in vec3 pos;"
+    "layout (location = 1) in vec2 in_coords;"
+    "out vec2 coords;"
+    "uniform mat4 model;"
+    "uniform mat4 view;"
+    "uniform mat4 projection;"
     "void main() {"
-    "    gl_Position = projection * view * model * v4(pos, 1.);"
+    "    gl_Position = projection * view * model * vec4(pos, 1.);"
     "    coords = in_coords;"
     "}";
 
 static const u8 *frag_shader_source = (u8 *)
     "#version 330 core\n"
-    "in v2 coords;"
-    "out v4 frag_color;"
+    "in vec2 coords;"
+    "out vec4 frag_color;"
     "uniform sampler2D tex;"
     "void main() {"
     "    frag_color = texture(tex, coords);"
