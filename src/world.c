@@ -72,8 +72,8 @@ static u32
 chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
     u32 result = 0;
-    u32 is_inside_chunk = ((0 <= x && x < CHUNK_SIZE) && 
-                           (0 <= y && y < CHUNK_SIZE) && 
+    u32 is_inside_chunk = ((0 <= x && x < CHUNK_SIZE) &&
+                           (0 <= y && y < CHUNK_SIZE) &&
                            (0 <= z && z < CHUNK_SIZE));
     if (is_inside_chunk) {
         u32 index = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
@@ -131,8 +131,8 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
     i32 chunk_x = x / CHUNK_SIZE;
     i32 chunk_y = y / CHUNK_SIZE;
     i32 chunk_z = z / CHUNK_SIZE;
-    i32 chunk_is_inside_world = ((0 <= chunk_x && chunk_x < world->width) && 
-                                 (0 <= chunk_y && chunk_y < world->height) && 
+    i32 chunk_is_inside_world = ((0 <= chunk_x && chunk_x < world->width) &&
+                                 (0 <= chunk_y && chunk_y < world->height) &&
                                  (0 <= chunk_z && chunk_z < world->depth));
     if (chunk_is_inside_world) {
         u32 width  = world->width;
@@ -283,7 +283,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
     }
 
     gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
-    gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count * 
+    gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
                   sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
     gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
     gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
@@ -345,7 +345,7 @@ world_update(struct world *world, vec3 player_position)
 
     u32 max_load = 4;
     u32 batch_count = MIN(world->unloaded_chunk_count, max_load);
-    u32 *unloaded_chunks = world->unloaded_chunks + 
+    u32 *unloaded_chunks = world->unloaded_chunks +
         world->unloaded_chunk_count;
 
     for (u32 i = 0; i < batch_count; i++) {
@@ -370,10 +370,10 @@ world_update(struct world *world, vec3 player_position)
 
         chunk_generate_mesh(chunk, world, mesh);
 
-        gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+        gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
                                (const void *)offsetof(struct vertex, position));
         gl.EnableVertexAttribArray(0);
-        gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
+        gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
                                (const void *)offsetof(struct vertex, texcoord));
         gl.EnableVertexAttribArray(1);
 
@@ -426,7 +426,7 @@ world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
 }
 
 void
-world_place_block(struct world *world, f32 x, f32 y, f32 z, 
+world_place_block(struct world *world, f32 x, f32 y, f32 z,
                   enum block_type block_type)
 {
     vec3 point = {{ x, y, z }};
@@ -434,7 +434,7 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
     if (chunk) {
         vec3 block_pos = world_get_block_position(world, x, y, z);
         ivec3 block = ivec3_vec3(vec3_floor(block_pos));
-        
+
         u32 i = (block.z * CHUNK_SIZE + block.y) * CHUNK_SIZE + block.x;
         chunk->blocks[i] = block_type;
         world_unload_chunk(world, chunk);
