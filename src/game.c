@@ -17,14 +17,14 @@ static const u8 *vert_shader_source = (u8 *)
     "uniform mat4 view;"
     "uniform mat4 projection;"
     "void main() {"
-    "    gl_Position = projection * view * model * vec4(pos, 1.);"
+    "    gl_Position = projection * view * model * v4(pos, 1.);"
     "    coords = in_coords;"
     "}";
 
 static const u8 *frag_shader_source = (u8 *)
     "#version 330 core\n"
     "in vec2 coords;"
-    "out vec4 frag_color;"
+    "out v4 frag_color;"
     "uniform sampler2D tex;"
     "void main() {"
     "    frag_color = texture(tex, coords);"

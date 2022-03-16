@@ -175,59 +175,59 @@ v3_lerp(v3 a, v3 b, float t)
 }
 
 /*
- * vec4 function definitions
+ * v4 function definitions
  */
 
-vec4
-vec4_add(vec4 a, vec4 b)
+v4
+v4_add(v4 a, v4 b)
 {
     return VEC4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
 
-vec4
-vec4_sub(vec4 a, vec4 b)
+v4
+v4_sub(v4 a, v4 b)
 {
     return VEC4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
 }
 
-vec4
-vec4_mul(vec4 a, vec4 b)
+v4
+v4_mul(v4 a, v4 b)
 {
     return VEC4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
 }
 
-vec4
-vec4_div(vec4 a, vec4 b)
+v4
+v4_div(v4 a, v4 b)
 {
     return VEC4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
 }
 
-vec4
-vec4_mulf(vec4 a, float f)
+v4
+v4_mulf(v4 a, float f)
 {
     return VEC4(a.x * f, a.y * f, a.z * f, a.w * f);
 }
 
-vec4
-vec4_divf(vec4 a, float f)
+v4
+v4_divf(v4 a, float f)
 {
     return VEC4(a.x / f, a.y / f, a.z / f, a.w / f);
 }
 
-vec4
-vec4_norm(vec4 a)
+v4
+v4_norm(v4 a)
 {
-    return vec4_divf(a, vec4_len(a));
+    return v4_divf(a, v4_len(a));
 }
 
 float
-vec4_len(vec4 a)
+v4_len(v4 a)
 {
     return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
 }
 
 float
-vec4_dot(vec4 a, vec4 b)
+v4_dot(v4 a, v4 b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * a.w;
 }

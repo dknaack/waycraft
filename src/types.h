@@ -38,7 +38,7 @@ typedef union {
     struct { f32 x, y, z, w; };
     struct { f32 r, g, b, a; };
     f32 e[4];
-} vec4;
+} v4;
 
 typedef struct {
     f32 e[16];
@@ -68,7 +68,7 @@ typedef union {
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
 #define MAT4(...)        (mat4){{ __VA_ARGS__ }}
-#define VEC4(x, y, z, w) (vec4){{ (x), (y), (z), (w) }}
+#define VEC4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define VEC3(x, y, z)    (v3){{ (x), (y), (z) }}
 #define VEC2(x, y)       (vec2){{ (x), (y) }}
 

@@ -7,7 +7,7 @@
 #include "memory.h"
 
 struct window {
-    vec4 rotation;
+    v4 rotation;
     v3 scale;
     v3 position;
     u32 width, height;

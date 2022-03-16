@@ -29,7 +29,7 @@ static const u8 *debug_vertex_shader_source = (u8 *)
     "uniform mat4 projection;"
     "out v3 color;"
     "void main() {"
-    "   gl_Position = projection * view * model * vec4(in_pos, 1.);"
+    "   gl_Position = projection * view * model * v4(in_pos, 1.);"
     "   color = in_color;"
     "}"
     ;
@@ -37,9 +37,9 @@ static const u8 *debug_vertex_shader_source = (u8 *)
 static const u8 *debug_fragment_shader_source = (u8 *)
     "#version 330\n"
     "in v3 color;\n"
-    "out vec4 frag_color;\n"
+    "out v4 frag_color;\n"
     "void main() {"
-    "   frag_color = vec4(color, 1.);"
+    "   frag_color = v4(color, 1.);"
     "}"
     ;
 

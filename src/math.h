@@ -26,14 +26,14 @@ v3 v3_round(v3 a);
 v3 v3_neg(v3 a);
 v3 v3_lerp(v3 a, v3 b, float t);
 
-f32  vec4_len(vec4 v);
-f32  vec4_dot(vec4 a, vec4 b);
-vec4 vec4_add(vec4 a, vec4 b);
-vec4 vec4_sub(vec4 a, vec4 b);
-vec4 vec4_mul(vec4 a, vec4 b);
-vec4 vec4_div(vec4 a, vec4 b);
-vec4 vec4_mulf(vec4 a, float f);
-vec4 vec4_norm(vec4 a);
+f32  v4_len(v4 v);
+f32  v4_dot(v4 a, v4 b);
+v4 v4_add(v4 a, v4 b);
+v4 v4_sub(v4 a, v4 b);
+v4 v4_mul(v4 a, v4 b);
+v4 v4_div(v4 a, v4 b);
+v4 v4_mulf(v4 a, float f);
+v4 v4_norm(v4 a);
 
 mat4 mat4_id(float f);
 mat4 mat4_scale(float x, float y, float z);
