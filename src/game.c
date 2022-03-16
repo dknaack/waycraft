@@ -267,8 +267,6 @@ player_update(struct player *player, struct camera *camera,
 
 
     vec3 block = vec3_round(camera->position);
-    block.y += 1.f;
-
     vec3 block_size = {{ 0.5, 0.5, 0.5 }};
     struct box selected_block;
     selected_block.min = vec3_sub(block, block_size);
