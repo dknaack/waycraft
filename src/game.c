@@ -30,6 +30,27 @@ static const u8 *frag_shader_source = (u8 *)
     "    frag_color = texture(tex, coords);"
     "}";
 
+void
+player_init(struct player *player, struct camera *camera)
+{
+    f32 player_speed = 10.f;
+    f32 camera_fov = 65.f;
+    v3 player_position = V3(0, 20, 0);
+
+    camera_init(camera, player_position, player_speed, camera_fov);
+    player->position = player_position;
+
+    player->hotbar[0] = BLOCK_STONE;
+    player->hotbar[1] = BLOCK_DIRT;
+    player->hotbar[2] = BLOCK_GRASS;
+    player->hotbar[3] = BLOCK_SAND;
+    player->hotbar[4] = BLOCK_PLANKS;
+    player->hotbar[5] = BLOCK_OAK_LOG;
+    player->hotbar[6] = BLOCK_OAK_LEAVES;
+    player->hotbar[7] = BLOCK_WATER;
+    player->hotbar[8] = BLOCK_AIR;
+}
+
 i32
 game_init(struct game_state *game)
 {
@@ -46,8 +67,8 @@ game_init(struct game_state *game)
     f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
     game->world.position = V3(offset, yoffset, offset);
     world_init(&game->world, arena);
-    camera_init(&game->camera, V3(0, 20, 0), 10.f, 65.f);
-    game->player.position = V3(0, 20, 0);
+
+    player_init(&game->player, &game->camera);
 
     gl.Enable(GL_DEPTH_TEST);
     gl.Enable(GL_CULL_FACE);
@@ -254,18 +275,6 @@ static void
 player_update(struct player *player, struct camera *camera,
               struct world *world, struct game_input *input)
 {
-    static enum block_type blocks_in_inventory[8] = {
-        BLOCK_STONE,
-        BLOCK_DIRT,
-        BLOCK_GRASS,
-        BLOCK_SAND,
-        BLOCK_PLANKS,
-        BLOCK_OAK_LOG,
-        BLOCK_OAK_LEAVES,
-        BLOCK_WATER,
-    };
-
-
     v3 block = v3_round(camera->position);
     v3 block_size = {{ 0.5, 0.5, 0.5 }};
     struct box selected_block;
@@ -301,15 +310,15 @@ player_update(struct player *player, struct camera *camera,
     }
 
     if (input->mouse.buttons[5]) {
-        player->selected_block++;
-        player->selected_block %= LENGTH(blocks_in_inventory);
+        player->hotbar_selection++;
+        player->hotbar_selection %= LENGTH(player->hotbar);
     }
     
-    if (input->mouse.buttons[4] && player->selected_block > 0) {
-        if (player->selected_block == 0) {
-            player->selected_block = LENGTH(blocks_in_inventory);
+    if (input->mouse.buttons[4] && player->hotbar_selection > 0) {
+        if (player->hotbar_selection == 0) {
+            player->hotbar_selection = LENGTH(player->hotbar);
         } else {
-            player->selected_block--;
+            player->hotbar_selection--;
         }
     }
 
@@ -327,7 +336,7 @@ player_update(struct player *player, struct camera *camera,
         block_bounds.max = v3_add(block, bounds_size);
         u32 can_place_block = !box_contains_point(block_bounds, player_pos);
         if (can_place_block && input->mouse.buttons[3]) {
-            u32 selected_block = blocks_in_inventory[player->selected_block];
+            u32 selected_block = player->hotbar[player->hotbar_selection];
             world_place_block(world, block.x, block.y, block.z,
                               selected_block);
         }

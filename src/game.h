@@ -51,7 +51,9 @@ struct game_state {
         v3 velocity;
         u8 is_jumping;
         u8 frames_since_jump;
-        enum block_type selected_block;
+
+        u8 hotbar[9];
+        u8 hotbar_selection;
     } player;
 };
 
