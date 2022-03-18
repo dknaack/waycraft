@@ -1,4 +1,4 @@
-#include <stdio.h>
+#includerc/wo<stdio.h>
 #include <stdlib.h>
 
 #include "debug.h"
@@ -48,7 +48,7 @@ player_init(struct player *player, struct camera *camera)
     player->hotbar[5] = BLOCK_OAK_LOG;
     player->hotbar[6] = BLOCK_OAK_LEAVES;
     player->hotbar[7] = BLOCK_WATER;
-    player->hotbar[8] = BLOCK_AIR;
+    player->hotbar[8] = BLOCK_MONITOR;
 }
 
 i32
@@ -394,11 +394,36 @@ window_render(struct window *window, u32 model_uniform)
     gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
+static enum block_type
+block_from_direction(enum block_type base_block, v3 direction)
+{
+    enum block_type block = base_block;
+    v3 abs_direction = v3_abs(direction);
+
+    u32 is_facing_x_axis = (abs_direction.x > abs_direction.y &&
+                            abs_direction.x > abs_direction.z);
+    u32 is_facing_y_axis = (abs_direction.y > abs_direction.x &&
+                            abs_direction.y > abs_direction.z);
+
+    u32 is_facing_in_negative_direction = 0;
+    if (is_facing_x_axis) {
+        is_facing_in_negative_direction = direction.x < 0;
+    } else if (is_facing_y_axis) {
+        is_facing_in_negative_direction = direction.y < 0;
+        block += 2;
+    } else {
+        is_facing_in_negative_direction = direction.z < 0;
+        block += 4;
+    }
+
+    block += is_facing_in_negative_direction;
+    return block;
+}
+
 i32
 game_update(struct game_state *game, struct game_input *input)
 {
     struct world *world = &game->world;
-    struct camera *camera = &game->camera;
 
     m4x4 projection = game->camera.projection;
     m4x4 view = game->camera.view;
@@ -422,27 +447,28 @@ game_update(struct game_state *game, struct game_input *input)
             world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
         } 
 
-#if 0
+#if 1
+        struct player *player = &game->player;
         block_pos = v3_add(block_pos, block_normal);
         v3 player_size = V3(0.25, 0.99f, 0.25f);
         v3 player_pos = player->position;
         struct box block_bounds;
+        v3 block_size = V3(0.5, 0.5, 0.5);
         v3 bounds_size = v3_add(block_size, player_size);
         block_bounds.min = v3_sub(block_pos, bounds_size);
         block_bounds.max = v3_add(block_pos, bounds_size);
         u32 can_place_block = !box_contains_point(block_bounds, player_pos);
         if (can_place_block && input->mouse.buttons[3]) {
             u32 selected_block = player->hotbar[player->hotbar_selection];
+            if (selected_block == BLOCK_MONITOR) {
+                selected_block = 
+                    block_from_direction(selected_block, block_normal);
+            }
+
             world_place_block(world, block_pos.x, block_pos.y, block_pos.z,
                               selected_block);
         }
-#endif
-    }
-
-    world_update(&game->world, game->camera.position);
-    world_render(&game->world);
-
-    if (has_selected_block) {
+#else
         u32 active_window = game->active_window;
         u32 window_count = game->window_count;
         if (input->mouse.buttons[3]) {
@@ -465,8 +491,11 @@ game_update(struct game_state *game, struct game_input *input)
                                    v3_mulf(camera->front, t - 0.001f));
             window_move(window, window_pos, block_normal, relative_up);
         }
+#endif
     }
 
+    world_update(&game->world, game->camera.position);
+    world_render(&game->world);
     u32 window_count = game->window_count;
     struct window *window = game->windows;
     gl.BindVertexArray(game->window_vertex_array);

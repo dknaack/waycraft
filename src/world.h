@@ -3,10 +3,14 @@
 
 #include "mesh.h"
 
-#define WORLD_SIZE 16
-#define WORLD_HEIGHT 8
+#define WORLD_SIZE 8
+#define WORLD_HEIGHT 4
 #define CHUNK_SIZE 16
 
+// NOTE: block with different directions should have the block facing to the
+// right first, then the block facing left next, and then the block facing up
+// and then down. The last two block should be the blocks facing forward and
+// backward.
 enum block_type {
     BLOCK_AIR,
     BLOCK_STONE,
@@ -18,6 +22,17 @@ enum block_type {
     BLOCK_OAK_LEAVES,
     BLOCK_SAND,
     BLOCK_WATER,
+    BLOCK_MONITOR_RIGHT,
+    BLOCK_MONITOR_LEFT,
+    BLOCK_MONITOR_UP,
+    BLOCK_MONITOR_DOWN,
+    BLOCK_MONITOR_FORWARD,
+    BLOCK_MONITOR_BACKWARD,
+
+    BLOCK_MONITOR      = BLOCK_MONITOR_RIGHT,
+    BLOCK_MONITOR_SIDE = BLOCK_MONITOR_RIGHT,
+    BLOCK_MONITOR_BACK,
+    BLOCK_MONITOR_FRONT,
 };
 
 enum chunk_state {
@@ -30,7 +45,7 @@ enum chunk_state {
  */
 struct world {
     struct chunk *chunks;
-    u8 *blocks;
+    u16 *blocks;
 
     struct mesh mesh;
     u32 *unloaded_chunks;
@@ -47,7 +62,7 @@ struct world {
 };
 
 struct chunk {
-    u8 *blocks;
+    u16 *blocks;
     u32 vao, vbo, ebo;
     u32 index_count;
     u8 flags;

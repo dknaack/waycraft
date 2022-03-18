@@ -6,6 +6,11 @@
 #include "world.h"
 #include "memory.h"
 
+enum game_mode {
+    GAME_MODE_GAME,
+    GAME_MODE_WINDOW,
+};
+
 struct window {
     m4x4 transform;
     u32 width, height;
@@ -25,6 +30,7 @@ struct game_input {
         u8 move_left;
         u8 move_right;
         u8 jump;
+        u8 modifiers;
     } controller;
 
     f32 dt;
@@ -60,6 +66,8 @@ struct game_state {
     u32 window_vertex_buffer;
     u32 window_index_buffer;
     u32 active_window;
+
+    u32 cursor;
 };
 
 static i32 game_init(struct game_state *game);
