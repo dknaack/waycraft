@@ -392,6 +392,18 @@ m4x4_rotate(v3 axis, float angle)
     return m4x4_add(m1, m4x4_add(m4x4_mulf(m2, 1.f - cos), m4x4_mulf(m3, sin)));
 }
 
+m4x4
+m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward)
+{
+    return m4x4_mul(
+        m4x4_translate(pos.x, pos.y, pos.z),
+        M4X4(
+            right.x,   right.y,   right.z,   0,
+            up.x,      up.y,      up.z,      0,
+            forward.x, forward.y, forward.z, 0,
+            0,         0,         0,         1));
+}
+
 v3i
 v3i_vec3(v3 a)
 {
