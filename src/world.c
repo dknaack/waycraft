@@ -430,6 +430,15 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 i32
 world_init(struct world *world, struct memory_arena *arena)
 {
+    u32 world_size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
+    world->chunks = arena_alloc(arena, world_size, struct chunk);
+    world->width  = WORLD_SIZE;
+    world->height = WORLD_HEIGHT;
+    world->depth  = WORLD_SIZE;
+    f32 offset = -WORLD_SIZE * CHUNK_SIZE / 2.f;
+    f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
+    world->position = V3(offset, yoffset, offset);
+
     struct mesh *mesh = &world->mesh;
     u32 size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     mesh->vertices = arena_alloc(arena, size * 64, struct vertex);

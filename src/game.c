@@ -1,4 +1,4 @@
-#includerc/wo<stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "debug.h"
@@ -58,14 +58,6 @@ game_init(struct game_state *game)
 
     struct memory_arena *arena = &game->arena;
 
-    u32 size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
-    game->world.chunks = arena_alloc(arena, size, struct chunk);
-    game->world.width  = WORLD_SIZE;
-    game->world.height = WORLD_HEIGHT;
-    game->world.depth  = WORLD_SIZE;
-    f32 offset = -WORLD_SIZE * CHUNK_SIZE / 2.f;
-    f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
-    game->world.position = V3(offset, yoffset, offset);
     world_init(&game->world, arena);
 
     player_init(&game->player, &game->camera);
