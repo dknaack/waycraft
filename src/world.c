@@ -32,7 +32,7 @@ normalize_height(f32 value)
 }
 
 static void
-chunk_init(struct chunk *chunk, u8 *blocks, i32 cx, i32 cy, i32 cz)
+chunk_init(struct chunk *chunk, u16 *blocks, i32 cx, i32 cy, i32 cz)
 {
     f32 noise_size = 0.1f;
 
@@ -148,7 +148,7 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
             v3 chunk_pos = world_get_chunk_position(world, chunk);
 
             u64 offset = chunk_index * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-            u8 *blocks = world->blocks + offset;
+            u16 *blocks = world->blocks + offset;
             chunk_init(chunk, blocks, chunk_pos.x, chunk_pos.y, chunk_pos.z);
             world_unload_chunk(world, chunk);
         }
@@ -325,7 +325,7 @@ world_init(struct world *world, struct memory_arena *arena)
 
     u64 chunk_size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     u64 block_size = chunk_count * chunk_size;
-    world->blocks = arena_alloc(arena, block_size, u8);
+    world->blocks = arena_alloc(arena, block_size, u16);
 
     world->unloaded_chunks = arena_alloc(arena, chunk_count, u32);
     world->unloaded_chunk_count = 0;
