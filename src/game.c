@@ -364,6 +364,34 @@ player_select_block(struct game_state *game, struct game_input *input,
     return has_selected_block;
 }
 
+static void
+window_move(struct window *window, v3 position, v3 normal, v3 up)
+{
+    v3 window_pos = v3_add(position, v3_mulf(normal, 0.6f));
+    v3 window_forward = normal;
+    v3 window_right = v3_cross(up, window_forward);
+    v3 window_up = v3_cross(window_forward, window_right);
+    f32 window_aspect_ratio = window->width / window->height;
+
+    m4x4 window_transform = m4x4_mul(
+        m4x4_to_coords(window_pos, window_right, window_up,
+                       window_forward),
+        m4x4_scale(window_aspect_ratio, 1, 1));
+
+    window->transform = window_transform;
+}
+
+static void
+window_render(struct window *window, u32 model_uniform)
+{
+    m4x4 window_transform = window->transform;
+    u32 window_texture = window->texture;
+
+    gl.UniformMatrix4fv(model_uniform, 1, GL_FALSE, window_transform.e);
+    gl.BindTexture(GL_TEXTURE_2D, window_texture);
+    gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
 i32
 game_update(struct game_state *game, struct game_input *input)
 {
@@ -428,40 +456,18 @@ game_update(struct game_state *game, struct game_input *input)
                 }
             }
 
-            v3 window_pos = v3_add(block_pos, v3_mulf(normal_min, 0.6f));
-            v3 window_forward = normal_min;
-            v3 window_right = v3_cross(up, window_forward);
-            v3 window_up = v3_cross(window_forward, window_right);
-            f32 window_aspect_ratio = window->width / window->height;
-
-            m4x4 window_transform = m4x4_mul(
-                m4x4_to_coords(window_pos, window_right, window_up,
-                               window_forward),
-                m4x4_scale(1, window_aspect_ratio, 1));
-            window->transform = window_transform;
-
-
+            window_move(window, block_pos, normal_min, up);
         }
     }
 
     u32 window_count = game->window_count;
     struct window *window = game->windows;
+    gl.UseProgram(game->shader.program);
+    gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
+    gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
+    gl.BindVertexArray(game->window_vertex_array);
     while (window_count-- > 0) {
-        m4x4 window_transform = window->transform;
-        u32 window_texture = window->texture;
-
-        gl.UseProgram(game->shader.program);
-        gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE,
-                            window_transform.e);
-        gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE,
-                            camera->projection.e);
-        gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE,
-                            camera->view.e);
-        gl.BindVertexArray(game->window_vertex_array);
-        gl.BindTexture(GL_TEXTURE_2D, window_texture);
-        gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        window++;
+        window_render(window++, game->shader.model);
     }
 
     debug_render(view, projection);
