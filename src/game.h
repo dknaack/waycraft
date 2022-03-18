@@ -54,12 +54,12 @@ struct game_state {
         u8 hotbar_selection;
     } player;
     
-    struct window *active_window;
     struct window *windows;
     u32 window_count;
     u32 window_vertex_array;
     u32 window_vertex_buffer;
     u32 window_index_buffer;
+    u32 active_window;
 };
 
 static i32 game_init(struct game_state *game);

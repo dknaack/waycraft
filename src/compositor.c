@@ -779,15 +779,22 @@ main(void)
         memset(&input.controller, 0, sizeof(input.controller));
         x11_window_poll_events(&window, &input);
 
-        game.windows = 0;
-        struct window game_window;
+        static struct window game_windows[16] = {0};
+        game.windows = game_windows;
+        i32 window_count = 16;
+
         struct surface *surface;
+        i32 i = 0;
+        game.window_count = 0;
         wl_list_for_each(surface, &server.surfaces, link) {
-            game.window_count = 1;
-            game.windows = &game_window;
-            game.windows->texture = surface->texture;
-            game.windows->width = surface->width;
-            game.windows->height = surface->height;
+            struct window *window = game.windows + i;
+            if (window_count-- > 0) {
+                window->texture = surface->texture;
+                window->width = surface->width;
+                window->height = surface->height;
+                game.window_count++;
+            }
+            i++;
         }
 
         input.dt = 0.01;

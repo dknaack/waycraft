@@ -89,6 +89,7 @@ game_init(struct game_state *game)
     game->shader.projection = gl.GetUniformLocation(program, "projection");
     game->shader.program = program;
 
+    game->window_count = 0;
     {
         static const struct vertex vertices[] = {
             { {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
@@ -398,25 +399,29 @@ game_update(struct game_state *game, struct game_input *input)
     struct world *world = &game->world;
     struct camera *camera = &game->camera;
 
-    gl.ClearColor(0.45, 0.65, 0.85, 1.0);
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     m4x4 projection = game->camera.projection;
     m4x4 view = game->camera.view;
     m4x4 model = m4x4_id(1);
 
+    gl.ClearColor(0.45, 0.65, 0.85, 1.0);
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl.UseProgram(game->shader.program);
+    gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE, model.e);
+    gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
+    gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
+
     player_move(game, input);
     v3 block_pos = {0};
-    v3 normal_min = {0};
+    v3 block_normal = {0};
     u32 has_selected_block = 
-        player_select_block(game, input, &block_pos, &normal_min);
+        player_select_block(game, input, &block_pos, &block_normal);
     if (has_selected_block) {
         if (input->mouse.buttons[1]) {
             world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
         } 
 
 #if 0
-        block_pos = v3_add(block_pos, normal_min);
+        block_pos = v3_add(block_pos, block_normal);
         v3 player_size = V3(0.25, 0.99f, 0.25f);
         v3 player_pos = player->position;
         struct box block_bounds;
@@ -433,22 +438,20 @@ game_update(struct game_state *game, struct game_input *input)
     }
 
     world_update(&game->world, game->camera.position);
-
-    gl.UseProgram(game->shader.program);
-    gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE, model.e);
-    gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
-    gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
     world_render(&game->world);
 
     if (has_selected_block) {
+        u32 active_window = game->active_window;
+        u32 window_count = game->window_count;
         if (input->mouse.buttons[3]) {
-            game->active_window = game->active_window ? 0 : game->windows;
+            active_window = (active_window + 1) % (window_count + 1);
+            game->active_window = active_window;
         }
 
-        struct window *window = game->active_window;
-        if (window && window->height && window->width) {
+        struct window *window = game->windows + (active_window - 1);
+        if (active_window && window->height && window->width) {
             v3 up = V3(0, 1, 0);
-            if (normal_min.y > 0.5) {
+            if (block_normal.y > 0.5) {
                 if (fabsf(camera->front.x) < fabsf(camera->front.z)) {
                     up = V3(0, 0, SIGN(camera->front.z));
                 } else {
@@ -456,15 +459,12 @@ game_update(struct game_state *game, struct game_input *input)
                 }
             }
 
-            window_move(window, block_pos, normal_min, up);
+            window_move(window, block_pos, block_normal, up);
         }
     }
 
     u32 window_count = game->window_count;
     struct window *window = game->windows;
-    gl.UseProgram(game->shader.program);
-    gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
-    gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
     gl.BindVertexArray(game->window_vertex_array);
     while (window_count-- > 0) {
         window_render(window++, game->shader.model);
@@ -477,6 +477,10 @@ game_update(struct game_state *game, struct game_input *input)
 void
 game_finish(struct game_state *game)
 {
+    gl.DeleteVertexArrays(1, &game->window_vertex_array);
+    gl.DeleteBuffers(1, &game->window_vertex_buffer);
+    gl.DeleteBuffers(1, &game->window_index_buffer);
+
     gl.DeleteProgram(game->shader.program);
     world_finish(&game->world);
     arena_finish(&game->arena);
