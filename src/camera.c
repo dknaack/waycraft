@@ -30,6 +30,7 @@ camera_rotate(struct camera *c, f32 dx, f32 dy)
     c->yaw   += dx * sensitivity;
     c->pitch -= dy * sensitivity;
 
+    c->yaw   = fmodf(c->yaw + 360.f, 360.f);
     c->pitch = CLAMP(c->pitch, -89.f, 89.f);
 
 	c->front.x = cosf(DEG2RAD(c->yaw)) * cosf(DEG2RAD(c->pitch));
