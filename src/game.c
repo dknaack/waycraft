@@ -307,7 +307,7 @@ player_move(struct game_state *game, struct game_input *input)
 
 static u32
 player_select_block(struct game_state *game, struct game_input *input,
-                    v3 *out_block_pos, v3 *out_normal_min)
+                    v3 *out_block_pos, v3 *out_normal_min, f32 *out_t)
 {
     struct player *player = &game->player;
     struct world *world   = &game->world;
@@ -325,9 +325,10 @@ player_select_block(struct game_state *game, struct game_input *input,
     i32 has_selected_block = 0;
     v3 normal_min = {0};
     v3 normal_max = {0};
+    f32 tmin, tmax;
     for (u32 i = 0; i < 10; i++) {
-        f32 tmin = 0.f;
-        f32 tmax = INFINITY;
+        tmin = 0.f;
+        tmax = INFINITY;
 
         box_ray_intersection_point(selected_block, start, direction,
                                    &normal_min, &normal_max, &tmin, &tmax);
@@ -362,13 +363,13 @@ player_select_block(struct game_state *game, struct game_input *input,
 
     *out_block_pos = block_pos;
     *out_normal_min = normal_min;
+    *out_t = tmin;
     return has_selected_block;
 }
 
 static void
-window_move(struct window *window, v3 position, v3 normal, v3 up)
+window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
 {
-    v3 window_pos = v3_add(position, v3_mulf(normal, 0.6f));
     v3 window_forward = normal;
     v3 window_right = v3_cross(up, window_forward);
     v3 window_up = v3_cross(window_forward, window_right);
@@ -413,8 +414,9 @@ game_update(struct game_state *game, struct game_input *input)
     player_move(game, input);
     v3 block_pos = {0};
     v3 block_normal = {0};
+    f32 t = 0.f;
     u32 has_selected_block = 
-        player_select_block(game, input, &block_pos, &block_normal);
+        player_select_block(game, input, &block_pos, &block_normal, &t);
     if (has_selected_block) {
         if (input->mouse.buttons[1]) {
             world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
@@ -450,16 +452,18 @@ game_update(struct game_state *game, struct game_input *input)
 
         struct window *window = game->windows + (active_window - 1);
         if (active_window && window->height && window->width) {
-            v3 up = V3(0, 1, 0);
+            v3 relative_up = V3(0, 1, 0);
             if (block_normal.y > 0.5) {
                 if (fabsf(camera->front.x) < fabsf(camera->front.z)) {
-                    up = V3(0, 0, SIGN(camera->front.z));
+                    relative_up = V3(0, 0, SIGN(camera->front.z));
                 } else {
-                    up = V3(SIGN(camera->front.x), 0, 0);
+                    relative_up = V3(SIGN(camera->front.x), 0, 0);
                 }
             }
 
-            window_move(window, block_pos, block_normal, up);
+            v3 window_pos = v3_add(camera->position, 
+                                   v3_mulf(camera->front, t - 0.001f));
+            window_move(window, window_pos, block_normal, relative_up);
         }
     }
 
