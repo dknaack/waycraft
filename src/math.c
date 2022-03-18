@@ -174,6 +174,12 @@ v3_lerp(v3 a, v3 b, float t)
     return V3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }
 
+v3
+v3_abs(v3 a)
+{
+    return V3(fabsf(a.x), fabsf(a.y), fabsf(a.z));
+}
+
 /*
  * v4 function definitions
  */

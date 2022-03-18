@@ -25,6 +25,7 @@ v3 v3_floor(v3 a);
 v3 v3_round(v3 a);
 v3 v3_neg(v3 a);
 v3 v3_lerp(v3 a, v3 b, float t);
+v3 v3_abs(v3 v);
 
 f32  v4_len(v4 v);
 f32  v4_dot(v4 a, v4 b);
