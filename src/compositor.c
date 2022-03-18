@@ -779,33 +779,23 @@ main(void)
         memset(&input.controller, 0, sizeof(input.controller));
         x11_window_poll_events(&window, &input);
 
+        game.windows = 0;
+        struct window game_window;
+        struct surface *surface;
+        wl_list_for_each(surface, &server.surfaces, link) {
+            game.window_count = 1;
+            game.windows = &game_window;
+            game.windows->texture = surface->texture;
+            game.windows->width = surface->width;
+            game.windows->height = surface->height;
+        }
+
         input.dt = 0.01;
         input.width = window.width;
         input.height = window.height;
         gl.Viewport(0, 0, window.width, window.height);
         if (game_update(&game, &input) != 0) {
             window.is_open = 0;
-        }
-
-        /* draw the windows */
-        gl.UseProgram(game.shader.program);
-        gl.BindVertexArray(server.vertex_array);
-        gl.UniformMatrix4fv(game.shader.view, 1, GL_FALSE, game.camera.view.e);
-        gl.UniformMatrix4fv(game.shader.projection, 1, GL_FALSE, game.camera.projection.e);
-        struct surface *surface;
-        wl_list_for_each(surface, &server.surfaces, link) {
-            f32 virtual_screen_size = 204.8;
-            f32 x      = surface->x / virtual_screen_size;
-            f32 y      = surface->y / virtual_screen_size + 20.;
-            f32 width  = surface->width / virtual_screen_size;
-            f32 height = surface->height / virtual_screen_size;
-
-            m4x4 model = m4x4_mul(
-                m4x4_translate(x, y, 0),
-                m4x4_scale(width, height, 1));
-            gl.UniformMatrix4fv(game.shader.model, 1, GL_FALSE, model.e);
-            gl.BindTexture(GL_TEXTURE_2D, surface->texture);
-            gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
 
         wl_display_flush_clients(display);
