@@ -89,6 +89,39 @@ game_init(struct game_state *game)
     game->shader.projection = gl.GetUniformLocation(program, "projection");
     game->shader.program = program;
 
+    {
+        static const struct vertex vertices[] = {
+            { {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
+            { {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
+            { {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
+            { {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
+        };
+
+        static const u32 indices[] = { 0, 1, 3, 1, 2, 3, };
+
+        gl.GenVertexArrays(1, &game->window_vertex_array);
+        gl.BindVertexArray(game->window_vertex_array);
+
+        gl.GenBuffers(1, &game->window_vertex_buffer);
+        gl.BindBuffer(GL_ARRAY_BUFFER, game->window_vertex_buffer);
+        gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
+                      GL_STATIC_DRAW);
+
+        gl.GenBuffers(1, &game->window_index_buffer);
+        gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, game->window_index_buffer);
+        gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+                      GL_STATIC_DRAW);
+
+        gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+                               (const void *)offsetof(struct vertex, position));
+        gl.EnableVertexAttribArray(0);
+        gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+                               (const void *)offsetof(struct vertex, texcoord));
+        gl.EnableVertexAttribArray(1);
+
+        gl.BindVertexArray(0);
+    }
+
     return 0;
 }
 
@@ -271,15 +304,19 @@ player_move(struct game_state *game, struct game_input *input)
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
 
-static void
-player_update(struct player *player, struct camera *camera,
-              struct world *world, struct game_input *input)
+static u32
+player_select_block(struct game_state *game, struct game_input *input,
+                    v3 *out_block_pos, v3 *out_normal_min)
 {
-    v3 block = v3_round(camera->position);
+    struct player *player = &game->player;
+    struct world *world   = &game->world;
+    struct camera *camera = &game->camera;
+
+    v3 block_pos = v3_round(camera->position);
     v3 block_size = {{ 0.5, 0.5, 0.5 }};
     struct box selected_block;
-    selected_block.min = v3_sub(block, block_size);
-    selected_block.max = v3_add(block, block_size);
+    selected_block.min = v3_sub(block_pos, block_size);
+    selected_block.max = v3_add(block_pos, block_size);
 
     v3 start = camera->position;
     v3 direction = camera->front;
@@ -297,8 +334,8 @@ player_update(struct player *player, struct camera *camera,
             break;
         }
 
-        if (block_is_empty(world_at(world, block.x, block.y, block.z))) {
-            block = v3_add(block, normal_max);
+        if (block_is_empty(world_at(world, block_pos.x, block_pos.y, block_pos.z))) {
+            block_pos = v3_add(block_pos, normal_max);
             selected_block.min = v3_add(selected_block.min, normal_max);
             selected_block.max = v3_add(selected_block.max, normal_max);
         } else {
@@ -322,45 +359,111 @@ player_update(struct player *player, struct camera *camera,
         }
     }
 
-    if (has_selected_block) {
-        if (input->mouse.buttons[1]) {
-            world_destroy_block(world, block.x, block.y, block.z);
-        } 
-
-        block = v3_add(block, normal_min);
-        v3 player_size = V3(0.25, 0.99f, 0.25f);
-        v3 player_pos = player->position;
-        struct box block_bounds;
-        v3 bounds_size = v3_add(block_size, player_size);
-        block_bounds.min = v3_sub(block, bounds_size);
-        block_bounds.max = v3_add(block, bounds_size);
-        u32 can_place_block = !box_contains_point(block_bounds, player_pos);
-        if (can_place_block && input->mouse.buttons[3]) {
-            u32 selected_block = player->hotbar[player->hotbar_selection];
-            world_place_block(world, block.x, block.y, block.z,
-                              selected_block);
-        }
-    }
+    *out_block_pos = block_pos;
+    *out_normal_min = normal_min;
+    return has_selected_block;
 }
 
 i32
 game_update(struct game_state *game, struct game_input *input)
 {
+    struct world *world = &game->world;
+    struct camera *camera = &game->camera;
+
+    gl.ClearColor(0.45, 0.65, 0.85, 1.0);
+    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     m4x4 projection = game->camera.projection;
     m4x4 view = game->camera.view;
     m4x4 model = m4x4_id(1);
 
     player_move(game, input);
-    player_update(&game->player, &game->camera, &game->world, input);
+    v3 block_pos = {0};
+    v3 normal_min = {0};
+    u32 has_selected_block = 
+        player_select_block(game, input, &block_pos, &normal_min);
+    if (has_selected_block) {
+        if (input->mouse.buttons[1]) {
+            world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
+        } 
+
+#if 0
+        block_pos = v3_add(block_pos, normal_min);
+        v3 player_size = V3(0.25, 0.99f, 0.25f);
+        v3 player_pos = player->position;
+        struct box block_bounds;
+        v3 bounds_size = v3_add(block_size, player_size);
+        block_bounds.min = v3_sub(block_pos, bounds_size);
+        block_bounds.max = v3_add(block_pos, bounds_size);
+        u32 can_place_block = !box_contains_point(block_bounds, player_pos);
+        if (can_place_block && input->mouse.buttons[3]) {
+            u32 selected_block = player->hotbar[player->hotbar_selection];
+            world_place_block(world, block_pos.x, block_pos.y, block_pos.z,
+                              selected_block);
+        }
+#endif
+    }
+
     world_update(&game->world, game->camera.position);
 
-    gl.ClearColor(0.45, 0.65, 0.85, 1.0);
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl.UseProgram(game->shader.program);
     gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE, model.e);
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
     world_render(&game->world);
+
+    if (has_selected_block) {
+        if (input->mouse.buttons[3]) {
+            game->active_window = game->active_window ? 0 : game->windows;
+        }
+
+        struct window *window = game->active_window;
+        if (window && window->height && window->width) {
+            v3 up = V3(0, 1, 0);
+            if (normal_min.y > 0.5) {
+                if (fabsf(camera->front.x) < fabsf(camera->front.z)) {
+                    up = V3(0, 0, SIGN(camera->front.z));
+                } else {
+                    up = V3(SIGN(camera->front.x), 0, 0);
+                }
+            }
+
+            v3 window_pos = v3_add(block_pos, v3_mulf(normal_min, 0.6f));
+            v3 window_forward = normal_min;
+            v3 window_right = v3_cross(up, window_forward);
+            v3 window_up = v3_cross(window_forward, window_right);
+            f32 window_aspect_ratio = window->width / window->height;
+
+            m4x4 window_transform = m4x4_mul(
+                m4x4_to_coords(window_pos, window_right, window_up,
+                               window_forward),
+                m4x4_scale(1, window_aspect_ratio, 1));
+            window->transform = window_transform;
+
+
+        }
+    }
+
+    u32 window_count = game->window_count;
+    struct window *window = game->windows;
+    while (window_count-- > 0) {
+        m4x4 window_transform = window->transform;
+        u32 window_texture = window->texture;
+
+        gl.UseProgram(game->shader.program);
+        gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE,
+                            window_transform.e);
+        gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE,
+                            camera->projection.e);
+        gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE,
+                            camera->view.e);
+        gl.BindVertexArray(game->window_vertex_array);
+        gl.BindTexture(GL_TEXTURE_2D, window_texture);
+        gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        window++;
+    }
+
     debug_render(view, projection);
     return 0;
 }

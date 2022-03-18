@@ -7,9 +7,7 @@
 #include "memory.h"
 
 struct window {
-    v4 rotation;
-    v3 scale;
-    v3 position;
+    m4x4 transform;
     u32 width, height;
     u32 texture;
 };
@@ -55,6 +53,13 @@ struct game_state {
         u8 hotbar[9];
         u8 hotbar_selection;
     } player;
+    
+    struct window *active_window;
+    struct window *windows;
+    u32 window_count;
+    u32 window_vertex_array;
+    u32 window_vertex_buffer;
+    u32 window_index_buffer;
 };
 
 static i32 game_init(struct game_state *game);
