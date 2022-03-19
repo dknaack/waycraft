@@ -310,10 +310,10 @@ static void
 block_texcoords_back(enum block_type block, v2 *uv)
 {
     switch (block) {
-    case BLOCK_MONITOR_BACKWARD:
+    case BLOCK_MONITOR_FORWARD:
         block_texcoords(BLOCK_MONITOR_BACK, uv);
         break;
-    case BLOCK_MONITOR_FORWARD:
+    case BLOCK_MONITOR_BACKWARD:
         block_texcoords(BLOCK_MONITOR_FRONT, uv);
         break;
     case BLOCK_MONITOR_RIGHT:
