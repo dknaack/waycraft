@@ -417,7 +417,9 @@ block_from_direction(enum block_type base_block, v3 direction)
 #endif
 
 static u32
-window_intersects_ray(struct window *window, v3 ray_start, v3 ray_direction)
+window_ray_intersection_point(struct window *window, 
+                              v3 ray_start, v3 ray_direction,
+                              v2 *point_on_window)
 {
     u32 hit = 0;
     v3 normal = window->z_axis;
@@ -436,6 +438,10 @@ window_intersects_ray(struct window *window, v3 ray_start, v3 ray_direction)
             u32 is_inside_window = ((-1.f <= tx && tx < 1.f) &&
                                     (-1.f <= ty && ty < 1.f));
 
+            if (point_on_window) {
+                point_on_window->x = tx;
+                point_on_window->y = ty;
+            }
             hit = is_inside_window;
         }
     }
@@ -449,7 +455,9 @@ window_find(struct window *window, u32 window_count,
             v3 ray_start, v3 ray_direction)
 {
     for (u32 i = 0; i < window_count; i++) {
-        if (window_intersects_ray(window, ray_start, ray_direction)) {
+        u32 intersects_window = window_ray_intersection_point(
+            window, ray_start, ray_direction, 0);
+        if (intersects_window) {
             return i + 1;
         }
 
@@ -524,6 +532,7 @@ game_update(struct game_state *game, struct game_input *input)
         }
 
         if (input->mouse.buttons[3]) {
+            // TODO: resize the window
             if (hot_window) {
                 game->active_window = hot_window;
             } else if (has_selected_block) {
@@ -551,10 +560,33 @@ game_update(struct game_state *game, struct game_input *input)
             }
         }
     } else {
+        struct window *window = &game->windows[active_window - 1];
+        v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
+        v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
+        v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
+        v3 camera_pos = v3_add(camera->position, mouse_pos);
+        v3 camera_front = camera->front;
+        v3 window_pos = window->position;
+
+        v2 cursor_pos = {0};
+        u32 is_inside_window = 
+            window_ray_intersection_point(window, camera_pos, camera_front,
+                                          &cursor_pos);
+        if (is_inside_window) {
+            v3 x = v3_mulf(window->x_axis, cursor_pos.x);
+            v3 y = v3_mulf(window->y_axis, cursor_pos.y);
+            debug_line(window_pos, v3_add(v3_add(window_pos, y), x));
+        }
+
+        debug_set_color(0, 1, 0);
+        debug_line(window_pos, v3_add(window_pos, window->x_axis));
+
         u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
-        if (input->controller.jump && is_pressing_alt) {
+        if (input->mouse.buttons[3] && is_pressing_alt) {
             game->active_window = 0;
         }
+
+        game->mouse_pos = mouse_pos;
     }
 
     world_update(&game->world, game->camera.position);

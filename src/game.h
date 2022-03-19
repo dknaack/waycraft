@@ -75,6 +75,7 @@ struct game_state {
     u32 window_index_buffer;
     u32 active_window;
     u32 hot_window;
+    v3 mouse_pos;
 
     u32 cursor;
 };
