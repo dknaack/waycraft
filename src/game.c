@@ -40,15 +40,16 @@ player_init(struct player *player, struct camera *camera)
     camera_init(camera, player_position, player_speed, camera_fov);
     player->position = player_position;
 
-    player->hotbar[0] = BLOCK_STONE;
-    player->hotbar[1] = BLOCK_DIRT;
-    player->hotbar[2] = BLOCK_GRASS;
-    player->hotbar[3] = BLOCK_SAND;
-    player->hotbar[4] = BLOCK_PLANKS;
-    player->hotbar[5] = BLOCK_OAK_LOG;
-    player->hotbar[6] = BLOCK_OAK_LEAVES;
-    player->hotbar[7] = BLOCK_WATER;
-    player->hotbar[8] = BLOCK_MONITOR;
+    u8 *hotbar = player->hotbar;
+    *hotbar++ = BLOCK_WINDOW;
+    *hotbar++ = BLOCK_STONE;
+    *hotbar++ = BLOCK_DIRT;
+    *hotbar++ = BLOCK_GRASS;
+    *hotbar++ = BLOCK_SAND;
+    *hotbar++ = BLOCK_PLANKS;
+    *hotbar++ = BLOCK_OAK_LOG;
+    *hotbar++ = BLOCK_OAK_LEAVES;
+    *hotbar++ = BLOCK_WATER;
 }
 
 i32
