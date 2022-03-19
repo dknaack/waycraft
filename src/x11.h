@@ -13,6 +13,7 @@ struct x11_window {
     u32 width, height;
     uint is_open;
     uint lock_cursor;
+    uint is_active;
 };
 
 struct game_input;

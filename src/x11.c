@@ -64,7 +64,7 @@ x11_window_init(struct x11_window *window)
                                            0, 0, 800, 600, 0, 0, 0);
     mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask |
         KeymapStateMask | ExposureMask | PointerMotionMask |
-        StructureNotifyMask;
+        StructureNotifyMask | EnterWindowMask | LeaveWindowMask;
     XSelectInput(window->display, window->drawable, mask);
     XMapWindow(window->display, window->drawable);
 
@@ -114,27 +114,6 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     XEvent event;
     i32 dx, dy;
 
-    struct {
-        KeySym key_sym;
-        u8 *pressed;
-    } keys_to_check[] = {
-        { XK_space, &input->controller.jump   },
-        { XK_w, &input->controller.move_up    },
-        { XK_a, &input->controller.move_left  },
-        { XK_s, &input->controller.move_down  },
-        { XK_d, &input->controller.move_right },
-    };
-
-    u8 key_vector[32] = {0};
-    XQueryKeymap(window->display, (char *)key_vector);
-    for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
-        u8 key_code = XKeysymToKeycode(window->display,
-                                       keys_to_check[i].key_sym);
-        if (x11_get_key_state(key_vector, key_code)) {
-            *keys_to_check[i].pressed = 1;
-        }
-    }
-
     for (u32 i = 0; i < LENGTH(input->mouse.buttons); i++) {
         input->mouse.buttons[i] = 0;
     }
@@ -183,7 +162,35 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             if (key == XK_Escape) {
                 window->lock_cursor = 0;
                 XUngrabPointer(window->display, CurrentTime);
-                break;
+            }
+        case EnterNotify:
+            window->is_active = 1;
+            break;
+        case LeaveNotify:
+            window->is_active = 0;
+            break;
+        }
+    }
+
+    if (window->is_active) {
+        struct {
+            KeySym key_sym;
+            u8 *pressed;
+        } keys_to_check[] = {
+            { XK_space, &input->controller.jump   },
+            { XK_w, &input->controller.move_up    },
+            { XK_a, &input->controller.move_left  },
+            { XK_s, &input->controller.move_down  },
+            { XK_d, &input->controller.move_right },
+        };
+
+        u8 key_vector[32] = {0};
+        XQueryKeymap(window->display, (char *)key_vector);
+        for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
+            u8 key_code = XKeysymToKeycode(window->display,
+                                           keys_to_check[i].key_sym);
+            if (x11_get_key_state(key_vector, key_code)) {
+                *keys_to_check[i].pressed = 1;
             }
         }
     }
