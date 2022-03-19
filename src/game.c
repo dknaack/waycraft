@@ -360,35 +360,35 @@ player_select_block(struct game_state *game, struct game_input *input,
     return has_selected_block;
 }
 
-#if 0
+static m4x4
+window_transform(struct window *window)
+{
+    return m4x4_to_coords(window->position, 
+                          window->x_axis, window->y_axis, window->z_axis);
+}
+
 static void
 window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
 {
-    v3 window_forward = normal;
-    v3 window_right = v3_cross(up, window_forward);
-    v3 window_up = v3_cross(window_forward, window_right);
-    f32 window_aspect_ratio = window->width / window->height;
-
-    m4x4 window_transform = m4x4_mul(
-        m4x4_to_coords(window_pos, window_right, window_up,
-                       window_forward),
-        m4x4_scale(window_aspect_ratio, 1, 1));
-
-    window->transform = window_transform;
+    window->position = window_pos;
+    window->z_axis = normal;
+    window->x_axis = v3_cross(up, window->z_axis);
+    window->y_axis = v3_cross(window->z_axis, window->x_axis);
 }
-#endif
 
 static void
-window_render(struct window *window, u32 model_uniform)
+window_render(struct window *window, u32 window_count, u32 model_uniform)
 {
-    m4x4 window_transform = window->transform;
-    u32 window_texture = window->texture;
-
-    gl.UniformMatrix4fv(model_uniform, 1, GL_FALSE, window_transform.e);
-    gl.BindTexture(GL_TEXTURE_2D, window_texture);
-    gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    while (window_count-- > 0) {
+        m4x4 transform = window_transform(window);
+        gl.UniformMatrix4fv(model_uniform, 1, GL_FALSE, transform.e);
+        gl.BindTexture(GL_TEXTURE_2D, window->texture);
+        gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        window++;
+    }
 }
 
+#if 0
 static enum block_type
 block_from_direction(enum block_type base_block, v3 direction)
 {
