@@ -150,10 +150,10 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 }
 
 // NOTE: assumes ray starts outside the box and intersects the box
-f32
-box_ray_intersection_point(struct box box, v3 start, v3 direction,
-                           v3 *normal_min, v3 *normal_max, 
-                           f32 *out_tmin, f32 *out_tmax)
+u32
+ray_box_intersection(struct box box, v3 start, v3 direction,
+                     v3 *normal_min, v3 *normal_max, 
+                     f32 *out_tmin, f32 *out_tmax)
 {
     f32 tmin = 0.f;
     f32 tmax = INFINITY;
@@ -264,7 +264,7 @@ player_move(struct game_state *game, struct game_input *input)
                         v3 normal_min = {0};
                         v3 normal_max;
                         f32 t, tmax;
-                        box_ray_intersection_point(
+                        ray_box_intersection(
                             block_bounds, relative_old_pos, 
                             velocity, &normal_min, &normal_max, &t, &tmax);
                         t = MAX(t - 0.01f, 0);
@@ -322,7 +322,7 @@ player_select_block(struct game_state *game, struct game_input *input,
         tmin = 0.f;
         tmax = INFINITY;
 
-        box_ray_intersection_point(selected_block, start, direction,
+        ray_box_intersection(selected_block, start, direction,
                                    &normal_min, &normal_max, &tmin, &tmax);
         if (tmin > 5.f) {
             break;
@@ -359,6 +359,7 @@ player_select_block(struct game_state *game, struct game_input *input,
     return has_selected_block;
 }
 
+#if 0
 static void
 window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
 {
@@ -374,6 +375,7 @@ window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
 
     window->transform = window_transform;
 }
+#endif
 
 static void
 window_render(struct window *window, u32 model_uniform)
