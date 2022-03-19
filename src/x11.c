@@ -158,11 +158,24 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             }
             break;
         case KeyPress:
+            if (event.xkey.state & ShiftMask) {
+                input->controller.modifiers |= MOD_SHIFT;
+            }
+
+            if (event.xkey.state & ControlMask) {
+                input->controller.modifiers |= MOD_CTRL;
+            }
+
+            if (event.xkey.state & Mod1Mask) {
+                input->controller.modifiers |= MOD_ALT;
+            }
+
             key = XLookupKeysym(&event.xkey, 0);
             if (key == XK_Escape) {
                 window->lock_cursor = 0;
                 XUngrabPointer(window->display, CurrentTime);
             }
+            break;
         case EnterNotify:
             window->is_active = 1;
             break;

@@ -17,6 +17,12 @@ struct window {
     u32 texture;
 };
 
+enum game_input_modifiers {
+    MOD_SHIFT = 0x1,
+    MOD_CTRL  = 0x2,
+    MOD_ALT   = 0x4,
+};
+
 struct game_input {
     struct {
         f32 dx, dy;
