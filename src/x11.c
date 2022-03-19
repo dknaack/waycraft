@@ -118,6 +118,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
         input->mouse.buttons[i] = 0;
     }
 
+    input->controller.modifiers = 0;
+
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
 
@@ -158,18 +160,6 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             }
             break;
         case KeyPress:
-            if (event.xkey.state & ShiftMask) {
-                input->controller.modifiers |= MOD_SHIFT;
-            }
-
-            if (event.xkey.state & ControlMask) {
-                input->controller.modifiers |= MOD_CTRL;
-            }
-
-            if (event.xkey.state & Mod1Mask) {
-                input->controller.modifiers |= MOD_ALT;
-            }
-
             key = XLookupKeysym(&event.xkey, 0);
             if (key == XK_Escape) {
                 window->lock_cursor = 0;
@@ -205,6 +195,21 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
             if (x11_get_key_state(key_vector, key_code)) {
                 *keys_to_check[i].pressed = 1;
             }
+        }
+
+        u8 shift_keycode = XKeysymToKeycode(window->display, XK_Shift_L); 
+        if (x11_get_key_state(key_vector, shift_keycode)) {
+            input->controller.modifiers |= MOD_SHIFT;
+        }
+
+        u8 ctrl_keycode = XKeysymToKeycode(window->display, XK_Control_L); 
+        if (x11_get_key_state(key_vector, ctrl_keycode)) {
+            input->controller.modifiers |= MOD_CTRL;
+        }
+
+        u8 alt_keycode = XKeysymToKeycode(window->display, XK_Alt_L); 
+        if (x11_get_key_state(key_vector, alt_keycode)) {
+            input->controller.modifiers |= MOD_ALT;
         }
     }
 
