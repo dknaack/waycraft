@@ -414,15 +414,63 @@ block_from_direction(enum block_type base_block, v3 direction)
     block += is_facing_in_negative_direction;
     return block;
 }
+#endif
+
+static u32
+window_intersects_ray(struct window *window, v3 ray_start, v3 ray_direction)
+{
+    u32 hit = 0;
+    v3 normal = window->z_axis;
+    v3 window_pos = window->position;
+
+    f32 d_dot_n = v3_dot(ray_direction, normal);
+    if (fabsf(d_dot_n) > 0.0001f) {
+        f32 p_dot_n = v3_dot(v3_sub(window_pos, ray_start), normal);
+        f32 t = p_dot_n / d_dot_n;
+        if (t > 0.f) {
+            v3 point = v3_add(ray_start, v3_mulf(ray_direction, t));
+            v3 relative_point = v3_sub(point, window_pos);
+
+            f32 tx = v3_dot(window->x_axis, relative_point);
+            f32 ty = v3_dot(window->y_axis, relative_point);
+            u32 is_inside_window = ((-1.f <= tx && tx < 1.f) &&
+                                    (-1.f <= ty && ty < 1.f));
+
+            hit = is_inside_window;
+        }
+    }
+
+    return hit;
+}
+
+// NOTE: returns index + 1 instead of just index
+static i32
+window_find(struct window *window, u32 window_count,
+            v3 ray_start, v3 ray_direction)
+{
+    for (u32 i = 0; i < window_count; i++) {
+        if (window_intersects_ray(window, ray_start, ray_direction)) {
+            return i + 1;
+        }
+
+        window++;
+    }
+
+    return 0;
+}
 
 i32
 game_update(struct game_state *game, struct game_input *input)
 {
     struct world *world = &game->world;
+    struct camera *camera = &game->camera;
 
     m4x4 projection = game->camera.projection;
     m4x4 view = game->camera.view;
     m4x4 model = m4x4_id(1);
+
+    v3 camera_pos = camera->position;
+    v3 camera_front = camera->front;
 
     gl.ClearColor(0.45, 0.65, 0.85, 1.0);
     gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -431,72 +479,89 @@ game_update(struct game_state *game, struct game_input *input)
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
-    player_move(game, input);
-    v3 block_pos = {0};
-    v3 block_normal = {0};
-    f32 t = 0.f;
-    u32 has_selected_block = 
-        player_select_block(game, input, &block_pos, &block_normal, &t);
-    if (has_selected_block) {
-        if (input->mouse.buttons[1]) {
-            world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
-        } 
+    struct window *windows = game->windows;
+    u32 window_count = game->window_count;
+    u32 active_window = game->active_window;
+    if (!active_window) {
+        player_move(game, input);
+        v3 block_pos = {0};
+        v3 block_normal = {0};
+        f32 t = 0.f;
+        u32 has_selected_block = 
+            player_select_block(game, input, &block_pos, &block_normal, &t);
 
-#if 1
-        struct player *player = &game->player;
-        block_pos = v3_add(block_pos, block_normal);
-        v3 player_size = V3(0.25, 0.99f, 0.25f);
-        v3 player_pos = player->position;
-        struct box block_bounds;
-        v3 block_size = V3(0.5, 0.5, 0.5);
-        v3 bounds_size = v3_add(block_size, player_size);
-        block_bounds.min = v3_sub(block_pos, bounds_size);
-        block_bounds.max = v3_add(block_pos, bounds_size);
-        u32 can_place_block = !box_contains_point(block_bounds, player_pos);
-        if (can_place_block && input->mouse.buttons[3]) {
-            u32 selected_block = player->hotbar[player->hotbar_selection];
-            if (selected_block == BLOCK_MONITOR) {
-                selected_block = 
-                    block_from_direction(selected_block, block_normal);
-            }
+        u32 hot_window = game->hot_window;
+        if (hot_window && has_selected_block) {
+            struct window *window = game->windows + (hot_window - 1);
 
-            world_place_block(world, block_pos.x, block_pos.y, block_pos.z,
-                              selected_block);
-        }
-#else
-        u32 active_window = game->active_window;
-        u32 window_count = game->window_count;
-        if (input->mouse.buttons[3]) {
-            active_window = (active_window + 1) % (window_count + 1);
-            game->active_window = active_window;
-        }
-
-        struct window *window = game->windows + (active_window - 1);
-        if (active_window && window->height && window->width) {
             v3 relative_up = V3(0, 1, 0);
             if (block_normal.y > 0.5) {
-                if (fabsf(camera->front.x) < fabsf(camera->front.z)) {
-                    relative_up = V3(0, 0, SIGN(camera->front.z));
+                if (fabsf(camera_front.x) < fabsf(camera_front.z)) {
+                    relative_up = V3(0, 0, SIGN(camera_front.z));
                 } else {
-                    relative_up = V3(SIGN(camera->front.x), 0, 0);
+                    relative_up = V3(SIGN(camera_front.x), 0, 0);
                 }
             }
 
-            v3 window_pos = v3_add(camera->position, 
-                                   v3_mulf(camera->front, t - 0.001f));
+            v3 offset = v3_mulf(camera_front, t - 0.001f);
+            v3 window_pos = v3_add(camera_pos, offset);
             window_move(window, window_pos, block_normal, relative_up);
+        } else if (!hot_window) {
+            hot_window = window_find(windows, window_count, 
+                                     camera_pos, camera_front);
         }
-#endif
+
+
+        if (input->mouse.buttons[1]) {
+            u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
+            if (hot_window && is_pressing_alt) {
+                game->hot_window = game->hot_window ? 0 : hot_window;
+            } else if (hot_window && !is_pressing_alt) {
+                // TODO: destroy the active window
+            } else if (has_selected_block && !is_pressing_alt) {
+                world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
+            }
+        }
+
+        if (input->mouse.buttons[3]) {
+            if (hot_window) {
+                game->active_window = hot_window;
+            } else if (has_selected_block) {
+                struct player *player = &game->player;
+                v3 new_block_pos = v3_add(block_pos, block_normal);
+                v3 player_size = V3(0.25, 0.99f, 0.25f);
+                v3 player_pos = player->position;
+                struct box block_bounds;
+                v3 block_size = V3(0.5, 0.5, 0.5);
+                v3 bounds_size = v3_add(block_size, player_size);
+                block_bounds.min = v3_sub(new_block_pos, bounds_size);
+                block_bounds.max = v3_add(new_block_pos, bounds_size);
+                u32 can_place_block = !box_contains_point(block_bounds, player_pos);
+                if (can_place_block) {
+                    u32 selected_block = player->hotbar[player->hotbar_selection];
+                    if (selected_block == BLOCK_WINDOW) {
+                        game->hot_window = hot_window = game->window_count;
+                    } else {
+                        world_place_block(
+                            world, 
+                            new_block_pos.x, new_block_pos.y, new_block_pos.z,
+                            selected_block);
+                    }
+                }
+            }
+        }
+    } else {
+        u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
+        if (input->controller.jump && is_pressing_alt) {
+            game->active_window = 0;
+        }
     }
 
     world_update(&game->world, game->camera.position);
     world_render(&game->world);
-    u32 window_count = game->window_count;
-    struct window *window = game->windows;
+
     gl.BindVertexArray(game->window_vertex_array);
-    while (window_count-- > 0) {
-        window_render(window++, game->shader.model);
-    }
+    window_render(windows, window_count, game->shader.model);
 
     debug_render(view, projection);
     return 0;

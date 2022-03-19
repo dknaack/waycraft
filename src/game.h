@@ -12,8 +12,10 @@ enum game_mode {
 };
 
 struct window {
-    m4x4 transform;
-    u32 width, height;
+    v3 position;
+    v3 x_axis;
+    v3 y_axis;
+    v3 z_axis;
     u32 texture;
 };
 
@@ -72,6 +74,7 @@ struct game_state {
     u32 window_vertex_buffer;
     u32 window_index_buffer;
     u32 active_window;
+    u32 hot_window;
 
     u32 cursor;
 };
