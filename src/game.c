@@ -587,6 +587,7 @@ game_update(struct game_state *game, struct game_input *input)
         }
 
         game->mouse_pos = mouse_pos;
+        game->cursor_pos = cursor_pos;
     }
 
     world_update(&game->world, game->camera.position);

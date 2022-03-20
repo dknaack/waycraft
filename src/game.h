@@ -76,6 +76,7 @@ struct game_state {
     u32 active_window;
     u32 hot_window;
     v3 mouse_pos;
+    v2 cursor_pos;
 
     u32 cursor;
 };
