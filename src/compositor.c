@@ -59,11 +59,6 @@ struct server {
 
     struct wl_list free_clients;
     struct wl_list free_surfaces;
-
-    u32 vertex_array;
-    u32 vertex_buffer;
-    u32 index_buffer;
-    struct mesh mesh;
 };
 
 struct client {
@@ -750,35 +745,6 @@ main(void)
         fprintf(stderr, "Failed to initialize the game\n");
         return 1;
     }
-
-    static const struct vertex vertices[] = {
-        { {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
-        { {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
-        { {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
-        { {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
-    };
-
-    static u32 indices[] = { 0, 1, 3, 1, 2, 3, };
-
-    gl.GenVertexArrays(1, &server.vertex_array);
-    gl.GenBuffers(1, &server.vertex_buffer);
-    gl.GenBuffers(1, &server.index_buffer);
-
-    gl.BindVertexArray(server.vertex_array);
-
-    gl.BindBuffer(GL_ARRAY_BUFFER, server.vertex_buffer);
-    gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-                  GL_STATIC_DRAW);
-    gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, server.index_buffer);
-    gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-                  GL_STATIC_DRAW);
-
-    gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
-                           (const void *)offsetof(struct vertex, position));
-    gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 
-                           (const void *)offsetof(struct vertex, texcoord));
-    gl.EnableVertexAttribArray(1);
 
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
