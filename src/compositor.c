@@ -66,6 +66,13 @@ struct server {
     struct mesh mesh;
 };
 
+struct client {
+    struct wl_client *client;
+    struct wl_resource *pointer;
+
+    struct wl_list link;
+};
+
 struct surface {
     struct server *server;
     struct wl_resource *surface;
@@ -77,9 +84,11 @@ struct surface {
     i32 width, height;
     u32 texture;
 
-    struct wl_client *client;
+    struct client *client;
     struct wl_list link;
 };
+
+struct server server = {0};
 
 static struct surface *
 server_create_surface(struct server *server)
@@ -91,30 +100,24 @@ server_create_surface(struct server *server)
     return surface;
 }
 
-static void
-wl_region_destroy(struct wl_client *client, struct wl_resource *resource)
+static struct client *
+server_create_client(struct server *server)
 {
-    /* TODO */
+    struct client *client = calloc(1, sizeof(struct client));
+
+    wl_list_insert(&server->clients, &client->link);
+    return client;
 }
 
 static void
-wl_region_add(struct wl_client *client, struct wl_resource *resource,
-              i32 x, i32 y, i32 width, i32 height)
+do_nothing()
 {
-    /* TODO */
-}
-
-static void
-wl_region_subtract(struct wl_client *client, struct wl_resource *resource,
-                   i32 x, i32 y, i32 width, i32 height)
-{
-    /* TODO */
 }
 
 static const struct wl_region_interface wl_region_implementation = {
-    .destroy  = wl_region_destroy,
-    .add      = wl_region_add,
-    .subtract = wl_region_subtract,
+    .destroy  = do_nothing,
+    .add      = do_nothing,
+    .subtract = do_nothing,
 };
 
 static void
@@ -132,9 +135,7 @@ wl_surface_destroy(struct wl_client *client,
                    struct wl_resource *resource)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
-
     wl_list_remove(&surface->link);
-    //free(surface);
 }
 
 static void
@@ -160,6 +161,7 @@ static void
 wl_surface_frame(struct wl_client *client,
                  struct wl_resource *resource, u32 callback)
 {
+    puts("wl_surface::frame");
     struct surface *surface = wl_resource_get_user_data(resource);
 
     surface->frame_callback = 
@@ -292,17 +294,19 @@ wl_surface_resource_destroy(struct wl_resource *resource)
  */
 
 static void
-wl_compositor_create_surface(struct wl_client *client,
+wl_compositor_create_surface(struct wl_client *wl_client,
                              struct wl_resource *resource, u32 id)
 {
     struct server *server = wl_resource_get_user_data(resource);
     struct surface *surface = server_create_surface(server);
-    if (!surface) {
+    struct client *client = server_create_client(server);
+    client->client = wl_client;
+    if (!surface || !client) {
         return;
     }
 
     surface->client = client;
-    surface->surface = wl_resource_create(client,
+    surface->surface = wl_resource_create(wl_client,
                                           &wl_surface_interface, WL_SURFACE_VERSION, id);
     wl_resource_set_implementation(
         surface->surface, &wl_surface_implementation,
@@ -349,7 +353,7 @@ static void
 xdg_toplevel_destroy(struct wl_client *client,
                      struct wl_resource *resource)
 {
-    /* TODO */
+    printf("destroy\n");
 }
 
 static void
@@ -357,7 +361,7 @@ xdg_toplevel_set_parent(struct wl_client *client,
                         struct wl_resource *resource,
                         struct wl_resource *parent)
 {
-    /* TODO */
+    printf("parent\n");
 }
 
 static void
@@ -365,7 +369,7 @@ xdg_toplevel_set_title(struct wl_client *client,
                        struct wl_resource *resource,
                        const char *title)
 {
-    /* TODO */
+    printf("title: %s\n", title);
 }
 
 static void
@@ -373,7 +377,7 @@ xdg_toplevel_set_app_id(struct wl_client *client,
                         struct wl_resource *resource,
                         const char *app_id)
 {
-    /* TODO */
+    printf("app id: %s\n", app_id);
 }
 
 static void
@@ -402,28 +406,28 @@ static void
 xdg_toplevel_set_max_size(struct wl_client *client,
                           struct wl_resource *resource, i32 width, i32 height)
 {
-    /* TODO */
+    printf("min_size: (%d, %d)\n", width, height);
 }
 
 static void
 xdg_toplevel_set_min_size(struct wl_client *client,
                           struct wl_resource *resource, i32 width, i32 height)
 {
-    /* TODO */
+    printf("max_size: (%d, %d)\n", width, height);
 }
 
 static void
 xdg_toplevel_set_maximized(struct wl_client *client,
                            struct wl_resource *resource)
 {
-    /* TODO */
+    printf("maximize\n");
 }
 
 static void
 xdg_toplevel_unset_maximized(struct wl_client *client,
                              struct wl_resource *resource)
 {
-    /* TODO */
+    printf("unmaximize\n");
 }
 
 static void
@@ -445,7 +449,7 @@ static void
 xdg_toplevel_set_minimized(struct wl_client *client,
                            struct wl_resource *resource)
 {
-    /* TODO */
+    printf("minimize\n");
 }
 
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
@@ -589,6 +593,7 @@ static void
 wl_pointer_set_cursor(struct wl_client *client, struct wl_resource *resource, 
                       u32 serial, struct wl_resource *surface, i32 hotspot_x, i32 hotspot_y)
 {
+    /* TODO */
 }
 
 static void 
@@ -624,6 +629,12 @@ wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
     struct wl_resource *pointer = 
         wl_resource_create(client, &wl_pointer_interface, 7, id);
     wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
+    struct client *it;
+    wl_list_for_each(it, &server.clients, link) {
+        if (it->client == client) {
+            it->pointer = pointer;
+        }
+    }
 }
 
 static void
@@ -683,7 +694,6 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 int
 main(void)
 {
-    struct server server = {0};
     struct x11_window window = {0};
     struct game_state game = {0};
     struct game_input input = {0};
@@ -790,8 +800,6 @@ main(void)
             struct window *window = game.windows + i;
             if (window_count-- > 0) {
                 window->texture = surface->texture;
-                window->width = surface->width;
-                window->height = surface->height;
                 game.window_count++;
             }
             i++;
