@@ -33,7 +33,7 @@ static const u8 *frag_shader_source = (u8 *)
 void
 player_init(struct player *player, struct camera *camera)
 {
-    f32 player_speed = 10.f;
+    f32 player_speed = 150.f;
     f32 camera_fov = 65.f;
     v3 player_position = V3(0, 20, 0);
 
@@ -200,25 +200,30 @@ player_move(struct game_state *game, struct game_input *input)
 
     f32 dt = input->dt;
 
+    v3 front = camera->front;
+    v3 right = camera->right;
+    f32 speed = camera->speed;
+    v3 position = player->position;
     v3 velocity = player->velocity;
-    v3 direction = player_direction_from_input(input, camera->front,
-                                                 camera->right, camera->speed);
-    velocity.x = direction.x * dt;
-    velocity.z = direction.z * dt;
+    v3 acceleration = player_direction_from_input(input, front, right, speed);
+    acceleration = v3_sub(acceleration, v3_mulf(velocity, 15.f));
+    acceleration.y = -100.f;
 
-    if (input->controller.jump && game->player.frames_since_jump < 5) {
-        velocity.y += 3.9f * dt;
+    if (input->controller.jump && player->frames_since_jump < 5) {
+        acceleration.y = 300.f;
         player->frames_since_jump++;
         player->is_jumping = 1;
     }
 
+    v3 position_delta = v3_add(
+        v3_mulf(velocity, dt),
+        v3_mulf(acceleration, dt * dt * 0.5f)
+    );
 
-    if (velocity.y < 10) {
-        velocity.y -= 0.9f * dt;
-    }
+    velocity = v3_add(velocity, v3_mulf(acceleration, dt));
 
     v3 old_player_pos = player->position;
-    v3 new_player_pos = v3_add(old_player_pos, velocity);
+    v3 new_player_pos = v3_add(old_player_pos, position_delta);
 
     v3 player_size = V3(0.25, 0.99f, 0.25f);
     v3 old_player_min = v3_sub(old_player_pos, player_size);
@@ -254,20 +259,22 @@ player_move(struct game_state *game, struct game_input *input)
             for (i32 y = min_block_y; y <= max_block_y; y++) {
                 for (i32 x = min_block_x; x <= max_block_x; x++) {
                     v3 block = V3(x, y, z);
-                    v3 relative_old_pos = 
-                        v3_sub(old_player_pos, block);
-                    v3 relative_new_pos = 
-                        v3_add(relative_old_pos, velocity);
-                    if (!block_is_empty(world_at(world, x, y, z)) &&
-                        box_contains_point(block_bounds, relative_new_pos)) 
-                    {
+                    v3 relative_old_pos = v3_sub(position, block);
 
+                    v3 new_position = v3_add(relative_old_pos, position_delta);
+                    if (!block_is_empty(world_at(world, x, y, z)) &&
+                        box_contains_point(block_bounds, new_position)) 
+                    {
                         v3 normal_min = {0};
                         v3 normal_max;
                         f32 t, tmax;
+
                         ray_box_intersection(
-                            block_bounds, relative_old_pos, 
-                            velocity, &normal_min, &normal_max, &t, &tmax);
+                            block_bounds, 
+                            relative_old_pos, 
+                            position_delta, 
+                            &normal_min, &normal_max, &t, &tmax);
+
                         t = MAX(t - 0.01f, 0);
                         if (t_min > t) {
                             t_min = t;
@@ -278,21 +285,24 @@ player_move(struct game_state *game, struct game_input *input)
             }
         }
 
-        v3 new_player_pos = v3_add(old_player_pos, 
-                                       v3_mulf(velocity, t_min));
-        old_player_pos = new_player_pos;
-        velocity = v3_sub(velocity, 
-                            v3_mulf(normal, v3_dot(normal, velocity)));
+        if (normal.y == 1) {
+            player->is_jumping = 0;
+            player->frames_since_jump = 0;
+        }
+
+        position = v3_add(position, v3_mulf(position_delta, t_min));
+        velocity = v3_sub(velocity, v3_mulf(normal, v3_dot(normal, velocity)));
+        position_delta = v3_sub(
+            position_delta, 
+            v3_mulf(normal, v3_dot(normal, position_delta))
+        );
+
         t_remaining -= t_min * t_remaining;
     }
 
-    if (velocity.y == 0) {
-        player->is_jumping = 0;
-        player->frames_since_jump = 0;
-    }
-
+    player->position = position;
     player->velocity = velocity;
-    player->position = old_player_pos;
+
     camera->position = v3_add(player->position, V3(0, 0.75, 0)); 
     camera_resize(&game->camera, input->width, input->height);
     camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
@@ -336,7 +346,7 @@ player_select_block(struct game_state *game, struct game_input *input,
         } else {
             has_selected_block = 1;
             debug_set_color(0, 0, 0);
-            debug_cube(selected_block.min, selected_block.max);
+            //debug_cube(selected_block.min, selected_block.max);
             break;
         }
     }
