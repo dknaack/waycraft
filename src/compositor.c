@@ -58,9 +58,6 @@ struct server {
 
     struct wl_list clients;
     struct wl_list surfaces;
-
-    struct wl_list free_clients;
-    struct wl_list free_surfaces;
 };
 
 struct client {
@@ -700,8 +697,6 @@ waycraft_init(struct server *server, EGLDisplay *egl_display)
 
     wl_list_init(&server->surfaces);
     wl_list_init(&server->clients);
-    wl_list_init(&server->free_surfaces);
-    wl_list_init(&server->free_clients);
 
     if (!(display = wl_display_create())) {
         fprintf(stderr, "Failed to initialize display\n");
