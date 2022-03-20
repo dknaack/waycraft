@@ -48,6 +48,8 @@
 #define XDG_SURFACE_VERSION 4
 
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
+static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
+
 static struct egl egl;
 
 struct server {
@@ -495,7 +497,8 @@ xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
 
 static void
 xdg_surface_set_window_geometry(struct wl_client *client,
-                                struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
+                                struct wl_resource *resource,
+                                i32 x, i32 y, i32 width, i32 height)
 {
     struct surface *surface = wl_resource_get_user_data(resource);
     surface->width = width;
@@ -538,7 +541,8 @@ xdg_wm_base_create_positioner(struct wl_client *client,
 
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
-                            struct wl_resource *resource, u32 id, struct wl_resource *wl_surface)
+                            struct wl_resource *resource, 
+                            u32 id, struct wl_resource *wl_surface)
 {
     struct surface *surface = wl_resource_get_user_data(wl_surface);
     struct wl_resource *xdg_surface = wl_resource_create(client,
@@ -711,6 +715,8 @@ main(void)
     x11_egl_init(&egl, &window);
     eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
         eglGetProcAddress("eglQueryWaylandBufferWL");
+    eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
+        eglGetProcAddress("eglBindWaylandDisplayWL");
     gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
 
     /*
@@ -721,6 +727,9 @@ main(void)
         fprintf(stderr, "Failed to initialize display\n");
         return 1;
     }
+
+    server.egl_display = egl.display;
+    eglBindWaylandDisplayWL(egl.display, display);
 
     if (!(socket = wl_display_add_socket_auto(display))) {
         fprintf(stderr, "Failed to add a socket to the display\n");
