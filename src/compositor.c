@@ -668,22 +668,13 @@ static const struct wl_seat_interface wl_seat_implementation = {
 };
 
 static void
-wl_seat_resource_destroy(struct wl_resource *resource)
-{
-    printf("wl_seat::destroy\n");
-
-    wl_resource_destroy(resource);
-}
-
-static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
     struct server *server = data;
 
     struct wl_resource *seat = 
         wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
-    wl_resource_set_implementation(seat, &wl_seat_implementation,
-                                   server, wl_seat_resource_destroy);
+    wl_resource_set_implementation(seat, &wl_seat_implementation, server, 0);
 
     u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
     wl_seat_send_capabilities(seat, caps);
