@@ -21,8 +21,11 @@ options:
 	@echo "CC      = $(CC)"
 	@echo
 
-waycraft: src/xdg-shell-protocol.c
-	$(CC) $(CFLAGS) -o $@ src/compositor.c $(LDFLAGS)
+waycraft: src/stb_image.o src/xdg-shell-protocol.c
+	$(CC) $(CFLAGS) -o $@ src/compositor.c src/stb_image.o $(LDFLAGS)
+
+src/stb_image.o:
+	$(CC) $(CFLAGS) -DSTB_IMAGE_IMPLEMENTATION -c -o $@ src/stb_image.c
 
 include/xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
