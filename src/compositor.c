@@ -673,7 +673,9 @@ static const struct wl_seat_interface wl_seat_implementation = {
 static void
 wl_seat_resource_destroy(struct wl_resource *resource)
 {
-    /* TODO */
+    printf("wl_seat::destroy\n");
+
+    wl_resource_destroy(resource);
 }
 
 static void
@@ -681,13 +683,55 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
     struct server *server = data;
 
-    struct wl_resource *resource = wl_resource_create(client,
-                                                      &wl_seat_interface, WL_SEAT_VERSION, id);
-    wl_resource_set_implementation(resource, &wl_seat_implementation,
+    struct wl_resource *seat = 
+        wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
+    wl_resource_set_implementation(seat, &wl_seat_implementation,
                                    server, wl_seat_resource_destroy);
 
     u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
-    wl_seat_send_capabilities(resource, caps);
+    wl_seat_send_capabilities(seat, caps);
+}
+
+static i32
+waycraft_init(struct server *server, EGLDisplay *egl_display)
+{
+    struct wl_display *display;
+    const char *socket;
+
+    wl_list_init(&server->surfaces);
+    wl_list_init(&server->clients);
+    wl_list_init(&server->free_surfaces);
+    wl_list_init(&server->free_clients);
+
+    if (!(display = wl_display_create())) {
+        fprintf(stderr, "Failed to initialize display\n");
+        return 1;
+    }
+
+    server->egl_display = egl.display;
+    eglBindWaylandDisplayWL(egl.display, display);
+
+    if (!(socket = wl_display_add_socket_auto(display))) {
+        fprintf(stderr, "Failed to add a socket to the display\n");
+        return 1;
+    }
+
+    wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION,
+                     &server, wl_compositor_bind);
+    wl_global_create(display, &xdg_wm_base_interface, XDG_WM_BASE_VERSION,
+                     &server, xdg_wm_base_bind);
+    wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION,
+                     &server, &wl_seat_bind);
+    wl_display_init_shm(display);
+
+    server->display = display;
+    return 0;
+}
+
+void
+waycraft_finish(struct server *server)
+{
+    wl_display_destroy(server->display);
 }
 
 int
@@ -696,14 +740,10 @@ main(void)
     struct x11_window window = {0};
     struct game_state game = {0};
     struct game_input input = {0};
-    struct wl_display *display;
-    const char *socket;
 
-    wl_list_init(&server.surfaces);
-    wl_list_init(&server.clients);
-    wl_list_init(&server.free_surfaces);
-    wl_list_init(&server.free_clients);
-
+    /*
+     * initialize the window
+     */
     if (x11_window_init(&window) != 0) {
         fprintf(stderr, "Failed to initialize window\n");
         return 1;
@@ -719,33 +759,10 @@ main(void)
         eglGetProcAddress("eglBindWaylandDisplayWL");
     gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
 
-    /*
-     * initialize wayland 
-     */
-
-    if (!(display = wl_display_create())) {
-        fprintf(stderr, "Failed to initialize display\n");
+    if (waycraft_init(&server, egl.display) != 0) {
+        fprintf(stderr, "Failed to initialize the compositor\n");
         return 1;
     }
-
-    server.egl_display = egl.display;
-    eglBindWaylandDisplayWL(egl.display, display);
-
-    if (!(socket = wl_display_add_socket_auto(display))) {
-        fprintf(stderr, "Failed to add a socket to the display\n");
-        return 1;
-    }
-
-    struct wl_event_loop *event_loop =
-        wl_display_get_event_loop(display);
-
-    wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION,
-                     &server, wl_compositor_bind);
-    wl_global_create(display, &xdg_wm_base_interface, XDG_WM_BASE_VERSION,
-                     &server, xdg_wm_base_bind);
-    wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION,
-                     &server, &wl_seat_bind);
-    wl_display_init_shm(display);
 
     /*
      * initalize the game
@@ -754,6 +771,9 @@ main(void)
         fprintf(stderr, "Failed to initialize the game\n");
         return 1;
     }
+
+    struct wl_event_loop *event_loop = 
+        wl_display_get_event_loop(server.display);
 
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
@@ -788,14 +808,14 @@ main(void)
             window.is_open = 0;
         }
 
-        wl_display_flush_clients(display);
+        wl_display_flush_clients(server.display);
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
     }
 
     game_finish(&game);
     egl_finish(&egl);
-    wl_display_destroy(display);
+    waycraft_finish(&server);
     x11_window_finish(&window);
     return 0;
 }
