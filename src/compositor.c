@@ -48,6 +48,17 @@
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
+struct server {
+    struct wl_display *display;
+    EGLDisplay *egl_display;
+
+    struct wl_list surfaces;
+    struct wl_list clients;
+
+    u32 client_count;
+    u32 surface_count;
+};
+
 struct client {
     struct wl_client *client;
     struct wl_resource *pointer;
@@ -708,7 +719,21 @@ compositor_init(struct server *server, struct egl *egl)
 }
 
 void
-compositor_finish(struct server *server)
+compositor_update(struct backend_memory *memory, struct egl *egl)
 {
+    struct server *server = memory->data;
+
+    if (!memory->is_initialized) {
+        compositor_init(server, egl);
+
+        memory->is_initialized = 1;
+    }
+}
+
+void
+compositor_finish(struct backend_memory *memory)
+{
+    struct server *server = memory->data;
+
     wl_display_destroy(server->display);
 }

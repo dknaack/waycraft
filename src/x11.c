@@ -297,7 +297,7 @@ main(void)
     struct x11_window window = {0};
     struct game_input input = {0};
     struct backend_memory game = {0};
-    struct server server = {0};
+    struct backend_memory compositor = {0};
     struct egl egl = {0};
 
     /* initialize the window */
@@ -310,22 +310,15 @@ main(void)
     x11_egl_init(&egl, &window);
     gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
 
-    if (compositor_init(&server, &egl) != 0) {
-        fprintf(stderr, "Failed to initialize the compositor\n");
-        return 1;
-    }
-
     game.size = MB(256);
     game.data = calloc(game.size, 1);
 
-    struct wl_event_loop *event_loop = 
-        wl_display_get_event_loop(server.display);
+    compositor.size = MB(64);
+    compositor.data = calloc(compositor.size, 1);
 
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
-        wl_event_loop_dispatch(event_loop, 0);
-
         input.mouse.dx = input.mouse.dy = 0;
         memset(&input.controller, 0, sizeof(input.controller));
         x11_window_poll_events(&window, &input);
@@ -335,14 +328,14 @@ main(void)
         input.height = window.height;
         gl.Viewport(0, 0, window.width, window.height);
         game_update(&game, &input);
+        compositor_update(&compositor, &egl);
 
-        wl_display_flush_clients(server.display);
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
     }
 
     egl_finish(&egl);
-    compositor_finish(&server);
+    compositor_finish(&compositor);
     x11_window_finish(&window);
     return 0;
 }
