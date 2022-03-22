@@ -287,3 +287,89 @@ error_initialize:
 error_get_display:
     return -1;
 }
+
+int
+main(void)
+{
+    struct x11_window window = {0};
+    struct game_state game = {0};
+    struct game_input input = {0};
+
+    /*
+     * initialize the window
+     */
+    if (x11_window_init(&window) != 0) {
+        fprintf(stderr, "Failed to initialize window\n");
+        return 1;
+    }
+
+    /*
+     * initialize egl
+     */
+    x11_egl_init(&egl, &window);
+    eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
+        eglGetProcAddress("eglQueryWaylandBufferWL");
+    eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
+        eglGetProcAddress("eglBindWaylandDisplayWL");
+    gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
+
+    if (waycraft_init(&server, egl.display) != 0) {
+        fprintf(stderr, "Failed to initialize the compositor\n");
+        return 1;
+    }
+
+    /*
+     * initalize the game
+     */
+    if (game_init(&game) != 0) {
+        fprintf(stderr, "Failed to initialize the game\n");
+        return 1;
+    }
+
+    struct wl_event_loop *event_loop = 
+        wl_display_get_event_loop(server.display);
+
+    // TODO: fix timestep
+    struct timespec wait_time = { 0, 1000000 };
+    while (window.is_open) {
+        wl_event_loop_dispatch(event_loop, 0);
+
+        input.mouse.dx = input.mouse.dy = 0;
+        memset(&input.controller, 0, sizeof(input.controller));
+        x11_window_poll_events(&window, &input);
+
+        static struct window game_windows[16] = {0};
+        game.windows = game_windows;
+        i32 window_count = 16;
+
+        struct surface *surface;
+        i32 i = 0;
+        game.window_count = 0;
+        wl_list_for_each(surface, &server.surfaces, link) {
+            struct window *window = game.windows + i;
+            if (window_count-- > 0) {
+                window->texture = surface->texture;
+                game.window_count++;
+            }
+            i++;
+        }
+
+        input.dt = 0.01;
+        input.width = window.width;
+        input.height = window.height;
+        gl.Viewport(0, 0, window.width, window.height);
+        if (game_update(&game, &input) != 0) {
+            window.is_open = 0;
+        }
+
+        wl_display_flush_clients(server.display);
+        eglSwapBuffers(egl.display, egl.surface);
+        nanosleep(&wait_time, 0);
+    }
+
+    game_finish(&game);
+    egl_finish(&egl);
+    waycraft_finish(&server);
+    x11_window_finish(&window);
+    return 0;
+}
