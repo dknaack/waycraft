@@ -138,7 +138,11 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
         input->mouse.buttons[i] = 0;
     }
 
-    input->controller.modifiers = 0;
+    input->dt = 0.01;
+    input->width = window->width;
+    input->height = window->height;
+    input->mouse.dx = input->mouse.dy = 0;
+    memset(&input->controller, 0, sizeof(input->controller));
 
     while (XPending(window->display)) {
         XNextEvent(window->display, &event);
@@ -337,13 +341,8 @@ x11_main(void)
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
-        input.mouse.dx = input.mouse.dy = 0;
-        memset(&input.controller, 0, sizeof(input.controller));
         x11_window_poll_events(&window, &input);
 
-        input.dt = 0.01;
-        input.width = window.width;
-        input.height = window.height;
         gl.Viewport(0, 0, window.width, window.height);
         game_update(&game, &input, &compositor_state);
         compositor_update(&compositor, &egl, &compositor_state);
