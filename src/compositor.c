@@ -28,7 +28,7 @@
 #include "math.c"
 #include "noise.c"
 #include "world.c"
-#include "x11.c"
+#include "x11_backend.c"
 #include "xdg-shell-protocol.c"
 #include "debug.c"
 #include "timer.c"
