@@ -15,7 +15,6 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "types.h"
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "egl.h"
 #include "game.h"
