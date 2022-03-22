@@ -2,6 +2,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <time.h>
+#include <wayland-server.h>
 
 #include "backend.h"
 #include "compositor.h"
@@ -128,7 +129,8 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 }
 
 void
-x11_window_poll_events(struct x11_window *window, struct game_input *input)
+x11_window_poll_events(struct x11_window *window, struct game_input *input,
+                       struct compositor_state *compositor)
 {
     KeySym key;
     XEvent event;
@@ -183,11 +185,24 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
                 input->mouse.buttons[button_index] |= is_pressed;
             }
             break;
+        case KeyRelease:
+            {
+                key = XLookupKeysym(&event.xkey, 0);
+                u32 keycode = event.xkey.keycode - 8;
+                u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
+                compositor_update_key(compositor, keycode, state);
+            }
+            break;
         case KeyPress:
-            key = XLookupKeysym(&event.xkey, 0);
-            if (key == XK_Escape) {
-                window->lock_cursor = 0;
-                XUngrabPointer(window->display, CurrentTime);
+            {
+                key = XLookupKeysym(&event.xkey, 0);
+                u32 keycode = event.xkey.keycode - 8;
+                u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
+                compositor_update_key(compositor, keycode, state);
+                if (key == XK_Escape) {
+                    window->lock_cursor = 0;
+                    XUngrabPointer(window->display, CurrentTime);
+                }
             }
             break;
         case EnterNotify:
@@ -330,7 +345,7 @@ x11_main(void)
 
     /* initialize egl */
     x11_egl_init(&egl, &window);
-    gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
+    gl_init(&gl, (gl_get_proc_address_t *)eglGetProcAddress);
 
     game.size = MB(256);
     game.data = calloc(game.size, 1);
@@ -341,7 +356,7 @@ x11_main(void)
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
-        x11_window_poll_events(&window, &input);
+        x11_window_poll_events(&window, &input, &compositor_state);
 
         gl.Viewport(0, 0, window.width, window.height);
         game_update(&game, &input, &compositor_state);

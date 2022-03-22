@@ -10,6 +10,7 @@
 #include "world.h"
 #include "timer.h"
 #include "backend.h"
+#include "compositor.h"
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
@@ -147,6 +148,7 @@ game_init(struct backend_memory *memory)
     game->shader.projection = gl.GetUniformLocation(program, "projection");
     game->shader.program = program;
 
+    game->windows = arena_alloc(arena, 1024, struct game_window);
     game->window_count = 0;
     {
         static const struct vertex vertices[] = {
@@ -567,9 +569,15 @@ game_update(struct backend_memory *memory, struct game_input *input,
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
-    struct game_window *windows = game->windows;
+    game->window_count = compositor->window_count;
     u32 window_count = game->window_count;
     u32 active_window = game->active_window;
+    struct game_window *windows = game->windows;
+    struct compositor_window *compositor_windows = compositor->windows;
+    for (u32 i = 0; i < window_count; i++) {
+        windows[i].texture = compositor_windows[i].texture;
+    }
+
     if (!active_window) {
         player_move(game, input);
         v3 block_pos = {0};
@@ -580,7 +588,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
         u32 hot_window = game->hot_window;
         if (hot_window && has_selected_block) {
-            struct game_window *window = game->windows + (hot_window - 1);
+            struct game_window *window = windows + (hot_window - 1);
 
             v3 relative_up = V3(0, 1, 0);
             if (block_normal.y > 0.5) {
@@ -615,6 +623,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
             // TODO: resize the window
             if (hot_window) {
                 game->active_window = hot_window;
+                compositor->is_active = 1;
             } else if (has_selected_block) {
                 struct player *player = &game->player;
                 v3 new_block_pos = v3_add(block_pos, block_normal);
@@ -664,6 +673,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
         u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
         if (input->mouse.buttons[3] && is_pressing_alt) {
             game->active_window = 0;
+            compositor->is_active = 0;
         }
 
         game->mouse_pos = mouse_pos;

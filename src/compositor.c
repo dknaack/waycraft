@@ -8,11 +8,12 @@
 #include <xdg-shell-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "types.h"
+#include "backend.h"
+#include "compositor.h"
 #include "egl.h"
 #include "game.h"
 #include "gl.h"
-#include "backend.h"
+#include "types.h"
 
 #define WL_COMPOSITOR_VERSION 5
 #define WL_REGION_VERSION 1
@@ -655,9 +656,10 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 i32
-compositor_init(struct server *server, struct compositor_state *state, 
-                struct egl *egl)
+compositor_init(struct backend_memory *memory, struct egl *egl, 
+                struct compositor_state *state)
 {
+    struct server *server = memory->data;
     struct wl_display *display;
     const char *socket;
 
@@ -693,6 +695,9 @@ compositor_init(struct server *server, struct compositor_state *state,
 
     server->display = display;
     server->event_loop = wl_display_get_event_loop(display);
+
+    state->windows = (struct compositor_window *)(server + 1);
+
     return 0;
 }
 
@@ -703,13 +708,42 @@ compositor_update(struct backend_memory *memory, struct egl *egl,
     struct server *server = memory->data;
 
     if (!memory->is_initialized) {
-        compositor_init(server, state, egl);
+        compositor_init(memory, egl, state);
 
         memory->is_initialized = 1;
     }
 
+    struct surface *surface;
+    struct compositor_window *window = state->windows;
+    u32 window_count = 0;
+    wl_list_for_each(surface, &server->surfaces, link) {
+        window->texture = surface->texture;
+        window++;
+        window_count++;
+    }
+
+    state->window_count = window_count;
+
     wl_event_loop_dispatch(server->event_loop, 0);
     wl_display_flush_clients(server->display);
+}
+
+void
+compositor_update_key(struct compositor_state *compositor,
+                      i32 key, i32 state)
+{
+    if (1||compositor->is_active) {
+        puts("key");
+    }
+}
+
+void
+compositor_update_button(struct compositor_state *compositor,
+                         i32 button, i32 state)
+{
+    if (1||compositor->is_active) {
+        puts("button");
+    }
 }
 
 void
