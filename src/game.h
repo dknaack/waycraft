@@ -2,7 +2,6 @@
 #define GAME_H
 
 #include "types.h"
-#include "camera.h"
 #include "world.h"
 #include "memory.h"
 
@@ -17,6 +16,19 @@ struct window {
     v3 y_axis;
     v3 z_axis;
     u32 texture;
+};
+
+struct camera {
+    m4x4 view;
+    m4x4 projection;
+    v3 position;
+    v3 right;
+    v3 front;
+    v3 up;
+    f32 speed;
+    f32 yaw;
+    f32 pitch;
+    f32 fov;
 };
 
 enum game_input_modifiers {

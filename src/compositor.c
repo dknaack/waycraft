@@ -23,7 +23,6 @@
 #include "mesh.h"
 #include "x11.h"
 
-#include "camera.c"
 #include "game.c"
 #include "gl.c"
 #include "egl.c"
