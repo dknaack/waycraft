@@ -34,7 +34,6 @@
 #include "noise.c"
 #include "world.c"
 #include "x11.c"
-#include "x11_egl.c"
 #include "xdg-shell-protocol.c"
 #include "debug.c"
 #include "timer.c"
