@@ -10,7 +10,7 @@ enum game_mode {
     GAME_MODE_WINDOW,
 };
 
-struct window {
+struct game_window {
     v3 position;
     v3 x_axis;
     v3 y_axis;
@@ -86,7 +86,7 @@ struct game_state {
         u8 hotbar_selection;
     } player;
     
-    struct window *windows;
+    struct game_window *windows;
     u32 window_count;
     u32 window_vertex_array;
     u32 window_vertex_buffer;

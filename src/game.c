@@ -432,14 +432,14 @@ player_select_block(struct game_state *game, struct game_input *input,
 }
 
 static m4x4
-window_transform(struct window *window)
+window_transform(struct game_window *window)
 {
     return m4x4_to_coords(window->position, 
                           window->x_axis, window->y_axis, window->z_axis);
 }
 
 static void
-window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
+window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 {
     window->position = window_pos;
     window->z_axis = normal;
@@ -448,7 +448,7 @@ window_move(struct window *window, v3 window_pos, v3 normal, v3 up)
 }
 
 static void
-window_render(struct window *window, u32 window_count, u32 model_uniform)
+window_render(struct game_window *window, u32 window_count, u32 model_uniform)
 {
     while (window_count-- > 0) {
         m4x4 transform = window_transform(window);
@@ -488,7 +488,7 @@ block_from_direction(enum block_type base_block, v3 direction)
 #endif
 
 static u32
-window_ray_intersection_point(struct window *window, 
+window_ray_intersection_point(struct game_window *window, 
                               v3 ray_start, v3 ray_direction,
                               v2 *point_on_window)
 {
@@ -522,7 +522,7 @@ window_ray_intersection_point(struct window *window,
 
 // NOTE: returns index + 1 instead of just index
 static i32
-window_find(struct window *window, u32 window_count,
+window_find(struct game_window *window, u32 window_count,
             v3 ray_start, v3 ray_direction)
 {
     for (u32 i = 0; i < window_count; i++) {
@@ -564,7 +564,7 @@ game_update(struct backend_memory *memory, struct game_input *input)
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
-    struct window *windows = game->windows;
+    struct game_window *windows = game->windows;
     u32 window_count = game->window_count;
     u32 active_window = game->active_window;
     if (!active_window) {
@@ -577,7 +577,7 @@ game_update(struct backend_memory *memory, struct game_input *input)
 
         u32 hot_window = game->hot_window;
         if (hot_window && has_selected_block) {
-            struct window *window = game->windows + (hot_window - 1);
+            struct game_window *window = game->windows + (hot_window - 1);
 
             v3 relative_up = V3(0, 1, 0);
             if (block_normal.y > 0.5) {
@@ -637,7 +637,7 @@ game_update(struct backend_memory *memory, struct game_input *input)
             }
         }
     } else {
-        struct window *window = &game->windows[active_window - 1];
+        struct game_window *window = &game->windows[active_window - 1];
         v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
         v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
         v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
