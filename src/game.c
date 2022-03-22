@@ -7,6 +7,7 @@
 #include "noise.h"
 #include "world.h"
 #include "timer.h"
+#include "backend.h"
 
 static const u8 *vert_shader_source = (u8 *)
     "#version 330 core\n"
@@ -52,9 +53,10 @@ player_init(struct player *player, struct camera *camera)
     *hotbar++ = BLOCK_WATER;
 }
 
-i32
-game_init(struct game_state *game)
+void
+game_init(struct backend_memory *memory)
 {
+    struct game_state *game = memory->data;
     debug_init();
 
     struct memory_arena *arena = &game->arena;
@@ -74,7 +76,7 @@ game_init(struct game_state *game)
         u8 error[1024];
         gl_program_error(program, error, sizeof(error));
         fprintf(stderr, "Failed to create program: %s\n", error);
-        return -1;
+        return;
     }
 
     game->shader.model = gl.GetUniformLocation(program, "model");
@@ -115,8 +117,6 @@ game_init(struct game_state *game)
 
         gl.BindVertexArray(0);
     }
-
-    return 0;
 }
 
 struct box {
@@ -477,11 +477,17 @@ window_find(struct window *window, u32 window_count,
     return 0;
 }
 
-i32
-game_update(struct game_state *game, struct game_input *input)
+void
+game_update(struct backend_memory *memory, struct game_input *input)
 {
+    struct game_state *game = memory->data;
     struct world *world = &game->world;
     struct camera *camera = &game->camera;
+
+    if (!memory->is_initialized) {
+        game_init(memory);
+        memory->is_initialized = 1;
+    }
 
     m4x4 projection = game->camera.projection;
     m4x4 view = game->camera.view;
@@ -607,7 +613,6 @@ game_update(struct game_state *game, struct game_input *input)
     window_render(windows, window_count, game->shader.model);
 
     debug_render(view, projection);
-    return 0;
 }
 
 void

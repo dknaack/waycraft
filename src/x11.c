@@ -1,8 +1,11 @@
 #include <X11/Xlib.h>
 #include <X11/XKBlib.h>
 
-#include "x11.h"
+#include "backend.h"
+#include "compositor.h"
 #include "game.h"
+#include "gl.h"
+#include "x11.h"
 
 static void
 x11_hide_cursor(struct x11_window *window)
@@ -222,7 +225,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input)
     }
 }
 
-i32
+static i32
 x11_egl_init(struct egl *egl, struct x11_window *window)
 {
     egl->display = eglGetDisplay(window->display);
@@ -292,39 +295,28 @@ int
 main(void)
 {
     struct x11_window window = {0};
-    struct game_state game = {0};
     struct game_input input = {0};
+    struct backend_memory game = {0};
+    struct server server = {0};
+    struct egl egl = {0};
 
-    /*
-     * initialize the window
-     */
+    /* initialize the window */
     if (x11_window_init(&window) != 0) {
         fprintf(stderr, "Failed to initialize window\n");
         return 1;
     }
 
-    /*
-     * initialize egl
-     */
+    /* initialize egl */
     x11_egl_init(&egl, &window);
-    eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
-        eglGetProcAddress("eglQueryWaylandBufferWL");
-    eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
-        eglGetProcAddress("eglBindWaylandDisplayWL");
     gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
 
-    if (waycraft_init(&server, egl.display) != 0) {
+    if (compositor_init(&server, &egl) != 0) {
         fprintf(stderr, "Failed to initialize the compositor\n");
         return 1;
     }
 
-    /*
-     * initalize the game
-     */
-    if (game_init(&game) != 0) {
-        fprintf(stderr, "Failed to initialize the game\n");
-        return 1;
-    }
+    game.size = MB(256);
+    game.data = calloc(game.size, 1);
 
     struct wl_event_loop *event_loop = 
         wl_display_get_event_loop(server.display);
@@ -338,38 +330,19 @@ main(void)
         memset(&input.controller, 0, sizeof(input.controller));
         x11_window_poll_events(&window, &input);
 
-        static struct window game_windows[16] = {0};
-        game.windows = game_windows;
-        i32 window_count = 16;
-
-        struct surface *surface;
-        i32 i = 0;
-        game.window_count = 0;
-        wl_list_for_each(surface, &server.surfaces, link) {
-            struct window *window = game.windows + i;
-            if (window_count-- > 0) {
-                window->texture = surface->texture;
-                game.window_count++;
-            }
-            i++;
-        }
-
         input.dt = 0.01;
         input.width = window.width;
         input.height = window.height;
         gl.Viewport(0, 0, window.width, window.height);
-        if (game_update(&game, &input) != 0) {
-            window.is_open = 0;
-        }
+        game_update(&game, &input);
 
         wl_display_flush_clients(server.display);
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
     }
 
-    game_finish(&game);
     egl_finish(&egl);
-    waycraft_finish(&server);
+    compositor_finish(&server);
     x11_window_finish(&window);
     return 0;
 }

@@ -81,8 +81,8 @@ struct game_state {
     u32 cursor;
 };
 
-static i32 game_init(struct game_state *game);
-static i32 game_update(struct game_state *game, struct game_input *input);
-static void game_finish(struct game_state *game);
+struct backend_memory;
+
+void game_update(struct backend_memory *memory, struct game_input *input);
 
 #endif /* GAME_H */ 

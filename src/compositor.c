@@ -48,16 +48,6 @@
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
-static struct egl egl;
-
-struct server {
-    struct wl_display *display;
-    EGLDisplay *egl_display;
-
-    struct wl_list clients;
-    struct wl_list surfaces;
-};
-
 struct client {
     struct wl_client *client;
     struct wl_resource *pointer;
@@ -678,11 +668,16 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
     wl_seat_send_capabilities(seat, caps);
 }
 
-static i32
-waycraft_init(struct server *server, EGLDisplay *egl_display)
+i32
+compositor_init(struct server *server, struct egl *egl)
 {
     struct wl_display *display;
     const char *socket;
+
+    eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
+        eglGetProcAddress("eglQueryWaylandBufferWL");
+    eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
+        eglGetProcAddress("eglBindWaylandDisplayWL");
 
     wl_list_init(&server->surfaces);
     wl_list_init(&server->clients);
@@ -692,8 +687,8 @@ waycraft_init(struct server *server, EGLDisplay *egl_display)
         return 1;
     }
 
-    server->egl_display = egl.display;
-    eglBindWaylandDisplayWL(egl.display, display);
+    server->egl_display = egl->display;
+    eglBindWaylandDisplayWL(egl->display, display);
 
     if (!(socket = wl_display_add_socket_auto(display))) {
         fprintf(stderr, "Failed to add a socket to the display\n");
@@ -713,93 +708,7 @@ waycraft_init(struct server *server, EGLDisplay *egl_display)
 }
 
 void
-waycraft_finish(struct server *server)
+compositor_finish(struct server *server)
 {
     wl_display_destroy(server->display);
-}
-
-int
-main(void)
-{
-    struct x11_window window = {0};
-    struct game_state game = {0};
-    struct game_input input = {0};
-
-    /*
-     * initialize the window
-     */
-    if (x11_window_init(&window) != 0) {
-        fprintf(stderr, "Failed to initialize window\n");
-        return 1;
-    }
-
-    /*
-     * initialize egl
-     */
-    x11_egl_init(&egl, &window);
-    eglQueryWaylandBufferWL = (PFNEGLQUERYWAYLANDBUFFERWLPROC) 
-        eglGetProcAddress("eglQueryWaylandBufferWL");
-    eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
-        eglGetProcAddress("eglBindWaylandDisplayWL");
-    gl_init(&gl, (void (*(*)(const u8 *))(void))eglGetProcAddress);
-
-    if (waycraft_init(&server, egl.display) != 0) {
-        fprintf(stderr, "Failed to initialize the compositor\n");
-        return 1;
-    }
-
-    /*
-     * initalize the game
-     */
-    if (game_init(&game) != 0) {
-        fprintf(stderr, "Failed to initialize the game\n");
-        return 1;
-    }
-
-    struct wl_event_loop *event_loop = 
-        wl_display_get_event_loop(server.display);
-
-    // TODO: fix timestep
-    struct timespec wait_time = { 0, 1000000 };
-    while (window.is_open) {
-        wl_event_loop_dispatch(event_loop, 0);
-
-        input.mouse.dx = input.mouse.dy = 0;
-        memset(&input.controller, 0, sizeof(input.controller));
-        x11_window_poll_events(&window, &input);
-
-        static struct window game_windows[16] = {0};
-        game.windows = game_windows;
-        i32 window_count = 16;
-
-        struct surface *surface;
-        i32 i = 0;
-        game.window_count = 0;
-        wl_list_for_each(surface, &server.surfaces, link) {
-            struct window *window = game.windows + i;
-            if (window_count-- > 0) {
-                window->texture = surface->texture;
-                game.window_count++;
-            }
-            i++;
-        }
-
-        input.dt = 0.01;
-        input.width = window.width;
-        input.height = window.height;
-        gl.Viewport(0, 0, window.width, window.height);
-        if (game_update(&game, &input) != 0) {
-            window.is_open = 0;
-        }
-
-        wl_display_flush_clients(server.display);
-        eglSwapBuffers(egl.display, egl.surface);
-        nanosleep(&wait_time, 0);
-    }
-
-    game_finish(&game);
-    egl_finish(&egl);
-    waycraft_finish(&server);
-    x11_window_finish(&window);
-    return 0;
 }
