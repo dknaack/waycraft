@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "debug.h"
 #include "gl.h"
 #include "game.h"
+#include "math.h"
 #include "noise.h"
 #include "world.h"
 #include "timer.h"

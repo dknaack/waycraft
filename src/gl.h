@@ -2,6 +2,7 @@
 #define GL_H
 
 #include <GL/gl.h>
+#include <EGL/egl.h>
 
 #define GL_FALSE 0
 #define GL_TRUE 1

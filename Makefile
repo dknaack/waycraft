@@ -11,8 +11,6 @@ CFLAGS  = -g -std=c11 -pedantic -Wall -D_POSIX_C_SOURCE=200809L \
 		  -DWLR_USE_UNSTABLE -Iinclude
 CC      = cc
 
-SRC = src/main.c
-
 all: options waycraft
 
 options:
@@ -22,7 +20,7 @@ options:
 	@echo
 
 waycraft: src/stb_image.o src/xdg-shell-protocol.c
-	$(CC) $(CFLAGS) -o $@ src/compositor.c src/stb_image.o $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ src/main.c src/stb_image.o $(LDFLAGS)
 
 src/stb_image.o:
 	$(CC) $(CFLAGS) -DSTB_IMAGE_IMPLEMENTATION -c -o $@ src/stb_image.c

@@ -1,11 +1,28 @@
-#include <X11/Xlib.h>
 #include <X11/XKBlib.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <time.h>
 
 #include "backend.h"
 #include "compositor.h"
 #include "game.h"
 #include "gl.h"
-#include "x11.h"
+#include "x11_backend.h"
+
+struct x11_window {
+    Display *display;
+    Drawable drawable;
+    Visual *visual;
+    XIM xim;
+    XIC xic;
+    GC gc;
+    Atom net_wm_name;
+    Atom wm_delete_win;
+    u32 width, height;
+    uint is_open;
+    uint lock_cursor;
+    uint is_active;
+};
 
 static void
 x11_hide_cursor(struct x11_window *window)
@@ -292,7 +309,7 @@ error_get_display:
 }
 
 int
-main(void)
+x11_main(void)
 {
     struct compositor_state compositor_state = {0};
     struct x11_window window = {0};

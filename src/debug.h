@@ -1,6 +1,8 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+#include "types.h"
+
 struct memory_arena;
 void debug_init(struct memory_arena *arena);
 void debug_render(m4x4 view, m4x4 projection);

@@ -1,26 +1,8 @@
 #ifndef X11_H
 #define X11_H
 
-struct x11_window {
-    Display *display;
-    Drawable drawable;
-    Visual *visual;
-    XIM xim;
-    XIC xic;
-    GC gc;
-    Atom net_wm_name;
-    Atom wm_delete_win;
-    u32 width, height;
-    uint is_open;
-    uint lock_cursor;
-    uint is_active;
-};
+#include "types.h"
 
-struct game_input;
-
-i32 x11_window_init(struct x11_window *window);
-void x11_window_finish(struct x11_window *window);
-void x11_window_poll_events(struct x11_window *window, 
-        struct game_input *input);
+i32 x11_main(void);
 
 #endif /* X11_H */ 

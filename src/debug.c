@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "game.h"
+#include "math.h"
 #include "gl.h"
 
 #define DEBUG_VERTEX_BUFFER_SIZE MB(8)

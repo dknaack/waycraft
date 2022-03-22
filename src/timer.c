@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "timer.h"
 
 static i32 timer_initialized = 0;

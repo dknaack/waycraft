@@ -1,4 +1,3 @@
-#include "x11.h"
 #include "gl.h"
 
 static const char *gl_proc_names[] = {

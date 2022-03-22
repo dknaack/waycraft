@@ -1,37 +1,18 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-server.h>
 #include <xdg-shell-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "types.h"
-#include "stb_image.h"
 #include "egl.h"
 #include "game.h"
 #include "gl.h"
-#include "math.h"
-#include "x11.h"
-
-#include "game.c"
-#include "gl.c"
-#include "egl.c"
-#include "math.c"
-#include "noise.c"
-#include "world.c"
-#include "x11_backend.c"
-#include "xdg-shell-protocol.c"
-#include "debug.c"
-#include "timer.c"
+#include "backend.h"
 
 #define WL_COMPOSITOR_VERSION 5
 #define WL_REGION_VERSION 1

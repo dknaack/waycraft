@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include "stb_image.h"
 #include "types.h"
 #include "memory.h"
 #include "world.h"
