@@ -287,29 +287,3 @@ error_initialize:
 error_get_display:
     return -1;
 }
-
-#if 0
-i32
-x11_window_init_gl_context(struct x11_window *window, struct gl_context *gl)
-{
-    int attributes[] = {
-        GLX_RGBA,
-        GLX_DEPTH_SIZE, 24,
-        GLX_DOUBLEBUFFER,
-        None
-    };
-
-    Display *display = window->display;
-    XVisualInfo *visual = glXChooseVisual(display, 0, attributes);
-    gl->context = glXCreateContext(display, visual, 0, True);
-    glXMakeCurrent(display, window->drawable, gl->context);
-
-    return gl_context_init(gl, glXGetProcAddress);
-}
-
-void
-x11_window_finish_gl_context(struct x11_window *window, struct gl_context *gl)
-{
-    glXDestroyContext(window->display, gl->context);
-}
-#endif
