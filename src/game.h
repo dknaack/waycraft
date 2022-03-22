@@ -46,6 +46,12 @@ struct game_input {
     u32 height;
 };
 
+struct memory_arena {
+    u8 *data;
+    u64 size;
+    u64 used;
+};
+
 struct game_state {
     struct world world;
     struct camera camera;
@@ -82,6 +88,11 @@ struct game_state {
 };
 
 struct backend_memory;
+
+#define arena_alloc(arena, count, type) \
+    ((type *)arena_alloc_(arena, count * sizeof(type)))
+
+void *arena_alloc_(struct memory_arena *arena, u64 size);
 
 void game_update(struct backend_memory *memory, struct game_input *input);
 

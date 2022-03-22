@@ -54,15 +54,36 @@ player_init(struct player *player, struct camera *camera)
 }
 
 void
+arena_init(struct memory_arena *arena, void *data, u64 size)
+{
+    arena->data = data;
+    arena->size = size;
+    arena->used = 0;
+}
+
+#define arena_alloc(arena, count, type) ((type *)arena_alloc_(arena, count * sizeof(type)))
+
+void *
+arena_alloc_(struct memory_arena *arena, u64 size)
+{
+    u64 used = arena->used;
+    assert(used + size < arena->size);
+
+    void *ptr = arena->data + used;
+    arena->used += size;
+
+    return ptr;
+}
+
+void
 game_init(struct backend_memory *memory)
 {
     struct game_state *game = memory->data;
-    debug_init();
-
     struct memory_arena *arena = &game->arena;
+    arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
 
+    debug_init();
     world_init(&game->world, arena);
-
     player_init(&game->player, &game->camera);
 
     gl.Enable(GL_DEPTH_TEST);
@@ -624,5 +645,4 @@ game_finish(struct game_state *game)
 
     gl.DeleteProgram(game->shader.program);
     world_finish(&game->world);
-    arena_finish(&game->arena);
 }

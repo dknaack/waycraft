@@ -29,7 +29,6 @@
 #include "egl.c"
 #include "math.c"
 #include "mesh.c"
-#include "memory.c"
 #include "noise.c"
 #include "world.c"
 #include "x11.c"
