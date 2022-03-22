@@ -674,7 +674,8 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 i32
-compositor_init(struct server *server, struct egl *egl)
+compositor_init(struct server *server, struct compositor_state *state, 
+                struct egl *egl)
 {
     struct wl_display *display;
     const char *socket;
@@ -715,12 +716,13 @@ compositor_init(struct server *server, struct egl *egl)
 }
 
 void
-compositor_update(struct backend_memory *memory, struct egl *egl)
+compositor_update(struct backend_memory *memory, struct egl *egl, 
+                  struct compositor_state *state)
 {
     struct server *server = memory->data;
 
     if (!memory->is_initialized) {
-        compositor_init(server, egl);
+        compositor_init(server, state, egl);
 
         memory->is_initialized = 1;
     }

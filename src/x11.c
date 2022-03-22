@@ -294,6 +294,7 @@ error_get_display:
 int
 main(void)
 {
+    struct compositor_state compositor_state = {0};
     struct x11_window window = {0};
     struct game_input input = {0};
     struct backend_memory game = {0};
@@ -327,8 +328,8 @@ main(void)
         input.width = window.width;
         input.height = window.height;
         gl.Viewport(0, 0, window.width, window.height);
-        game_update(&game, &input);
-        compositor_update(&compositor, &egl);
+        game_update(&game, &input, &compositor_state);
+        compositor_update(&compositor, &egl, &compositor_state);
 
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);

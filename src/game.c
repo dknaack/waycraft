@@ -539,7 +539,8 @@ window_find(struct game_window *window, u32 window_count,
 }
 
 void
-game_update(struct backend_memory *memory, struct game_input *input)
+game_update(struct backend_memory *memory, struct game_input *input, 
+            struct compositor_state *compositor)
 {
     struct game_state *game = memory->data;
     struct world *world = &game->world;
