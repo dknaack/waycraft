@@ -1,8 +1,6 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include "mesh.h"
-
 #define WORLD_SIZE 8
 #define WORLD_HEIGHT 4
 #define CHUNK_SIZE 16
@@ -39,6 +37,19 @@ enum block_type {
 enum chunk_state {
     CHUNK_INITIALIZED = 0x1,
     CHUNK_MODIFIED    = 0x2,
+};
+
+struct vertex {
+    v3 position;
+    v2 texcoord;
+};
+
+struct mesh {
+    struct vertex *vertices;
+    u32 *indices;
+
+    u32 vertex_count;
+    u32 index_count;
 };
 
 /* 
