@@ -46,6 +46,7 @@ static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
 struct server {
     struct wl_display *display;
+    struct wl_event_loop *event_loop;
     EGLDisplay *egl_display;
 
     struct wl_list surfaces;
@@ -76,8 +77,6 @@ struct surface {
     struct client *client;
     struct wl_list link;
 };
-
-struct server server = {0};
 
 static struct surface *
 server_create_surface(struct server *server)
@@ -289,17 +288,20 @@ wl_compositor_create_surface(struct wl_client *wl_client,
     struct server *server = wl_resource_get_user_data(resource);
     struct surface *surface = server_create_surface(server);
     struct client *client = server_create_client(server);
-    client->client = wl_client;
     if (!surface || !client) {
         return;
     }
 
-    surface->client = client;
-    surface->surface = wl_resource_create(wl_client,
-                                          &wl_surface_interface, WL_SURFACE_VERSION, id);
+    struct wl_resource *wl_surface = wl_resource_create(
+        wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
+
     wl_resource_set_implementation(
-        surface->surface, &wl_surface_implementation,
+        wl_surface, &wl_surface_implementation,
         surface, &wl_surface_resource_destroy);
+
+    surface->client = client;
+    surface->surface = wl_surface;
+    client->client = wl_client;
 }
 
 static void
@@ -318,20 +320,13 @@ static const struct wl_compositor_interface wl_compositor_implementation = {
 };
 
 static void
-wl_compositor_resource_destroy(struct wl_resource *resource)
-{
-    /* TODO */
-}
-
-static void
 wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
     struct server *server = data;
-    struct wl_resource *compositor =
-        wl_resource_create(client, &wl_compositor_interface, 
-                           WL_COMPOSITOR_VERSION, id);
+    struct wl_resource *compositor = wl_resource_create(
+        client, &wl_compositor_interface, WL_COMPOSITOR_VERSION, id);
     wl_resource_set_implementation(compositor, &wl_compositor_implementation,
-                                   server, wl_compositor_resource_destroy);
+                                   server, 0);
 }
 
 /*
@@ -537,8 +532,8 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
                             u32 id, struct wl_resource *wl_surface)
 {
     struct surface *surface = wl_resource_get_user_data(wl_surface);
-    struct wl_resource *xdg_surface = wl_resource_create(client,
-                                                         &xdg_surface_interface, XDG_SURFACE_VERSION, id);
+    struct wl_resource *xdg_surface = wl_resource_create(
+        client, &xdg_surface_interface, XDG_SURFACE_VERSION, id);
     surface->xdg_surface = xdg_surface;
 
     // TODO: handle resource destroy
@@ -570,8 +565,8 @@ static void
 xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
     struct server *server = data;
-    struct wl_resource *resource = wl_resource_create(client,
-                                                      &xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
+    struct wl_resource *resource = wl_resource_create(
+        client, &xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
     wl_resource_set_implementation(resource, &xdg_wm_base_implementation,
                                    server, xdg_wm_base_resource_destroy);
 }
@@ -617,6 +612,8 @@ static void
 wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
                     u32 id)
 {
+    (void)wl_pointer_implementation;
+#if 0
     struct wl_resource *pointer = 
         wl_resource_create(client, &wl_pointer_interface, 7, id);
     wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
@@ -626,6 +623,7 @@ wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
             it->pointer = pointer;
         }
     }
+#endif
 }
 
 static void
@@ -686,6 +684,7 @@ compositor_init(struct server *server, struct egl *egl)
     eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
         eglGetProcAddress("eglBindWaylandDisplayWL");
 
+    memset(server, 0, sizeof(*server));
     wl_list_init(&server->surfaces);
     wl_list_init(&server->clients);
 
@@ -703,14 +702,15 @@ compositor_init(struct server *server, struct egl *egl)
     }
 
     wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION,
-                     &server, wl_compositor_bind);
+                     server, wl_compositor_bind);
     wl_global_create(display, &xdg_wm_base_interface, XDG_WM_BASE_VERSION,
-                     &server, xdg_wm_base_bind);
+                     server, xdg_wm_base_bind);
     wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION,
-                     &server, &wl_seat_bind);
+                     server, &wl_seat_bind);
     wl_display_init_shm(display);
 
     server->display = display;
+    server->event_loop = wl_display_get_event_loop(display);
     return 0;
 }
 
@@ -724,6 +724,9 @@ compositor_update(struct backend_memory *memory, struct egl *egl)
 
         memory->is_initialized = 1;
     }
+
+    wl_event_loop_dispatch(server->event_loop, 0);
+    wl_display_flush_clients(server->display);
 }
 
 void
