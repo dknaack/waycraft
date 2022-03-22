@@ -82,7 +82,7 @@ game_init(struct backend_memory *memory)
     struct memory_arena *arena = &game->arena;
     arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
 
-    debug_init();
+    debug_init(arena);
     world_init(&game->world, arena);
     player_init(&game->player, &game->camera);
 
@@ -367,7 +367,7 @@ player_select_block(struct game_state *game, struct game_input *input,
         } else {
             has_selected_block = 1;
             debug_set_color(0, 0, 0);
-            //debug_cube(selected_block.min, selected_block.max);
+            debug_cube(selected_block.min, selected_block.max);
             break;
         }
     }

@@ -1,4 +1,5 @@
 #include "debug.h"
+#include "game.h"
 #include "gl.h"
 
 #define DEBUG_VERTEX_BUFFER_SIZE MB(8)
@@ -46,9 +47,9 @@ static const u8 *debug_fragment_shader_source = (u8 *)
 static struct debug_state debug = {0};
 
 void
-debug_init(void)
+debug_init(struct memory_arena *arena)
 {
-    debug.vertices = calloc(DEBUG_VERTEX_BUFFER_SIZE, 1);
+    debug.vertices = arena_alloc(arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
     debug.vertex_count = 0;
 
     gl.LineWidth(4.f);
