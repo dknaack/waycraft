@@ -183,6 +183,10 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
             u32 button_index = event.xbutton.button;
             if (button_index < 8) {
                 input->mouse.buttons[button_index] |= is_pressed;
+                u32 state = is_pressed ? 
+                    WL_POINTER_BUTTON_STATE_PRESSED : 
+                    WL_POINTER_BUTTON_STATE_RELEASED;
+                compositor_update_button(compositor, button_index, state);
             }
             break;
         case KeyRelease:
