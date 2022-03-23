@@ -7,6 +7,7 @@
 #include <wayland-server.h>
 #include <xdg-shell-protocol.h>
 #include <xkbcommon/xkbcommon.h>
+#include <time.h>
 
 #include "backend.h"
 #include "compositor.h"
@@ -188,6 +189,8 @@ wl_surface_commit(struct wl_client *client,
         gl.EGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
         gl.BindTexture(GL_TEXTURE_2D, 0);
         surface->texture = texture;
+
+        wl_buffer_send_release(surface->buffer);
     } else {
         struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->buffer);
         u32 width = wl_shm_buffer_get_width(shm_buffer);
@@ -207,6 +210,8 @@ wl_surface_commit(struct wl_client *client,
                       GL_BGRA, GL_UNSIGNED_BYTE, data);
         gl.BindTexture(GL_TEXTURE_2D, 0);
         surface->texture = texture;
+
+        wl_buffer_send_release(surface->buffer);
     }
 }
 
@@ -701,6 +706,15 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     return 0;
 }
 
+static u32
+compositor_time_msec(void)
+{
+    struct timespec ts = {0};
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
 void
 compositor_update(struct backend_memory *memory, struct egl *egl, 
                   struct compositor_state *state)
@@ -713,6 +727,9 @@ compositor_update(struct backend_memory *memory, struct egl *egl,
         memory->is_initialized = 1;
     }
 
+    wl_event_loop_dispatch(server->event_loop, 0);
+    wl_display_flush_clients(server->display);
+
     struct surface *surface;
     struct compositor_window *window = state->windows;
     u32 window_count = 0;
@@ -720,12 +737,15 @@ compositor_update(struct backend_memory *memory, struct egl *egl,
         window->texture = surface->texture;
         window++;
         window_count++;
+
+        if (surface->frame_callback) {
+            wl_callback_send_done(surface->frame_callback,
+                                  compositor_time_msec());
+            surface->frame_callback = 0;
+        }
     }
 
     state->window_count = window_count;
-
-    wl_event_loop_dispatch(server->event_loop, 0);
-    wl_display_flush_clients(server->display);
 }
 
 void
