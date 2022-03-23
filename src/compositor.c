@@ -23,6 +23,9 @@
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
 
+#define MAX_SURFACE_COUNT 256
+#define MAX_CLIENT_COUNT  256
+
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
@@ -59,17 +62,23 @@ struct wc_compositor {
     struct wl_event_loop *event_loop;
     EGLDisplay *egl_display;
 
-    struct wl_list surfaces;
-    struct wl_list clients;
+    struct memory_arena arena;
+    struct wc_surface *surfaces;
+    struct wc_client *clients;
+
+    // NOTE: surface_count is the same as window_count
+    u32 client_count;
 };
 
 static struct wc_surface *
-server_create_surface(struct wc_compositor *server)
+server_create_surface(struct wc_compositor *compositor)
 {
-    struct wc_surface *surface = calloc(1, sizeof(struct wc_surface));
-    surface->server = server;
+    u32 surface_count = compositor->base.window_count;
+    struct wc_surface *surface = compositor->surfaces + surface_count++;
+    surface->server = compositor;
+    compositor->base.window_count = surface_count;
+    assert(surface_count < MAX_SURFACE_COUNT);
 
-    wl_list_insert(&server->surfaces, &surface->link);
     return surface;
 }
 
@@ -77,8 +86,9 @@ static struct wc_client *
 server_create_client(struct wc_compositor *compositor)
 {
     struct wc_client *client = calloc(1, sizeof(struct wc_client));
+    compositor->client_count++;
+    assert(compositor->client_count < MAX_CLIENT_COUNT);
 
-    wl_list_insert(&compositor->clients, &client->link);
     return client;
 }
 
@@ -674,27 +684,26 @@ compositor_time_msec(void)
 static void
 compositor_update(struct compositor *base)
 {
-    struct wc_compositor *compositor = (struct wc_compositor *)base;
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
 
     wl_event_loop_dispatch(compositor->event_loop, 0);
     wl_display_flush_clients(compositor->display);
 
-    u32 window_count = 0;
-    struct wc_surface *surface;
+    u32 window_count = base->window_count;
+    struct wc_surface *surface = compositor->surfaces;
     struct compositor_window *window = compositor->base.windows;
-    wl_list_for_each(surface, &compositor->surfaces, link) {
+    while (window_count-- > 0) {
         window->texture = surface->texture;
-        window_count++;
-        window++;
 
         if (surface->frame_callback) {
             wl_callback_send_done(surface->frame_callback,
                                   compositor_time_msec());
             surface->frame_callback = 0;
         }
-    }
 
-    base->window_count = window_count;
+        surface++;
+        window++;
+    }
 }
 
 static void
@@ -720,7 +729,7 @@ compositor_send_button(struct compositor *compositor, i32 button, i32 state)
 static void
 compositor_finish(struct compositor *base)
 {
-    struct wc_compositor *compositor = (struct wc_compositor *)base;
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
 
     wl_display_destroy(compositor->display);
 }
@@ -729,6 +738,7 @@ struct compositor *
 compositor_init(struct backend_memory *memory, struct egl *egl)
 {
     struct wc_compositor *compositor = memory->data;
+    struct memory_arena *arena = &compositor->arena;
     struct wl_display *display;
     const char *socket;
 
@@ -736,10 +746,6 @@ compositor_init(struct backend_memory *memory, struct egl *egl)
         eglGetProcAddress("eglQueryWaylandBufferWL");
     eglBindWaylandDisplayWL = (PFNEGLBINDWAYLANDDISPLAYWLPROC) 
         eglGetProcAddress("eglBindWaylandDisplayWL");
-
-    memset(compositor, 0, sizeof(*compositor));
-    wl_list_init(&compositor->surfaces);
-    wl_list_init(&compositor->clients);
 
     if (!(display = wl_display_create())) {
         fprintf(stderr, "Failed to initialize display\n");
@@ -765,7 +771,14 @@ compositor_init(struct backend_memory *memory, struct egl *egl)
     compositor->event_loop = wl_display_get_event_loop(display);
     compositor->egl_display = egl->display;
 
-    compositor->base.windows = (struct compositor_window *)(compositor + 1);
+    arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
+    compositor->surfaces = arena_alloc(
+        arena, MAX_SURFACE_COUNT, struct wc_surface);
+    compositor->clients = arena_alloc(
+        arena, MAX_CLIENT_COUNT, struct wc_client);
+    compositor->base.windows = arena_alloc(
+        &compositor->arena, MAX_SURFACE_COUNT, struct compositor_window);
+
     compositor->base.update = compositor_update;
     compositor->base.finish = compositor_finish;
     compositor->base.send_key = compositor_send_key;
