@@ -58,12 +58,6 @@ struct game_input {
     u32 height;
 };
 
-struct memory_arena {
-    u8 *data;
-    u64 size;
-    u64 used;
-};
-
 struct game_state {
     struct world world;
     struct camera camera;

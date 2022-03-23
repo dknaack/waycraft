@@ -6,6 +6,7 @@
 #include "gl.h"
 #include "game.h"
 #include "math.h"
+#include "memory.h"
 #include "noise.h"
 #include "world.h"
 #include "timer.h"
@@ -94,28 +95,6 @@ player_init(struct player *player, struct camera *camera)
     *hotbar++ = BLOCK_OAK_LOG;
     *hotbar++ = BLOCK_OAK_LEAVES;
     *hotbar++ = BLOCK_WATER;
-}
-
-void
-arena_init(struct memory_arena *arena, void *data, u64 size)
-{
-    arena->data = data;
-    arena->size = size;
-    arena->used = 0;
-}
-
-#define arena_alloc(arena, count, type) ((type *)arena_alloc_(arena, count * sizeof(type)))
-
-void *
-arena_alloc_(struct memory_arena *arena, u64 size)
-{
-    u64 used = arena->used;
-    assert(used + size < arena->size);
-
-    void *ptr = arena->data + used;
-    arena->used += size;
-
-    return ptr;
 }
 
 void
