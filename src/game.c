@@ -433,6 +433,7 @@ window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 static void
 window_render(struct game_window *window, u32 window_count, u32 model_uniform)
 {
+    printf("window_render(%p, %d, %d)\n", (void *)window, window_count, model_uniform);
     while (window_count-- > 0) {
         m4x4 transform = window_transform(window);
         gl.UniformMatrix4fv(model_uniform, 1, GL_FALSE, transform.e);

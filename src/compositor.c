@@ -15,13 +15,15 @@
 #include "game.h"
 #include "gl.h"
 
-#define WL_COMPOSITOR_VERSION 5
+#define WL_POINTER_VERSION 1
+#define WL_KEYBOARD_VERSION 1
+#define WL_COMPOSITOR_VERSION 3
 #define WL_REGION_VERSION 1
-#define WL_SEAT_VERSION 7
-#define WL_SURFACE_VERSION 5
+#define WL_SEAT_VERSION 1
+#define WL_SURFACE_VERSION 3
 #define XDG_WM_BASE_VERSION 4
-#define XDG_TOPLEVEL_VERSION 4
-#define XDG_SURFACE_VERSION 4
+#define XDG_TOPLEVEL_VERSION 1
+#define XDG_SURFACE_VERSION 1
 
 #define MAX_SURFACE_COUNT 256
 #define MAX_CLIENT_COUNT  256
@@ -34,8 +36,6 @@ struct wc_client {
 
     struct wl_resource *pointer;
     struct wl_resource *keyboard;
-
-    struct wl_list link;
 };
 
 struct wc_surface {
@@ -53,7 +53,6 @@ struct wc_surface {
 
     struct wc_compositor *compositor;
     struct wc_client *client;
-    struct wl_list link;
 };
 
 struct wc_compositor {
@@ -107,7 +106,7 @@ compositor_get_client(struct wc_compositor *compositor,
         assert(compositor->client_count < MAX_CLIENT_COUNT);
     }
 
-    return client;
+    return result;
 }
 
 static void
@@ -123,6 +122,12 @@ surface_activate(struct wc_surface *surface)
     struct wl_resource *keyboard = surface->client->keyboard;
     if (keyboard) {
         wl_keyboard_send_enter(keyboard, 0, surface->surface, &array);
+        wl_keyboard_send_modifiers(keyboard, 0, 0, 0, 0, 0);
+    }
+
+    struct wl_resource *pointer = surface->client->pointer;
+    if (pointer) {
+        wl_pointer_send_enter(pointer, 0, surface->surface, 0, 0);
     }
 
     i32 *state = wl_array_add(&array, sizeof(i32));
@@ -142,6 +147,11 @@ surface_deactivate(struct wc_surface *surface)
         wl_keyboard_send_leave(keyboard, 0, surface->surface);
     }
 
+    struct wl_resource *pointer = surface->client->pointer;
+    if (pointer) {
+        wl_pointer_send_leave(pointer, 0, surface->surface);
+    }
+
     struct wl_array array;
     wl_array_init(&array);
     xdg_toplevel_send_configure(surface->xdg_toplevel, 0, 0, &array);
@@ -150,6 +160,7 @@ surface_deactivate(struct wc_surface *surface)
 static void
 do_nothing()
 {
+
 }
 
 static const struct wl_region_interface wl_region_implementation = {
@@ -172,8 +183,13 @@ static void
 wl_surface_destroy(struct wl_client *client,
                    struct wl_resource *resource)
 {
+    // TODO: fix the order of windows
     struct wc_surface *surface = wl_resource_get_user_data(resource);
-    wl_list_remove(&surface->link);
+    struct wc_compositor *compositor = surface->compositor;
+    struct wc_surface *last_surface = compositor->surfaces + 
+        compositor->base.window_count--;
+
+    *surface = *last_surface;
 }
 
 static void
@@ -185,17 +201,6 @@ wl_surface_attach(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-wl_surface_damage(struct wl_client *client,
-                  struct wl_resource *resource,
-                  i32 x,
-                  i32 y,
-                  i32 width,
-                  i32 height)
-{
-    /* TODO */
-}
-
-static void
 wl_surface_frame(struct wl_client *client,
                  struct wl_resource *resource, u32 callback)
 {
@@ -203,22 +208,6 @@ wl_surface_frame(struct wl_client *client,
 
     surface->frame_callback = 
         wl_resource_create(client, &wl_callback_interface, 1, callback);
-}
-
-static void
-wl_surface_set_opaque_region(struct wl_client *client,
-                             struct wl_resource *resource,
-                             struct wl_resource *region)
-{
-    /* TODO */
-}
-
-static void
-wl_surface_set_input_region(struct wl_client *client,
-                            struct wl_resource *resource,
-                            struct wl_resource *region)
-{
-    /* TODO */
 }
 
 static void
@@ -281,47 +270,18 @@ wl_surface_commit(struct wl_client *client,
     }
 }
 
-static void
-wl_surface_set_buffer_transform(struct wl_client *client,
-                                struct wl_resource *resource, i32 transform)
-{
-    /* TODO */
-}
-
-static void
-wl_surface_set_buffer_scale(struct wl_client *client,
-                            struct wl_resource *resource, i32 scale)
-{
-    /* TODO */
-}
-
-static void
-wl_surface_damage_buffer(struct wl_client *client,
-                         struct wl_resource *resource,
-                         i32 x, i32 y, i32 width, i32 height)
-{
-    /* TODO */
-}
-
-static void
-wl_surface_offset(struct wl_client *client,
-                  struct wl_resource *resource, i32 x, i32 y)
-{
-    /* TODO */
-}
-
 static const struct wl_surface_interface wl_surface_implementation = {
     .destroy              = wl_surface_destroy,
     .attach               = wl_surface_attach,
-    .damage               = wl_surface_damage,
+    .damage               = do_nothing,
     .frame                = wl_surface_frame ,
-    .set_opaque_region    = wl_surface_set_opaque_region,
-    .set_input_region     = wl_surface_set_input_region,
+    .set_opaque_region    = do_nothing,
+    .set_input_region     = do_nothing,
     .commit               = wl_surface_commit,
-    .set_buffer_transform = wl_surface_set_buffer_transform,
-    .set_buffer_scale     = wl_surface_set_buffer_scale,
-    .damage_buffer        = wl_surface_damage_buffer,
-    .offset               = wl_surface_offset,
+    .set_buffer_transform = do_nothing,
+    .set_buffer_scale     = do_nothing,
+    .damage_buffer        = do_nothing,
+    .offset               = do_nothing,
 };
 
 static void
@@ -380,127 +340,26 @@ wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 /*
  * xdg toplevel functions
  */
-
-static void
-xdg_toplevel_destroy(struct wl_client *client,
-                     struct wl_resource *resource)
-{
-}
-
-static void
-xdg_toplevel_set_parent(struct wl_client *client,
-                        struct wl_resource *resource,
-                        struct wl_resource *parent)
-{
-}
-
-static void
-xdg_toplevel_set_title(struct wl_client *client,
-                       struct wl_resource *resource,
-                       const char *title)
-{
-}
-
-static void
-xdg_toplevel_set_app_id(struct wl_client *client,
-                        struct wl_resource *resource,
-                        const char *app_id)
-{
-}
-
-static void
-xdg_toplevel_show_window_menu(struct wl_client *client,
-                              struct wl_resource *resource,
-                              struct wl_resource *seat, u32 serial, i32 x, i32 y)
-{
-    /* TODO */
-}
-
-static void
-xdg_toplevel_move(struct wl_client *client, struct wl_resource *resource,
-                  struct wl_resource *seat, u32 serial)
-{
-    /* TODO */
-}
-
-static void
-xdg_toplevel_resize(struct wl_client *client, struct wl_resource *resource,
-                    struct wl_resource *seat, u32 serial, u32 edges)
-{
-    /* TODO */
-}
-
-static void
-xdg_toplevel_set_max_size(struct wl_client *client,
-                          struct wl_resource *resource, i32 width, i32 height)
-{
-}
-
-static void
-xdg_toplevel_set_min_size(struct wl_client *client,
-                          struct wl_resource *resource, i32 width, i32 height)
-{
-}
-
-static void
-xdg_toplevel_set_maximized(struct wl_client *client,
-                           struct wl_resource *resource)
-{
-}
-
-static void
-xdg_toplevel_unset_maximized(struct wl_client *client,
-                             struct wl_resource *resource)
-{
-}
-
-static void
-xdg_toplevel_set_fullscreen(struct wl_client *client,
-                            struct wl_resource *resource,
-                            struct wl_resource *output)
-{
-    /* TODO */
-}
-
-static void
-xdg_toplevel_unset_fullscreen(struct wl_client *client,
-                              struct wl_resource *resource)
-{
-    /* TODO */
-}
-
-static void
-xdg_toplevel_set_minimized(struct wl_client *client,
-                           struct wl_resource *resource)
-{
-}
-
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
-    .destroy          = xdg_toplevel_destroy,
-    .set_parent       = xdg_toplevel_set_parent,
-    .set_title        = xdg_toplevel_set_title,
-    .set_app_id       = xdg_toplevel_set_app_id,
-    .show_window_menu = xdg_toplevel_show_window_menu,
-    .move             = xdg_toplevel_move,
-    .resize           = xdg_toplevel_resize,
-    .set_max_size     = xdg_toplevel_set_max_size,
-    .set_min_size     = xdg_toplevel_set_min_size,
-    .set_maximized    = xdg_toplevel_set_maximized,
-    .unset_maximized  = xdg_toplevel_unset_maximized,
-    .set_fullscreen   = xdg_toplevel_set_fullscreen,
-    .unset_fullscreen = xdg_toplevel_unset_fullscreen,
-    .set_minimized    = xdg_toplevel_set_minimized,
+    .destroy          = do_nothing,
+    .set_parent       = do_nothing,
+    .set_title        = do_nothing,
+    .set_app_id       = do_nothing,
+    .show_window_menu = do_nothing,
+    .move             = do_nothing,
+    .resize           = do_nothing,
+    .set_max_size     = do_nothing,
+    .set_min_size     = do_nothing,
+    .set_maximized    = do_nothing,
+    .unset_maximized  = do_nothing,
+    .set_fullscreen   = do_nothing,
+    .unset_fullscreen = do_nothing,
+    .set_minimized    = do_nothing,
 };
 
 /*
  * xdg surface functions
  */
-
-static void
-xdg_surface_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    /* TODO */
-}
 
 static void
 xdg_surface_get_toplevel(struct wl_client *client,
@@ -517,13 +376,6 @@ xdg_surface_get_toplevel(struct wl_client *client,
 }
 
 static void
-xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
-                      u32 id, struct wl_resource *parent, struct wl_resource *positioner)
-{
-    /* TODO */
-}
-
-static void
 xdg_surface_set_window_geometry(struct wl_client *client,
                                 struct wl_resource *resource,
                                 i32 x, i32 y, i32 width, i32 height)
@@ -535,37 +387,17 @@ xdg_surface_set_window_geometry(struct wl_client *client,
     surface->y = y;
 }
 
-static void
-xdg_surface_ack_configure(struct wl_client *client,
-                          struct wl_resource *resource, u32 serial)
-{
-    /* TODO */
-}
-
 static const struct xdg_surface_interface xdg_surface_implementation = {
-    .destroy             = xdg_surface_destroy,
+    .destroy             = do_nothing,
     .get_toplevel        = xdg_surface_get_toplevel,
-    .get_popup           = xdg_surface_get_popup,
+    .get_popup           = do_nothing,
     .set_window_geometry = xdg_surface_set_window_geometry,
-    .ack_configure       = xdg_surface_ack_configure,
+    .ack_configure       = do_nothing,
 };
 
 /*
  * xdg_wm_base functions
  */
-
-static void
-xdg_wm_base_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    /* TODO */
-}
-
-static void
-xdg_wm_base_create_positioner(struct wl_client *client,
-                              struct wl_resource *resource, u32 id)
-{
-    /* TODO */
-}
 
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
@@ -582,25 +414,12 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
                                    surface, 0);
 }
 
-static void
-xdg_wm_base_pong(struct wl_client *client, struct wl_resource *resource,
-                 u32 serial)
-{
-    /* TODO */
-}
-
 static const struct xdg_wm_base_interface xdg_wm_base_implementation = {
-    .destroy           = xdg_wm_base_destroy,
-    .create_positioner = xdg_wm_base_create_positioner,
+    .destroy           = do_nothing,
+    .create_positioner = do_nothing,
     .get_xdg_surface   = xdg_wm_base_get_xdg_surface,
-    .pong              = xdg_wm_base_pong,
+    .pong              = do_nothing,
 };
-
-static void
-xdg_wm_base_resource_destroy(struct wl_resource *resource)
-{
-    /* TODO */
-}
 
 static void
 xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
@@ -609,41 +428,18 @@ xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
     struct wl_resource *resource = wl_resource_create(
         client, &xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
     wl_resource_set_implementation(resource, &xdg_wm_base_implementation,
-                                   compositor, xdg_wm_base_resource_destroy);
+                                   compositor, 0);
 }
 
-/*
- * wl_pointer functions
- */
-
-static void 
-wl_pointer_set_cursor(struct wl_client *client, struct wl_resource *resource, 
-                      u32 serial, struct wl_resource *surface, i32 hotspot_x, i32 hotspot_y)
-{
-    /* TODO */
-}
-
-static void 
-wl_pointer_release(struct wl_client *client, struct wl_resource *resource)
-{
-    /* TODO */
-}
-
+/* TODO: wl_pointer functions */
 static const struct wl_pointer_interface wl_pointer_implementation = {
-    .set_cursor = wl_pointer_set_cursor,
-    .release    = wl_pointer_release,
+    .set_cursor = do_nothing,
+    .release    = do_nothing,
 };
 
-/* 
- * wl_keyboard functions
- */
-static void
-wl_keyboard_release(struct wl_client *client, struct wl_resource *resource)
-{
-}
-
+/* TODO: wl_keyboard functions */
 static const struct wl_keyboard_interface wl_keyboard_implementation = {
-    .release = wl_keyboard_release,
+    .release = do_nothing,
 };
 
 /*
@@ -655,7 +451,7 @@ wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
                     u32 id)
 {
     struct wc_compositor *compositor = wl_resource_get_user_data(resource);
-    struct wl_resource *pointer = wl_resource_create(wl_client, &wl_pointer_interface, 7, id);
+    struct wl_resource *pointer = wl_resource_create(wl_client, &wl_pointer_interface, WL_POINTER_VERSION, id);
 
     wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
     struct wc_client *client = compositor_get_client(compositor, wl_client);
@@ -668,7 +464,7 @@ wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
 {
     struct wc_compositor *compositor = wl_resource_get_user_data(resource);
     struct wl_resource *keyboard =
-        wl_resource_create(wl_client, &wl_keyboard_interface, 7, id);
+        wl_resource_create(wl_client, &wl_keyboard_interface, WL_KEYBOARD_VERSION, id);
     wl_resource_set_implementation(keyboard, &wl_keyboard_implementation, 0, 0);
 
     struct wc_client *client = compositor_get_client(compositor, wl_client);
@@ -678,24 +474,11 @@ wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
                             compositor->keymap, compositor->keymap_size);
 }
 
-static void
-wl_seat_get_touch(struct wl_client *client, struct wl_resource *resource,
-                  u32 id)
-{
-    /* TODO */
-}
-
-static void
-wl_seat_release(struct wl_client *client, struct wl_resource *resource)
-{
-    /* TODO */
-}
-
 static const struct wl_seat_interface wl_seat_implementation = {
     .get_pointer  = wl_seat_get_pointer,
     .get_keyboard = wl_seat_get_keyboard,
-    .get_touch    = wl_seat_get_touch,
-    .release      = wl_seat_release,
+    .get_touch    = do_nothing,
+    .release      = do_nothing,
 };
 
 static void
@@ -735,6 +518,7 @@ compositor_update(struct compositor *base)
         if (surface->frame_callback) {
             wl_callback_send_done(surface->frame_callback,
                                   compositor_time_msec());
+            wl_resource_destroy(surface->frame_callback);
             surface->frame_callback = 0;
         }
 
@@ -814,8 +598,7 @@ compositor_send_modifiers(struct compositor *base, u32 depressed,
     if (active_surface) {
         struct wl_resource *keyboard = active_surface->client->keyboard;
         if (keyboard) {
-            wl_keyboard_send_modifiers(keyboard, 0, 
-                                       depressed, latched, locked, group);
+            wl_keyboard_send_modifiers(keyboard, 0, depressed, latched, locked, group);
         }
     }
 }
@@ -881,6 +664,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     compositor->base.send_button = compositor_send_button;
     compositor->base.send_motion = compositor_send_motion;
     compositor->base.send_modifiers = compositor_send_modifiers;
+
+    compositor->keymap = keymap;
+    compositor->keymap_size = keymap_size;
 
     return &compositor->base;
 }

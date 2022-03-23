@@ -25,9 +25,9 @@ struct x11_window {
     Atom net_wm_name;
     Atom wm_delete_win;
     u32 width, height;
-    uint is_open;
-    uint lock_cursor;
-    uint is_active;
+    u32 is_open;
+    u32 lock_cursor;
+    u32 is_active;
     i32 keymap;
     i32 keymap_size;
     struct xkb_state *xkb_state;
@@ -38,8 +38,8 @@ randname(char *buf)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
-	long r = ts.tv_nsec;
-	for (int i = 0; i < 6; ++i) {
+	u64 r = ts.tv_nsec;
+	for (u32 i = 0; i < 6; ++i) {
 		buf[i] = 'A'+(r&15)+(r&16)*2;
 		r >>= 5;
 	}
@@ -48,34 +48,40 @@ randname(char *buf)
 static int
 create_shm_file(void)
 {
-	int retries = 100;
+	i32 retries = 100;
+    i32 fd = -1;
+
 	do {
 		char name[] = "/wl_shm-XXXXXX";
 		randname(name + sizeof(name) - 7);
-		--retries;
-		int fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
+		retries--;
+		fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
 		if (fd >= 0) {
 			shm_unlink(name);
-			return fd;
+            break;
 		}
 	} while (retries > 0 && errno == EEXIST);
-	return -1;
+
+	return fd;
 }
 
-int
+static i32
 allocate_shm_file(size_t size)
 {
-	int fd = create_shm_file();
+	i32 fd = create_shm_file();
 	if (fd < 0)
 		return -1;
-	int ret;
+
+	i32 ret = 0;
 	do {
 		ret = ftruncate(fd, size);
 	} while (ret < 0 && errno == EINTR);
+
 	if (ret < 0) {
 		close(fd);
-		return -1;
+        fd = -1;
 	}
+
 	return fd;
 }
 
@@ -116,7 +122,7 @@ x11_window_set_title(struct x11_window *window, char *title)
     return 0;
 }
 
-i32
+static i32
 x11_window_init(struct x11_window *window)
 {
     char *title = "Waycraft";
@@ -137,8 +143,8 @@ x11_window_init(struct x11_window *window)
     window->height = 600;
     window->drawable = XCreateSimpleWindow(window->display, root,
                                            0, 0, 800, 600, 0, 0, 0);
-    mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask |
-        KeymapStateMask | ExposureMask | PointerMotionMask |
+    mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask | 
+        KeyReleaseMask | KeymapStateMask | ExposureMask | PointerMotionMask |
         StructureNotifyMask | EnterWindowMask | LeaveWindowMask;
     XSelectInput(window->display, window->drawable, mask);
     XMapWindow(window->display, window->drawable);
@@ -193,7 +199,7 @@ x11_window_init(struct x11_window *window)
     return 0;
 }
 
-void
+static void
 x11_window_finish(struct x11_window *window)
 {
     close(window->keymap);
@@ -201,14 +207,14 @@ x11_window_finish(struct x11_window *window)
     XCloseDisplay(window->display);
 }
 
-u32
+static u32
 x11_get_key_state(u8 *key_vector, u8 key_code)
 {
     u32 result = (key_vector[key_code / 8] & (1 << (key_code % 8))) != 0;
     return result;
 }
 
-void
+static void
 x11_window_update_modifiers(struct x11_window *window,
                             struct compositor *compositor)
 {
@@ -252,8 +258,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
             }
             break;
         case ConfigureNotify:
-            window->width = event.xconfigure.width;
-            window->height = event.xconfigure.height;
+            input->width  = window->width  = event.xconfigure.width;
+            input->height = window->height = event.xconfigure.height;
             break;
         case MotionNotify:
             {
