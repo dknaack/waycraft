@@ -9,7 +9,12 @@ struct compositor_window {
     u32 texture;
 };
 
-struct compositor_state {
+struct compositor {
+    void (*update)(struct compositor *compositor);
+    void (*send_key)(struct compositor *compositor, i32 key, i32 state);
+    void (*send_button)(struct compositor *compositor, i32 key, i32 state);
+    void (*finish)(struct compositor *compositor);
+
     struct compositor_window *windows;
     u32 window_count;
     u32 active_window;
@@ -17,10 +22,8 @@ struct compositor_state {
     m4x4 transform;
 };
 
-void compositor_update(struct backend_memory *memory, struct egl *egl,
-                       struct compositor_state *state);
-void compositor_update_key(struct compositor_state *compositor, i32 key, i32 state);
-void compositor_update_button(struct compositor_state *compositor, i32 key, i32 state);
-void compositor_finish(struct backend_memory *memory);
+struct backend_memory;
+struct compositor *compositor_init(struct backend_memory *memory, 
+                                   struct egl *egl);
 
 #endif /* COMPOSITOR_H */ 

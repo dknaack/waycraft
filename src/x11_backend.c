@@ -130,7 +130,7 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 
 void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
-                       struct compositor_state *compositor)
+                       struct compositor *compositor)
 {
     KeySym key;
     XEvent event;
@@ -186,7 +186,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                 u32 state = is_pressed ? 
                     WL_POINTER_BUTTON_STATE_PRESSED : 
                     WL_POINTER_BUTTON_STATE_RELEASED;
-                compositor_update_button(compositor, button_index, state);
+                compositor->send_button(compositor, button_index, state);
             }
             break;
         case KeyRelease:
@@ -194,7 +194,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                 key = XLookupKeysym(&event.xkey, 0);
                 u32 keycode = event.xkey.keycode - 8;
                 u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
-                compositor_update_key(compositor, keycode, state);
+                compositor->send_key(compositor, keycode, state);
             }
             break;
         case KeyPress:
@@ -202,7 +202,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                 key = XLookupKeysym(&event.xkey, 0);
                 u32 keycode = event.xkey.keycode - 8;
                 u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
-                compositor_update_key(compositor, keycode, state);
+                compositor->send_key(compositor, keycode, state);
                 if (key == XK_Escape) {
                     window->lock_cursor = 0;
                     XUngrabPointer(window->display, CurrentTime);
@@ -334,11 +334,11 @@ error_get_display:
 int
 x11_main(void)
 {
-    struct compositor_state compositor_state = {0};
+    struct compositor *compositor;
     struct x11_window window = {0};
     struct game_input input = {0};
-    struct backend_memory game = {0};
-    struct backend_memory compositor = {0};
+    struct backend_memory game_memory = {0};
+    struct backend_memory compositor_memory = {0};
     struct egl egl = {0};
 
     /* initialize the window */
@@ -351,27 +351,34 @@ x11_main(void)
     x11_egl_init(&egl, &window);
     gl_init(&gl, (gl_get_proc_address_t *)eglGetProcAddress);
 
-    game.size = MB(256);
-    game.data = calloc(game.size, 1);
+    game_memory.size = MB(256);
+    game_memory.data = calloc(game_memory.size, 1);
 
-    compositor.size = MB(64);
-    compositor.data = calloc(compositor.size, 1);
+    compositor_memory.size = MB(64);
+    compositor_memory.data = calloc(compositor_memory.size, 1);
+
+    if (!(compositor = compositor_init(&compositor_memory, &egl))) {
+        fprintf(stderr, "Failed to initialize the compositor\n");
+        return 1;
+    }
 
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
-        x11_window_poll_events(&window, &input, &compositor_state);
+        x11_window_poll_events(&window, &input, compositor);
 
         gl.Viewport(0, 0, window.width, window.height);
-        game_update(&game, &input, &compositor_state);
-        compositor_update(&compositor, &egl, &compositor_state);
+        game_update(&game_memory, &input, compositor);
+        compositor->update(compositor);
 
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
     }
 
     egl_finish(&egl);
-    compositor_finish(&compositor);
+    compositor->finish(compositor);
+    free(compositor_memory.data);
+    free(game_memory.data);
     x11_window_finish(&window);
     return 0;
 }
