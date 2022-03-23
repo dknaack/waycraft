@@ -18,6 +18,7 @@
 #define WL_POINTER_VERSION 7
 #define WL_KEYBOARD_VERSION 7
 #define WL_COMPOSITOR_VERSION 5
+#define WL_SUBCOMPOSITOR_VERSION 1
 #define WL_REGION_VERSION 1
 #define WL_SEAT_VERSION 7
 #define WL_SURFACE_VERSION 5
@@ -52,6 +53,7 @@ struct wc_surface {
     u32 texture;
 
     struct wc_compositor *compositor;
+    struct wc_surface *parent;
     struct wc_client *client;
 };
 
@@ -494,6 +496,31 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
     wl_seat_send_capabilities(seat, caps);
 }
 
+static void
+wl_subcompositor_get_subsurface(
+    struct wl_client *client, struct wl_resource *resource, u32 id,
+    struct wl_resource *wl_surface, struct wl_resource *wl_parent)
+{
+    struct wc_surface *surface = wl_resource_get_user_data(wl_surface);
+    struct wc_surface *parent = wl_resource_get_user_data(wl_parent);
+
+    surface->parent = parent;
+}
+
+static const struct wl_subcompositor_interface wl_subcompositor_implementation = {
+    .destroy        = do_nothing,
+    .get_subsurface = wl_subcompositor_get_subsurface,
+};
+
+static void
+wl_subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
+{
+    struct wl_resource *subcompositor = wl_resource_create(
+        client, &wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, id);
+    wl_resource_set_implementation(
+        subcompositor, &wl_subcompositor_implementation, data, 0);
+}
+
 static u32
 compositor_time_msec(void)
 {
@@ -645,6 +672,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
                      compositor, xdg_wm_base_bind);
     wl_global_create(display, &wl_seat_interface, WL_SEAT_VERSION,
                      compositor, &wl_seat_bind);
+    wl_global_create(display, &wl_subcompositor_interface,
+                     WL_SUBCOMPOSITOR_VERSION, compositor,
+                     &wl_subcompositor_bind);
     wl_display_init_shm(display);
 
     compositor->display = display;
