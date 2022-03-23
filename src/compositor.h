@@ -1,6 +1,8 @@
 #ifndef COMPOSITOR_H
 #define COMPOSITOR_H
 
+#include "types.h"
+
 struct egl;
 
 struct compositor_window {
@@ -10,7 +12,9 @@ struct compositor_window {
 struct compositor_state {
     struct compositor_window *windows;
     u32 window_count;
+    u32 active_window;
     u8 is_active;
+    m4x4 transform;
 };
 
 void compositor_update(struct backend_memory *memory, struct egl *egl,
