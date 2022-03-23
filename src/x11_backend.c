@@ -303,7 +303,6 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                 u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
                 compositor->send_key(compositor, keycode, state);
                 xkb_state_update_key(xkb_state, event.xkey.keycode, XKB_KEY_UP);
-                x11_window_update_modifiers(window, compositor);
             }
             break;
         case KeyPress:
@@ -317,8 +316,6 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                     window->lock_cursor = 0;
                     XUngrabPointer(window->display, CurrentTime);
                 }
-
-                x11_window_update_modifiers(window, compositor);
             }
             break;
         case EnterNotify:
@@ -330,6 +327,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
         }
     }
 
+    x11_window_update_modifiers(window, compositor);
     if (window->is_active) {
         struct {
             KeySym key_sym;
