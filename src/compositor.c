@@ -50,7 +50,7 @@ struct wc_surface {
     i32 height;
     u32 texture;
 
-    struct wc_compositor *server;
+    struct wc_compositor *compositor;
     struct wc_client *client;
     struct wl_list link;
 };
@@ -71,11 +71,11 @@ struct wc_compositor {
 };
 
 static struct wc_surface *
-server_create_surface(struct wc_compositor *compositor)
+compositor_create_surface(struct wc_compositor *compositor)
 {
     u32 surface_count = compositor->base.window_count;
     struct wc_surface *surface = compositor->surfaces + surface_count++;
-    surface->server = compositor;
+    surface->compositor = compositor;
     compositor->base.window_count = surface_count;
     assert(surface_count < MAX_SURFACE_COUNT);
 
@@ -83,7 +83,7 @@ server_create_surface(struct wc_compositor *compositor)
 }
 
 static struct wc_client *
-server_create_client(struct wc_compositor *compositor)
+compositor_create_client(struct wc_compositor *compositor)
 {
     struct wc_client *client = calloc(1, sizeof(struct wc_client));
     compositor->client_count++;
@@ -172,8 +172,8 @@ wl_surface_commit(struct wl_client *client,
                   struct wl_resource *resource)
 {
     struct wc_surface *surface = wl_resource_get_user_data(resource);
-    struct wc_compositor *server = surface->server;
-    EGLDisplay *egl_display = server->egl_display;
+    struct wc_compositor *compositor = surface->compositor;
+    EGLDisplay *egl_display = compositor->egl_display;
     i32 texture_format;
 
     if (!surface->buffer) {
@@ -284,9 +284,9 @@ static void
 wl_compositor_create_surface(struct wl_client *wl_client,
                              struct wl_resource *resource, u32 id)
 {
-    struct wc_compositor *server = wl_resource_get_user_data(resource);
-    struct wc_surface *surface = server_create_surface(server);
-    struct wc_client *client = server_create_client(server);
+    struct wc_compositor *compositor = wl_resource_get_user_data(resource);
+    struct wc_surface *surface = compositor_create_surface(compositor);
+    struct wc_client *client = compositor_create_client(compositor);
     if (!surface || !client) {
         return;
     }
@@ -321,11 +321,10 @@ static const struct wl_compositor_interface wl_compositor_implementation = {
 static void
 wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-    struct compositor *server = data;
     struct wl_resource *compositor = wl_resource_create(
         client, &wl_compositor_interface, WL_COMPOSITOR_VERSION, id);
     wl_resource_set_implementation(compositor, &wl_compositor_implementation,
-                                   server, 0);
+                                   data, 0);
 }
 
 /*
@@ -563,11 +562,11 @@ xdg_wm_base_resource_destroy(struct wl_resource *resource)
 static void
 xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-    struct compositor *server = data;
+    struct compositor *compositor = data;
     struct wl_resource *resource = wl_resource_create(
         client, &xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
     wl_resource_set_implementation(resource, &xdg_wm_base_implementation,
-                                   server, xdg_wm_base_resource_destroy);
+                                   compositor, xdg_wm_base_resource_destroy);
 }
 
 /*
@@ -617,7 +616,7 @@ wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
         wl_resource_create(client, &wl_pointer_interface, 7, id);
     wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
     struct wc_client *it;
-    wl_list_for_each(it, &server.clients, link) {
+    wl_list_for_each(it, &compositor.clients, link) {
         if (it->client == client) {
             it->pointer = pointer;
         }
@@ -662,11 +661,11 @@ static const struct wl_seat_interface wl_seat_implementation = {
 static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-    struct compositor *server = data;
+    struct compositor *compositor = data;
 
     struct wl_resource *seat = 
         wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
-    wl_resource_set_implementation(seat, &wl_seat_implementation, server, 0);
+    wl_resource_set_implementation(seat, &wl_seat_implementation, compositor, 0);
 
     u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
     wl_seat_send_capabilities(seat, caps);
