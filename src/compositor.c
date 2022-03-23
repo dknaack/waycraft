@@ -186,10 +186,12 @@ wl_surface_destroy(struct wl_client *client,
     // TODO: fix the order of windows
     struct wc_surface *surface = wl_resource_get_user_data(resource);
     struct wc_compositor *compositor = surface->compositor;
-    struct wc_surface *last_surface = compositor->surfaces + 
-        compositor->base.window_count--;
+    if (compositor->base.window_count-- > 0) {
+        struct wc_surface *last_surface = compositor->surfaces + 
+            compositor->base.window_count;
 
-    *surface = *last_surface;
+        *surface = *last_surface;
+    }
 }
 
 static void
