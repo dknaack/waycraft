@@ -67,6 +67,9 @@ typedef union {
 #define DEG2RAD(deg) ((deg) / 180.f * PI)
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
+#define CONTAINER_OF(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+
 #define M4X4(...)      (m4x4){{ __VA_ARGS__ }}
 #define V4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define V3(x, y, z)    (v3){{ (x), (y), (z) }}
