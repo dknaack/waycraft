@@ -1,8 +1,13 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <X11/XKBlib.h>
+#include <X11/Xlib-xcb.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <sys/mman.h>
 #include <time.h>
 #include <wayland-server.h>
+#include <xkbcommon/xkbcommon-x11.h>
 
 #include "backend.h"
 #include "compositor.h"
@@ -23,7 +28,56 @@ struct x11_window {
     uint is_open;
     uint lock_cursor;
     uint is_active;
+    i32 keymap;
+    i32 keymap_size;
+    struct xkb_state *xkb_state;
 };
+
+static void
+randname(char *buf)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	long r = ts.tv_nsec;
+	for (int i = 0; i < 6; ++i) {
+		buf[i] = 'A'+(r&15)+(r&16)*2;
+		r >>= 5;
+	}
+}
+
+static int
+create_shm_file(void)
+{
+	int retries = 100;
+	do {
+		char name[] = "/wl_shm-XXXXXX";
+		randname(name + sizeof(name) - 7);
+		--retries;
+		int fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
+		if (fd >= 0) {
+			shm_unlink(name);
+			return fd;
+		}
+	} while (retries > 0 && errno == EEXIST);
+	return -1;
+}
+
+int
+allocate_shm_file(size_t size)
+{
+	int fd = create_shm_file();
+	if (fd < 0)
+		return -1;
+	int ret;
+	do {
+		ret = ftruncate(fd, size);
+	} while (ret < 0 && errno == EINTR);
+	if (ret < 0) {
+		close(fd);
+		return -1;
+	}
+	return fd;
+}
 
 static void
 x11_hide_cursor(struct x11_window *window)
@@ -111,12 +165,38 @@ x11_window_init(struct x11_window *window)
 
     window->is_open = 1;
     window->lock_cursor = 1;
+
+    {
+        xcb_connection_t *connection = XGetXCBConnection(window->display);
+        struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+        xkb_x11_setup_xkb_extension(connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
+                                    XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
+        i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(connection);
+        struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
+            context, connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+        char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1); 
+        i32 keymap_size = strlen(keymap_string) + 1;
+        i32 keymap_file = allocate_shm_file(keymap_size);
+
+        i32 prot = PROT_READ | PROT_WRITE;
+        i32 flags = MAP_SHARED;
+        char *contents = mmap(0, keymap_size, prot, flags, keymap_file, 0);
+        memcpy(contents, keymap_string, keymap_size);
+        munmap(contents, keymap_size);
+
+        window->keymap = keymap_file;
+        window->keymap_size = keymap_size;
+        window->xkb_state = xkb_x11_state_new_from_device(
+            keymap, connection, keyboard_device_id);
+    }
+
     return 0;
 }
 
 void
 x11_window_finish(struct x11_window *window)
 {
+    close(window->keymap);
     XDestroyWindow(window->display, window->drawable);
     XCloseDisplay(window->display);
 }
@@ -129,9 +209,24 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 }
 
 void
+x11_window_update_modifiers(struct x11_window *window,
+                            struct compositor *compositor)
+{
+    struct xkb_state *state = window->xkb_state;
+
+	u32 depressed = xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
+	u32 latched = xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
+	u32 locked = xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
+	u32 group = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    compositor->send_modifiers(compositor, depressed, latched, locked, group);
+}
+
+void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
                        struct compositor *compositor)
 {
+    struct xkb_state *xkb_state = window->xkb_state;
     KeySym key;
     XEvent event;
     i32 dx, dy;
@@ -161,19 +256,25 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
             window->height = event.xconfigure.height;
             break;
         case MotionNotify:
-            dx = event.xmotion.x - input->mouse.x;
-            dy = event.xmotion.y - input->mouse.y;
-            input->mouse.x = event.xmotion.x;
-            input->mouse.y = event.xmotion.y;
+            {
+                i32 x = event.xmotion.x;
+                i32 y = event.xmotion.y;
 
-            i32 mouse_was_warped = (input->mouse.x == window->width / 2 &&
-                                    input->mouse.y == window->height / 2);
-            if (!mouse_was_warped) {
-                // TODO: convert to relative coordinates?
-                input->mouse.dx = dx;
-                input->mouse.dy = dy;
+                dx = event.xmotion.x - input->mouse.x;
+                dy = event.xmotion.y - input->mouse.y;
+                input->mouse.x = x;
+                input->mouse.y = y;
+
+                i32 mouse_was_warped = (x == window->width / 2 &&
+                                        y == window->height / 2);
+                if (!mouse_was_warped) {
+                    // TODO: convert to relative coordinates?
+                    input->mouse.dx = dx;
+                    input->mouse.dy = dy;
+
+                    compositor->send_motion(compositor, x, y);
+                }
             }
-
             break;
         case ButtonPress:
             is_pressed = 1;
@@ -193,8 +294,10 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
             {
                 key = XLookupKeysym(&event.xkey, 0);
                 u32 keycode = event.xkey.keycode - 8;
-                u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
+                u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
                 compositor->send_key(compositor, keycode, state);
+                xkb_state_update_key(xkb_state, event.xkey.keycode, XKB_KEY_UP);
+                x11_window_update_modifiers(window, compositor);
             }
             break;
         case KeyPress:
@@ -203,10 +306,13 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
                 u32 keycode = event.xkey.keycode - 8;
                 u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
                 compositor->send_key(compositor, keycode, state);
+                xkb_state_update_key(xkb_state, event.xkey.keycode, XKB_KEY_DOWN);
                 if (key == XK_Escape) {
                     window->lock_cursor = 0;
                     XUngrabPointer(window->display, CurrentTime);
                 }
+
+                x11_window_update_modifiers(window, compositor);
             }
             break;
         case EnterNotify:
@@ -357,7 +463,10 @@ x11_main(void)
     compositor_memory.size = MB(64);
     compositor_memory.data = calloc(compositor_memory.size, 1);
 
-    if (!(compositor = compositor_init(&compositor_memory, &egl))) {
+    i32 keymap = window.keymap;
+    i32 keymap_size = window.keymap_size;
+    compositor = compositor_init(&compositor_memory, &egl, keymap, keymap_size);
+    if (!compositor) {
         fprintf(stderr, "Failed to initialize the compositor\n");
         return 1;
     }

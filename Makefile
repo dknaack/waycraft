@@ -3,10 +3,10 @@ WAYLAND_SCANNER=$(shell pkg-config --variable=wayland_scanner wayland-scanner)
 LIBS=\
 	 $(shell pkg-config --cflags --libs wlroots) \
 	 $(shell pkg-config --cflags --libs wayland-server) \
-	 $(shell pkg-config --cflags --libs xkbcommon) \
+	 $(shell pkg-config --cflags --libs xkbcommon-x11) \
 	 $(shell pkg-config --cflags --libs egl gl glew)
 
-LDFLAGS = -lm -ldl $(LIBS)
+LDFLAGS = -lm -ldl -lX11 -lX11-xcb $(LIBS)
 CFLAGS  = -g -std=c11 -pedantic -Wall -D_POSIX_C_SOURCE=200809L \
 		  -DWLR_USE_UNSTABLE -Iinclude
 CC      = cc

@@ -602,6 +602,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
             // TODO: resize the window
             if (hot_window) {
                 game->active_window = hot_window;
+                compositor->active_window = compositor->windows + hot_window - 1;
                 compositor->is_active = 1;
             } else if (has_selected_block) {
                 struct player *player = &game->player;
@@ -652,11 +653,12 @@ game_update(struct backend_memory *memory, struct game_input *input,
         u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
         if (input->mouse.buttons[3] && is_pressing_alt) {
             game->active_window = 0;
+            compositor->active_window = 0;
             compositor->is_active = 0;
         }
 
         game->mouse_pos = mouse_pos;
-        game->cursor_pos = cursor_pos;
+        compositor->cursor_pos = cursor_pos;
     }
 
     world_update(&game->world, game->camera.position);

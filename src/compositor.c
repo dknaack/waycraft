@@ -33,6 +33,7 @@ struct wc_client {
     struct wl_client *client;
 
     struct wl_resource *pointer;
+    struct wl_resource *keyboard;
 
     struct wl_list link;
 };
@@ -65,9 +66,12 @@ struct wc_compositor {
     struct memory_arena arena;
     struct wc_surface *surfaces;
     struct wc_client *clients;
+    struct wc_surface *active_surface;
 
     // NOTE: surface_count is the same as window_count
     u32 client_count;
+    i32 keymap;
+    i32 keymap_size;
 };
 
 static struct wc_surface *
@@ -83,13 +87,64 @@ compositor_create_surface(struct wc_compositor *compositor)
 }
 
 static struct wc_client *
-compositor_create_client(struct wc_compositor *compositor)
+compositor_get_client(struct wc_compositor *compositor, 
+                      struct wl_client *wl_client)
 {
-    struct wc_client *client = calloc(1, sizeof(struct wc_client));
-    compositor->client_count++;
-    assert(compositor->client_count < MAX_CLIENT_COUNT);
+    struct wc_client *result = 0;
+    struct wc_client *client = compositor->clients;
+    u32 client_count = compositor->client_count;
+    for (u32 i = 0; i < client_count; i++) {
+        if (wl_client == client->client) {
+            result = client;
+            break;
+        }
+    }
+
+    if (!result) {
+        result = compositor->clients + client_count;
+        result->client = wl_client;
+        compositor->client_count++;
+        assert(compositor->client_count < MAX_CLIENT_COUNT);
+    }
 
     return client;
+}
+
+static void
+surface_activate(struct wc_surface *surface)
+{
+    if (!surface) {
+        return;
+    }
+
+    struct wl_array array;
+    wl_array_init(&array);
+
+    struct wl_resource *keyboard = surface->client->keyboard;
+    if (keyboard) {
+        wl_keyboard_send_enter(keyboard, 0, surface->surface, &array);
+    }
+
+    i32 *state = wl_array_add(&array, sizeof(i32));
+    *state = XDG_TOPLEVEL_STATE_ACTIVATED;
+    xdg_toplevel_send_configure(surface->xdg_toplevel, 0, 0, &array);
+}
+
+static void
+surface_deactivate(struct wc_surface *surface)
+{
+    if (!surface) {
+        return;
+    }
+
+    struct wl_resource *keyboard = surface->client->keyboard;
+    if (keyboard) {
+        wl_keyboard_send_leave(keyboard, 0, surface->surface);
+    }
+
+    struct wl_array array;
+    wl_array_init(&array);
+    xdg_toplevel_send_configure(surface->xdg_toplevel, 0, 0, &array);
 }
 
 static void
@@ -144,7 +199,6 @@ static void
 wl_surface_frame(struct wl_client *client,
                  struct wl_resource *resource, u32 callback)
 {
-    puts("wl_surface::frame");
     struct wc_surface *surface = wl_resource_get_user_data(resource);
 
     surface->frame_callback = 
@@ -286,11 +340,7 @@ wl_compositor_create_surface(struct wl_client *wl_client,
 {
     struct wc_compositor *compositor = wl_resource_get_user_data(resource);
     struct wc_surface *surface = compositor_create_surface(compositor);
-    struct wc_client *client = compositor_create_client(compositor);
-    if (!surface || !client) {
-        return;
-    }
-
+    struct wc_client *client = compositor_get_client(compositor, wl_client);
     struct wl_resource *wl_surface = wl_resource_create(
         wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
 
@@ -335,7 +385,6 @@ static void
 xdg_toplevel_destroy(struct wl_client *client,
                      struct wl_resource *resource)
 {
-    printf("destroy\n");
 }
 
 static void
@@ -343,7 +392,6 @@ xdg_toplevel_set_parent(struct wl_client *client,
                         struct wl_resource *resource,
                         struct wl_resource *parent)
 {
-    printf("parent\n");
 }
 
 static void
@@ -351,7 +399,6 @@ xdg_toplevel_set_title(struct wl_client *client,
                        struct wl_resource *resource,
                        const char *title)
 {
-    printf("title: %s\n", title);
 }
 
 static void
@@ -359,7 +406,6 @@ xdg_toplevel_set_app_id(struct wl_client *client,
                         struct wl_resource *resource,
                         const char *app_id)
 {
-    printf("app id: %s\n", app_id);
 }
 
 static void
@@ -388,28 +434,24 @@ static void
 xdg_toplevel_set_max_size(struct wl_client *client,
                           struct wl_resource *resource, i32 width, i32 height)
 {
-    printf("min_size: (%d, %d)\n", width, height);
 }
 
 static void
 xdg_toplevel_set_min_size(struct wl_client *client,
                           struct wl_resource *resource, i32 width, i32 height)
 {
-    printf("max_size: (%d, %d)\n", width, height);
 }
 
 static void
 xdg_toplevel_set_maximized(struct wl_client *client,
                            struct wl_resource *resource)
 {
-    printf("maximize\n");
 }
 
 static void
 xdg_toplevel_unset_maximized(struct wl_client *client,
                              struct wl_resource *resource)
 {
-    printf("unmaximize\n");
 }
 
 static void
@@ -431,7 +473,6 @@ static void
 xdg_toplevel_set_minimized(struct wl_client *client,
                            struct wl_resource *resource)
 {
-    printf("minimize\n");
 }
 
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
@@ -465,9 +506,11 @@ static void
 xdg_surface_get_toplevel(struct wl_client *client,
                          struct wl_resource *resource, u32 id)
 {
+    struct wc_surface *surface = wl_resource_get_user_data(resource);
     struct wl_resource *xdg_toplevel = wl_resource_create(client,
                                                           &xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
 
+    surface->xdg_toplevel = xdg_toplevel;
     // TODO: handle resource destroy?
     wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_implementation,
                                    0, 0);
@@ -583,6 +626,7 @@ wl_pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
 static void 
 wl_pointer_release(struct wl_client *client, struct wl_resource *resource)
 {
+    /* TODO */
 }
 
 static const struct wl_pointer_interface wl_pointer_implementation = {
@@ -607,35 +651,31 @@ static const struct wl_keyboard_interface wl_keyboard_implementation = {
  */
 
 static void
-wl_seat_get_pointer(struct wl_client *client, struct wl_resource *resource,
+wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
                     u32 id)
 {
-    (void)wl_pointer_implementation;
-#if 0
-    struct wl_resource *pointer = 
-        wl_resource_create(client, &wl_pointer_interface, 7, id);
+    struct wc_compositor *compositor = wl_resource_get_user_data(resource);
+    struct wl_resource *pointer = wl_resource_create(wl_client, &wl_pointer_interface, 7, id);
+
     wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
-    struct wc_client *it;
-    wl_list_for_each(it, &compositor.clients, link) {
-        if (it->client == client) {
-            it->pointer = pointer;
-        }
-    }
-#endif
+    struct wc_client *client = compositor_get_client(compositor, wl_client);
+    client->pointer = pointer;
 }
 
 static void
-wl_seat_get_keyboard(struct wl_client *client, struct wl_resource *resource,
+wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
                      u32 id)
 {
+    struct wc_compositor *compositor = wl_resource_get_user_data(resource);
     struct wl_resource *keyboard =
-        wl_resource_create(client, &wl_keyboard_interface, 7, id);
-    wl_resource_set_implementation(keyboard, 
-                                   &wl_keyboard_implementation, 0, 0);
+        wl_resource_create(wl_client, &wl_keyboard_interface, 7, id);
+    wl_resource_set_implementation(keyboard, &wl_keyboard_implementation, 0, 0);
 
-    //i32 fd, size;
-    //// TODO: get the xkb keymap fd and size
-    //wl_keyboard_send_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, size);
+    struct wc_client *client = compositor_get_client(compositor, wl_client);
+    client->keyboard = keyboard;
+
+    wl_keyboard_send_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, 
+                            compositor->keymap, compositor->keymap_size);
 }
 
 static void
@@ -661,11 +701,9 @@ static const struct wl_seat_interface wl_seat_implementation = {
 static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-    struct compositor *compositor = data;
-
     struct wl_resource *seat = 
         wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
-    wl_resource_set_implementation(seat, &wl_seat_implementation, compositor, 0);
+    wl_resource_set_implementation(seat, &wl_seat_implementation, data, 0);
 
     u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
     wl_seat_send_capabilities(seat, caps);
@@ -703,25 +741,82 @@ compositor_update(struct compositor *base)
         surface++;
         window++;
     }
-}
 
-static void
-compositor_send_key(struct compositor *compositor, i32 key, i32 state)
-{
-    u32 active_window = compositor->active_window;
-    if (compositor->is_active && active_window) {
-        struct wl_resource *keyboard = 0;
-        wl_keyboard_send_key(keyboard, 0, compositor_time_msec(), key, state);
+    struct compositor_window *active_window = compositor->base.active_window;
+    struct wc_surface *active_surface = 0;
+    if (active_window) {
+        u32 window_index = active_window - compositor->base.windows;
+        active_surface = &compositor->surfaces[window_index];
+    }
+
+    struct wc_surface *prev_active_surface = compositor->active_surface;
+    if (active_surface != prev_active_surface) {
+        compositor->active_surface = active_surface;
+
+        surface_deactivate(prev_active_surface);
+        surface_activate(active_surface);
     }
 }
 
 static void
-compositor_send_button(struct compositor *compositor, i32 button, i32 state)
+compositor_send_key(struct compositor *base, i32 key, i32 state)
 {
-    u32 active_window = compositor->active_window;
-    if (active_window) {
-        struct wl_resource *pointer = 0;
-        wl_pointer_send_button(pointer, 0, compositor_time_msec(), button, state);
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
+    struct wc_surface *active_surface = compositor->active_surface;
+    if (active_surface) {
+        struct wl_resource *keyboard = active_surface->client->keyboard;
+        if (keyboard) {
+            wl_keyboard_send_key(keyboard, 0, compositor_time_msec(), key, state);
+        }
+    }
+}
+
+static void
+compositor_send_button(struct compositor *base, i32 button, i32 state)
+{
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
+    struct wc_surface *active_surface = compositor->active_surface;
+    if (active_surface) {
+        struct wl_resource *pointer = active_surface->client->pointer;
+        if (pointer) {
+            wl_pointer_send_button(pointer, 0, compositor_time_msec(), button, state);
+        }
+    }
+}
+
+static void
+compositor_send_motion(struct compositor *base, i32 x, i32 y)
+{
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
+    struct wc_surface *active_surface = compositor->active_surface;
+    if (active_surface) {
+        struct wl_resource *pointer = active_surface->client->pointer;
+        if (pointer) {
+            v2 cursor_pos = base->cursor_pos;
+            f32 surface_width = active_surface->width;
+            f32 surface_height = active_surface->height;
+            f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
+            f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
+            wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
+            wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
+            wl_pointer_send_motion(pointer, compositor_time_msec(), 
+                                   surface_x, surface_y);
+        }
+    }
+}
+
+static void
+compositor_send_modifiers(struct compositor *base, u32 depressed,
+                          u32 latched, u32 locked, u32 group)
+{
+    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
+    struct wc_surface *active_surface = compositor->active_surface;
+    if (active_surface) {
+        struct wl_resource *keyboard = active_surface->client->keyboard;
+        if (keyboard) {
+            wl_keyboard_send_modifiers(keyboard, 0, 
+                                       depressed, latched, locked, group);
+        }
     }
 }
 
@@ -734,7 +829,8 @@ compositor_finish(struct compositor *base)
 }
 
 struct compositor *
-compositor_init(struct backend_memory *memory, struct egl *egl)
+compositor_init(struct backend_memory *memory, struct egl *egl, 
+                i32 keymap, i32 keymap_size)
 {
     struct wc_compositor *compositor = memory->data;
     struct memory_arena *arena = &compositor->arena;
@@ -778,10 +874,13 @@ compositor_init(struct backend_memory *memory, struct egl *egl)
     compositor->base.windows = arena_alloc(
         &compositor->arena, MAX_SURFACE_COUNT, struct compositor_window);
 
+    compositor->base.active_window = 0;
     compositor->base.update = compositor_update;
     compositor->base.finish = compositor_finish;
     compositor->base.send_key = compositor_send_key;
     compositor->base.send_button = compositor_send_button;
+    compositor->base.send_motion = compositor_send_motion;
+    compositor->base.send_modifiers = compositor_send_modifiers;
 
     return &compositor->base;
 }
