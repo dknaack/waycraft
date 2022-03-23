@@ -22,6 +22,8 @@
 #define WL_REGION_VERSION 1
 #define WL_SEAT_VERSION 7
 #define WL_SURFACE_VERSION 5
+#define WL_SUBSURFACE_VERSION 1
+#define WL_DATA_DEVICE_MANAGER_VERSION 3
 #define XDG_WM_BASE_VERSION 4
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
@@ -37,6 +39,13 @@ struct wc_client {
 
     struct wl_resource *pointer;
     struct wl_resource *keyboard;
+};
+
+struct wc_subsurface {
+    struct wl_resource *wl_subsurface;
+
+    struct wc_surface *surface;
+    struct wc_surface *parent;
 };
 
 struct wc_surface {
@@ -65,11 +74,13 @@ struct wc_compositor {
     EGLDisplay *egl_display;
 
     struct memory_arena arena;
+    struct wc_subsurface *subsurfaces;
     struct wc_surface *surfaces;
     struct wc_client *clients;
     struct wc_surface *active_surface;
 
     // NOTE: surface_count is the same as window_count
+    u32 subsurface_count;
     u32 client_count;
     i32 keymap;
     i32 keymap_size;
@@ -132,9 +143,12 @@ surface_activate(struct wc_surface *surface)
         wl_pointer_send_enter(pointer, 0, surface->surface, 0, 0);
     }
 
-    i32 *state = wl_array_add(&array, sizeof(i32));
-    *state = XDG_TOPLEVEL_STATE_ACTIVATED;
-    xdg_toplevel_send_configure(surface->xdg_toplevel, 0, 0, &array);
+    struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+    if (xdg_toplevel) {
+        i32 *state = wl_array_add(&array, sizeof(i32));
+        *state = XDG_TOPLEVEL_STATE_ACTIVATED;
+        xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+    }
 }
 
 static void
@@ -154,9 +168,12 @@ surface_deactivate(struct wc_surface *surface)
         wl_pointer_send_leave(pointer, 0, surface->surface);
     }
 
-    struct wl_array array;
-    wl_array_init(&array);
-    xdg_toplevel_send_configure(surface->xdg_toplevel, 0, 0, &array);
+    struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+    if (xdg_toplevel) {
+        struct wl_array array;
+        wl_array_init(&array);
+        xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+    }
 }
 
 static void
@@ -341,9 +358,7 @@ wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
                                    data, 0);
 }
 
-/*
- * xdg toplevel functions
- */
+/* xdg toplevel functions */
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
     .destroy          = do_nothing,
     .set_parent       = do_nothing,
@@ -361,10 +376,7 @@ static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
     .set_minimized    = do_nothing,
 };
 
-/*
- * xdg surface functions
- */
-
+/* xdg surface functions */
 static void
 xdg_surface_get_toplevel(struct wl_client *client,
                          struct wl_resource *resource, u32 id)
@@ -399,10 +411,7 @@ static const struct xdg_surface_interface xdg_surface_implementation = {
     .ack_configure       = do_nothing,
 };
 
-/*
- * xdg_wm_base functions
- */
-
+/* xdg_wm_base functions */
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
                             struct wl_resource *resource, 
@@ -496,6 +505,16 @@ wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
     wl_seat_send_capabilities(seat, caps);
 }
 
+// TODO: fill out the subsurface functions
+static const struct wl_subsurface_interface wl_subsurface_imeplementation = {
+	.destroy      = do_nothing,
+	.set_position = do_nothing,
+	.place_above  = do_nothing,
+	.place_below  = do_nothing,
+	.set_sync     = do_nothing,
+	.set_desync   = do_nothing,
+};
+
 static void
 wl_subcompositor_get_subsurface(
     struct wl_client *client, struct wl_resource *resource, u32 id,
@@ -503,10 +522,21 @@ wl_subcompositor_get_subsurface(
 {
     struct wc_surface *surface = wl_resource_get_user_data(wl_surface);
     struct wc_surface *parent = wl_resource_get_user_data(wl_parent);
+    struct wc_compositor *compositor = wl_resource_get_user_data(resource);
+    struct wc_subsurface *subsurface = compositor->subsurfaces +
+        compositor->subsurface_count++;
 
-    surface->parent = parent;
+    struct wl_resource *wl_subsurface = wl_resource_create(
+        client, &wl_subsurface_interface, WL_SUBSURFACE_VERSION, id);
+    wl_resource_set_implementation(
+        wl_subsurface, &wl_subsurface_imeplementation, subsurface, 0);
+
+    subsurface->surface = surface;
+    subsurface->parent = parent;
+    subsurface->wl_subsurface = wl_subsurface;
 }
 
+// TODO: fill out the subcompositor functions
 static const struct wl_subcompositor_interface wl_subcompositor_implementation = {
     .destroy        = do_nothing,
     .get_subsurface = wl_subcompositor_get_subsurface,
@@ -519,6 +549,24 @@ wl_subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
         client, &wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, id);
     wl_resource_set_implementation(
         subcompositor, &wl_subcompositor_implementation, data, 0);
+}
+
+// TODO: fill out the data device manager functions
+static const struct wl_data_device_manager_interface
+wl_data_device_manager_implementation = {
+    .create_data_source = do_nothing,
+    .get_data_device = do_nothing,
+};
+
+static void
+wl_data_device_manager_bind(struct wl_client *client, void *data, 
+                            u32 version, u32 id)
+{
+    struct wl_resource *data_device_manager = wl_resource_create(
+        client, &wl_data_device_manager_interface, 
+        WL_DATA_DEVICE_MANAGER_VERSION, id);
+    wl_resource_set_implementation(
+        data_device_manager, &wl_data_device_manager_implementation, data, 0);
 }
 
 static u32
@@ -675,6 +723,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     wl_global_create(display, &wl_subcompositor_interface,
                      WL_SUBCOMPOSITOR_VERSION, compositor,
                      &wl_subcompositor_bind);
+    wl_global_create(display, &wl_data_device_manager_interface,
+                     WL_DATA_DEVICE_MANAGER_VERSION, compositor,
+                     &wl_data_device_manager_bind);
     wl_display_init_shm(display);
 
     compositor->display = display;
@@ -682,6 +733,8 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     compositor->egl_display = egl->display;
 
     arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
+    compositor->subsurfaces = arena_alloc(
+        arena, MAX_SURFACE_COUNT, struct wc_subsurface);
     compositor->surfaces = arena_alloc(
         arena, MAX_SURFACE_COUNT, struct wc_surface);
     compositor->clients = arena_alloc(
