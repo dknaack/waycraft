@@ -624,10 +624,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
                 if (can_place_block) {
                     u32 selected_block = player->hotbar[player->hotbar_selection];
                     if (selected_block == BLOCK_WINDOW) {
-                        if (window_count != 0) {
-                            game->hot_window++;
-                            game->hot_window %= window_count;
-                        }
+                        game->hot_window++;
+                        game->hot_window %= window_count + 1;
                     } else {
                         world_place_block(
                             world, 
