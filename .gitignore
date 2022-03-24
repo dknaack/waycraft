@@ -1,6 +1,6 @@
-waycraft
-tags
+build/
 etc/
+tags
 xdg-shell-protocol.c
 xdg-shell-protocol.h
 *.o
