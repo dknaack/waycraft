@@ -578,7 +578,7 @@ compositor_update(struct compositor *base)
 
     struct wc_surface *surface;
     struct compositor_surface *window = compositor->base.windows;
-    wl_list_for_each(surface, &compositor->surfaces, link) {
+    wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
         window->texture = surface->texture;
 
         if (surface->wl_frame_callback) {
@@ -596,7 +596,7 @@ compositor_update(struct compositor *base)
     if (active_window) {
         u32 window_index = active_window - compositor->base.windows;
         struct wc_surface *surface;
-        wl_list_for_each(surface, &compositor->surfaces, link) {
+        wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
             if (window_index-- == 0) {
                 active_surface = surface;
             }
