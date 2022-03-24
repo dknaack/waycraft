@@ -556,6 +556,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
     gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
     gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
+    if (!compositor->active_window) {
+        game->active_window = 0;
+    }
+
     game->window_count = compositor->window_count;
     u32 window_count = game->window_count;
     u32 active_window = game->active_window;
