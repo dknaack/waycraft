@@ -39,6 +39,7 @@ struct wc_client {
 
     struct wl_resource *wl_pointer;
     struct wl_resource *wl_keyboard;
+    struct wl_list link;
 };
 
 struct wc_subsurface {
@@ -46,6 +47,7 @@ struct wc_subsurface {
 
     struct wc_surface *surface;
     struct wc_surface *parent;
+    struct wl_list link;
 };
 
 struct wc_surface {
@@ -64,6 +66,8 @@ struct wc_surface {
     struct wc_compositor *compositor;
     struct wc_surface *parent;
     struct wc_client *client;
+    struct wl_list link;
+    struct wl_list subsurfaces;
 };
 
 struct wc_compositor {
@@ -74,14 +78,14 @@ struct wc_compositor {
     EGLDisplay *egl_display;
 
     struct memory_arena arena;
-    struct wc_subsurface *subsurfaces;
-    struct wc_surface *surfaces;
-    struct wc_client *clients;
+    struct wl_list surfaces;
+    struct wl_list clients;
+    struct wl_list free_surfaces;
+    struct wl_list free_clients;
+
     struct wc_surface *active_surface;
 
     // NOTE: surface_count is the same as window_count
-    u32 subsurface_count;
-    u32 client_count;
     i32 keymap;
     i32 keymap_size;
 };
@@ -89,12 +93,21 @@ struct wc_compositor {
 static struct wc_surface *
 compositor_create_surface(struct wc_compositor *compositor)
 {
-    u32 surface_count = compositor->base.window_count;
-    struct wc_surface *surface = compositor->surfaces + surface_count++;
-    surface->compositor = compositor;
-    compositor->base.window_count = surface_count;
-    assert(surface_count < MAX_SURFACE_COUNT);
+    struct wl_list *free_surfaces = &compositor->free_surfaces;
+    struct wl_list *surfaces = &compositor->surfaces;
+    struct wc_surface *surface = 0;
+    if (wl_list_empty(free_surfaces)) {
+        surface = arena_alloc(&compositor->arena, 1, struct wc_surface);
+        surface->compositor = compositor;
+        wl_list_insert(surfaces, &surface->link);
+        wl_list_init(&surface->subsurfaces);
+    } else {
+        struct wc_surface *surface = wl_container_of(
+            free_surfaces->next, surface, link);
+        wl_list_remove(&surface->link);
+    }
 
+    compositor->base.window_count++;
     return surface;
 }
 
@@ -103,9 +116,8 @@ compositor_get_client(struct wc_compositor *compositor,
                       struct wl_client *wl_client)
 {
     struct wc_client *result = 0;
-    struct wc_client *client = compositor->clients;
-    u32 client_count = compositor->client_count;
-    for (u32 i = 0; i < client_count; i++) {
+    struct wc_client *client;
+    wl_list_for_each(client, &compositor->clients, link) {
         if (wl_client == client->wl_client) {
             result = client;
             break;
@@ -113,10 +125,9 @@ compositor_get_client(struct wc_compositor *compositor,
     }
 
     if (!result) {
-        result = compositor->clients + client_count;
+        result = arena_alloc(&compositor->arena, 1, struct wc_client);
         result->wl_client = wl_client;
-        compositor->client_count++;
-        assert(compositor->client_count < MAX_CLIENT_COUNT);
+        wl_list_insert(&compositor->clients, &result->link);
     }
 
     return result;
@@ -197,14 +208,9 @@ wl_surface_destroy(struct wl_client *client,
     struct wc_surface *surface = wl_resource_get_user_data(resource);
     surface->texture = 0;
     surface->wl_frame_callback = 0;
+    wl_list_remove(&surface->link);
+
     struct wc_compositor *compositor = surface->compositor;
-    if (compositor->base.window_count-- > 0) {
-        struct wc_surface *last_surface = compositor->surfaces + 
-            compositor->base.window_count;
-
-        *surface = *last_surface;
-    }
-
     if (surface == compositor->active_surface) {
         compositor->active_surface = 0;
     }
@@ -505,8 +511,9 @@ wl_subcompositor_get_subsurface(
     struct wc_surface *surface = wl_resource_get_user_data(wl_surface);
     struct wc_surface *parent = wl_resource_get_user_data(wl_parent);
     struct wc_compositor *compositor = wl_resource_get_user_data(resource);
-    struct wc_subsurface *subsurface = compositor->subsurfaces +
-        compositor->subsurface_count++;
+    struct wc_subsurface *subsurface = 
+        arena_alloc(&compositor->arena, 1, struct wc_subsurface);
+    wl_list_insert(&surface->subsurfaces, &subsurface->link);
 
     struct wl_resource *wl_subsurface = wl_resource_create(
         client, &wl_subsurface_interface, WL_SUBSURFACE_VERSION, id);
@@ -563,15 +570,15 @@ compositor_time_msec(void)
 static void
 compositor_update(struct compositor *base)
 {
-    struct wc_compositor *compositor = CONTAINER_OF(base, struct wc_compositor, base);
+    struct wc_compositor *compositor = 
+        CONTAINER_OF(base, struct wc_compositor, base);
 
     wl_event_loop_dispatch(compositor->wl_event_loop, 0);
     wl_display_flush_clients(compositor->wl_display);
 
-    u32 window_count = base->window_count;
-    struct wc_surface *surface = compositor->surfaces;
+    struct wc_surface *surface;
     struct compositor_surface *window = compositor->base.windows;
-    while (window_count-- > 0) {
+    wl_list_for_each(surface, &compositor->surfaces, link) {
         window->texture = surface->texture;
 
         if (surface->wl_frame_callback) {
@@ -581,7 +588,6 @@ compositor_update(struct compositor *base)
             surface->wl_frame_callback = 0;
         }
 
-        surface++;
         window++;
     }
 
@@ -589,7 +595,12 @@ compositor_update(struct compositor *base)
     struct wc_surface *active_surface = 0;
     if (active_window) {
         u32 window_index = active_window - compositor->base.windows;
-        active_surface = &compositor->surfaces[window_index];
+        struct wc_surface *surface;
+        wl_list_for_each(surface, &compositor->surfaces, link) {
+            if (window_index-- == 0) {
+                active_surface = surface;
+            }
+        }
     }
 
     struct wc_surface *prev_active_surface = compositor->active_surface;
@@ -724,12 +735,10 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     compositor->egl_display = egl->display;
 
     arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
-    compositor->subsurfaces = arena_alloc(
-        arena, MAX_SURFACE_COUNT, struct wc_subsurface);
-    compositor->surfaces = arena_alloc(
-        arena, MAX_SURFACE_COUNT, struct wc_surface);
-    compositor->clients = arena_alloc(
-        arena, MAX_CLIENT_COUNT, struct wc_client);
+    wl_list_init(&compositor->surfaces);
+    wl_list_init(&compositor->clients);
+    wl_list_init(&compositor->free_surfaces);
+    wl_list_init(&compositor->free_clients);
     compositor->base.windows = arena_alloc(
         &compositor->arena, MAX_SURFACE_COUNT, struct compositor_surface);
 
