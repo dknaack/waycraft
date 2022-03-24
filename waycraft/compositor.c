@@ -201,22 +201,6 @@ static const struct wl_region_interface wl_region_implementation = {
 
 /* wl_surface functions */
 static void
-wl_surface_destroy(struct wl_client *client,
-                   struct wl_resource *resource)
-{
-    // TODO: fix the order of windows
-    struct wc_surface *surface = wl_resource_get_user_data(resource);
-    surface->texture = 0;
-    surface->wl_frame_callback = 0;
-    wl_list_remove(&surface->link);
-
-    struct wc_compositor *compositor = surface->compositor;
-    if (surface == compositor->active_surface) {
-        compositor->active_surface = 0;
-    }
-}
-
-static void
 wl_surface_attach(struct wl_client *client, struct wl_resource *resource, 
                   struct wl_resource *buffer, i32 x, i32 y)
 {
@@ -297,7 +281,7 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 }
 
 static const struct wl_surface_interface wl_surface_implementation = {
-    .destroy              = wl_surface_destroy,
+    .destroy              = do_nothing,
     .attach               = wl_surface_attach,
     .damage               = do_nothing,
     .frame                = wl_surface_frame ,
@@ -310,6 +294,25 @@ static const struct wl_surface_interface wl_surface_implementation = {
     .offset               = do_nothing,
 };
 
+static void
+wl_surface_resource_destroy(struct wl_resource *resource)
+{
+    // TODO: fix the order of windows
+    struct wc_surface *surface = wl_resource_get_user_data(resource);
+    surface->texture = 0;
+    surface->wl_frame_callback = 0;
+    wl_list_remove(&surface->link);
+
+    struct wc_compositor *compositor = surface->compositor;
+    wl_list_insert(&compositor->free_surfaces, &surface->link);
+    if (surface == compositor->active_surface) {
+        compositor->active_surface = 0;
+    }
+
+    compositor->base.window_count--;
+    compositor->base.active_window = 0;
+}
+
 /* wl_compositor functions */
 static void
 wl_compositor_create_surface(struct wl_client *wl_client,
@@ -321,7 +324,7 @@ wl_compositor_create_surface(struct wl_client *wl_client,
     struct wl_resource *wl_surface = wl_resource_create(
         wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
     wl_resource_set_implementation(
-        wl_surface, &wl_surface_implementation, surface, 0);
+        wl_surface, &wl_surface_implementation, surface, &wl_surface_resource_destroy);
 
     surface->client = client;
     surface->wl_surface = wl_surface;
@@ -352,8 +355,14 @@ wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 /* xdg toplevel functions */
+static void
+xdg_toplevel_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+    puts("xdg_toplevel::destroy");
+}
+
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
-    .destroy          = do_nothing,
+    .destroy          = xdg_toplevel_destroy,
     .set_parent       = do_nothing,
     .set_title        = do_nothing,
     .set_app_id       = do_nothing,
@@ -370,6 +379,12 @@ static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
 };
 
 /* xdg surface functions */
+static void
+xdg_surface_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+    puts("xdg_surface::destroy");
+}
+
 static void
 xdg_surface_get_toplevel(struct wl_client *client,
                          struct wl_resource *resource, u32 id)
@@ -396,7 +411,7 @@ xdg_surface_set_window_geometry(struct wl_client *client,
 }
 
 static const struct xdg_surface_interface xdg_surface_implementation = {
-    .destroy             = do_nothing,
+    .destroy             = xdg_surface_destroy,
     .get_toplevel        = xdg_surface_get_toplevel,
     .get_popup           = do_nothing,
     .set_window_geometry = xdg_surface_set_window_geometry,
@@ -574,7 +589,6 @@ compositor_update(struct compositor *base)
         CONTAINER_OF(base, struct wc_compositor, base);
 
     wl_event_loop_dispatch(compositor->wl_event_loop, 0);
-    wl_display_flush_clients(compositor->wl_display);
 
     struct wc_surface *surface;
     struct compositor_surface *window = compositor->base.windows;
@@ -610,6 +624,14 @@ compositor_update(struct compositor *base)
         surface_deactivate(prev_active_surface);
         surface_activate(active_surface);
     }
+}
+
+static void
+compositor_flush(struct compositor *base)
+{
+    struct wc_compositor *compositor =
+        CONTAINER_OF(base, struct wc_compositor, base);
+    wl_display_flush_clients(compositor->wl_display);
 }
 
 static void
@@ -744,6 +766,7 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 
     compositor->base.active_window = 0;
     compositor->base.update = compositor_update;
+    compositor->base.flush = compositor_flush;
     compositor->base.finish = compositor_finish;
     compositor->base.send_key = compositor_send_key;
     compositor->base.send_button = compositor_send_button;
