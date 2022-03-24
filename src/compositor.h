@@ -5,7 +5,7 @@
 
 struct egl;
 
-struct compositor_window {
+struct compositor_surface {
     u32 texture;
 };
 
@@ -18,8 +18,8 @@ struct compositor {
                            u32 latched, u32 locked, u32 group);
     void (*finish)(struct compositor *compositor);
 
-    struct compositor_window *windows;
-    struct compositor_window *active_window;
+    struct compositor_surface *windows;
+    struct compositor_surface *active_window;
     u32 window_count;
     u8 is_active;
     m4x4 transform;

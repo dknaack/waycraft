@@ -194,22 +194,25 @@ wl_region_resource_destroy(struct wl_resource *resource)
     /* TODO */
 }
 
-/*
- * wl_surface functions
- */
-
+/* wl_surface functions */
 static void
 wl_surface_destroy(struct wl_client *client,
                    struct wl_resource *resource)
 {
     // TODO: fix the order of windows
     struct wc_surface *surface = wl_resource_get_user_data(resource);
+    surface->texture = 0;
+    surface->frame_callback = 0;
     struct wc_compositor *compositor = surface->compositor;
     if (compositor->base.window_count-- > 0) {
         struct wc_surface *last_surface = compositor->surfaces + 
             compositor->base.window_count;
 
         *surface = *last_surface;
+    }
+
+    if (surface == compositor->active_surface) {
+        compositor->active_surface = 0;
     }
 }
 
@@ -244,6 +247,7 @@ wl_surface_commit(struct wl_client *client,
         xdg_surface_send_configure(surface->xdg_surface, 0);
     } else if (eglQueryWaylandBufferWL(egl_display, surface->buffer,
                                        EGL_TEXTURE_FORMAT, &texture_format)) {
+        puts("egl texture");
         i32 width, height;
         eglQueryWaylandBufferWL(egl_display, surface->buffer, EGL_WIDTH, &width);
         eglQueryWaylandBufferWL(egl_display, surface->buffer, EGL_HEIGHT, &height);
@@ -271,7 +275,9 @@ wl_surface_commit(struct wl_client *client,
         struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->buffer);
         u32 width = wl_shm_buffer_get_width(shm_buffer);
         u32 height = wl_shm_buffer_get_height(shm_buffer);
+        u32 format = wl_shm_buffer_get_format(shm_buffer);
         void *data = wl_shm_buffer_get_data(shm_buffer);
+        assert(format == 0);
 
         if (surface->texture) {
             gl.DeleteTextures(1, &surface->texture);
@@ -305,16 +311,7 @@ static const struct wl_surface_interface wl_surface_implementation = {
     .offset               = do_nothing,
 };
 
-static void
-wl_surface_resource_destroy(struct wl_resource *resource)
-{
-    /* TODO */
-}
-
-/*
- * wl_compositor functions
- */
-
+/* wl_compositor functions */
 static void
 wl_compositor_create_surface(struct wl_client *wl_client,
                              struct wl_resource *resource, u32 id)
@@ -326,8 +323,7 @@ wl_compositor_create_surface(struct wl_client *wl_client,
         wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
 
     wl_resource_set_implementation(
-        wl_surface, &wl_surface_implementation,
-        surface, &wl_surface_resource_destroy);
+        wl_surface, &wl_surface_implementation, surface, 0);
 
     surface->client = client;
     surface->surface = wl_surface;
@@ -588,7 +584,7 @@ compositor_update(struct compositor *base)
 
     u32 window_count = base->window_count;
     struct wc_surface *surface = compositor->surfaces;
-    struct compositor_window *window = compositor->base.windows;
+    struct compositor_surface *window = compositor->base.windows;
     while (window_count-- > 0) {
         window->texture = surface->texture;
 
@@ -603,7 +599,7 @@ compositor_update(struct compositor *base)
         window++;
     }
 
-    struct compositor_window *active_window = compositor->base.active_window;
+    struct compositor_surface *active_window = compositor->base.active_window;
     struct wc_surface *active_surface = 0;
     if (active_window) {
         u32 window_index = active_window - compositor->base.windows;
@@ -740,7 +736,7 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
     compositor->clients = arena_alloc(
         arena, MAX_CLIENT_COUNT, struct wc_client);
     compositor->base.windows = arena_alloc(
-        &compositor->arena, MAX_SURFACE_COUNT, struct compositor_window);
+        &compositor->arena, MAX_SURFACE_COUNT, struct compositor_surface);
 
     compositor->base.active_window = 0;
     compositor->base.update = compositor_update;
