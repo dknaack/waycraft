@@ -19,6 +19,7 @@ struct wcdb_client {
     struct wl_shm *shm;
     struct xdg_wm_base *xdg_wm_base;
 
+    struct wl_shm_pool *shm_pool;
     struct wl_buffer *buffer;
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
@@ -84,6 +85,46 @@ xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
     xdg_surface_ack_configure(xdg_surface, serial);
 
     struct wl_buffer *buffer = client->buffer;
+    if (!buffer) {
+        i32 width = 256;
+        i32 height = 256;
+        i32 stride = width * 4;
+        i32 shm_pool_size = height * stride * 2;
+
+        struct wl_shm_pool *pool = client->shm_pool;
+        if (!pool) {
+
+            i32 fd = allocate_shm_file(shm_pool_size);
+            i32 prot = PROT_READ | PROT_WRITE;
+            u8 *pool_data = mmap(0, shm_pool_size, prot, MAP_SHARED, fd, 0);
+
+            u32 *pixels = (u32 *)pool_data;
+            for (u32 y = 0; y < height; y++) {
+                for (u32 x = 0; x < width; x++) {
+                    if ((x + y / 8 * 8) % 16 < 8) {
+                        pixels[y * width + x] = 0xff666666;
+                    } else {
+                        pixels[y * width + x] = 0xffeeeeee;
+                    }
+                }
+            }
+
+            client->shm_pool = pool = wl_shm_create_pool(client->shm, fd, shm_pool_size);
+        }
+
+        i32 index = 0;
+        i32 offset = height * stride * index;
+        buffer = wl_shm_pool_create_buffer(pool, offset, width, height, stride,
+                                           WL_SHM_FORMAT_XRGB8888);
+
+        struct wl_surface *surface = client->surface;
+        wl_surface_attach(surface, buffer, 0, 0);
+        wl_surface_damage(surface, 0, 0, UINT32_MAX, UINT32_MAX);
+        wl_surface_commit(surface);
+
+        client->buffer = buffer;
+    }
+
     struct wl_surface *surface = client->surface;
     wl_surface_attach(surface, buffer, 0, 0);
     wl_surface_commit(surface);
@@ -111,62 +152,18 @@ wl_registry_global(void *data, struct wl_registry *registry, u32 name,
 
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
         struct wl_compositor *compositor = wl_registry_bind(
-            registry, name, &wl_compositor_interface, 5);
+            registry, name, &wl_compositor_interface, 4);
         struct wl_surface *surface = 
             wl_compositor_create_surface(compositor);
 
         client->compositor = compositor;
         client->surface = surface;
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
-        struct wl_shm *shm = client->shm = 
-            wl_registry_bind(registry, name, &wl_shm_interface, 1);
-
-        i32 width = 1920;
-        i32 height = 1080;
-        i32 stride = width * 4;
-        i32 shm_pool_size = height * stride * 2;
-
-        i32 fd = allocate_shm_file(shm_pool_size);
-        i32 prot = PROT_READ | PROT_WRITE;
-        u8 *pool_data = mmap(0, shm_pool_size, prot, MAP_SHARED, fd, 0);
-
-        struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, shm_pool_size);
-
-        i32 index = 0;
-        i32 offset = height * stride * index;
-        struct wl_buffer *buffer = wl_shm_pool_create_buffer(
-            pool, offset, width, height, stride, WL_SHM_FORMAT_XRGB8888);
-
-        u32 *pixels = (u32 *)pool_data;
-        for (u32 y = 0; y < height; y++) {
-            for (u32 x = 0; x < width; x++) {
-                if ((x + y / 8 * 8) % 16 < 8) {
-                    pixels[y * width + x] = 0xff666666;
-                } else {
-                    pixels[y * width + x] = 0xffeeeeee;
-                }
-            }
-        }
-
-        struct wl_surface *surface = client->surface;
-        wl_surface_attach(surface, buffer, 0, 0);
-        wl_surface_damage(surface, 0, 0, UINT32_MAX, UINT32_MAX);
-        wl_surface_commit(surface);
-
-        client->buffer = buffer;
+        client->shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
-        struct xdg_wm_base *xdg_wm_base = wl_registry_bind(
+        struct xdg_wm_base *xdg_wm_base = client->xdg_wm_base = wl_registry_bind(
             registry, name, &xdg_wm_base_interface, version);
         xdg_wm_base_add_listener(xdg_wm_base, &xdg_wm_base_listener, client);
-
-        struct xdg_surface *xdg_surface = xdg_wm_base_get_xdg_surface(
-            xdg_wm_base, client->surface);
-        xdg_surface_add_listener(xdg_surface, &xdg_surface_listener, client);
-        struct xdg_toplevel *xdg_toplevel = xdg_surface_get_toplevel(
-            xdg_surface);
-        xdg_toplevel_set_title(xdg_toplevel, "wcdb");
-
-        client->xdg_wm_base = xdg_wm_base;
     }
 }
 
@@ -180,9 +177,11 @@ main(void)
 {
     struct wcdb_client client = {0};
 
-    client.display = wl_display_connect(0);
+    const char *display_env = getenv("WAYLAND_DISPLAY");
+    client.display = wl_display_connect(display_env);
     if (!client.display) {
-        fprintf(stderr, "Failed to connect to wayland display\n");
+        fprintf(stderr, "Failed to connect to wayland display: %s\n",
+                display_env);
         return 1;
     }
 
@@ -190,6 +189,11 @@ main(void)
     wl_registry_add_listener(client.registry, &wl_registry_listener, &client);
 
     wl_display_roundtrip(client.display);
+    client.xdg_surface = xdg_wm_base_get_xdg_surface(client.xdg_wm_base, client.surface);
+    xdg_surface_add_listener(client.xdg_surface, &xdg_surface_listener, &client);
+    client.xdg_toplevel = xdg_surface_get_toplevel(client.xdg_surface);
+    xdg_toplevel_set_title(client.xdg_toplevel, "wcdb");
+    wl_surface_commit(client.surface);
 
     while (wl_display_dispatch(client.display)) {
 
