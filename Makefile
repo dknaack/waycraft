@@ -1,17 +1,20 @@
-WAYLAND_PROTOCOLS=$(shell pkg-config --variable=pkgdatadir wayland-protocols)
-WAYLAND_SCANNER=$(shell pkg-config --variable=wayland_scanner wayland-scanner)
-LIBS=\
-	 $(shell pkg-config --cflags --libs wlroots) \
+WAYLAND_PROTOCOLS = $(shell pkg-config --variable=pkgdatadir wayland-protocols)
+WAYLAND_SCANNER   = $(shell pkg-config --variable=wayland_scanner wayland-scanner)
+
+WAYCRAFT_LIBS = \
+	 $(shell pkg-config --cflags --libs x11 x11-xcb) \
 	 $(shell pkg-config --cflags --libs wayland-server) \
 	 $(shell pkg-config --cflags --libs xkbcommon-x11) \
-	 $(shell pkg-config --cflags --libs egl gl glew)
+	 $(shell pkg-config --cflags --libs egl gl) \
+	 -lm
 
-LDFLAGS = -lm -ldl -lX11 -lX11-xcb $(LIBS)
-CFLAGS  = -g -std=c11 -pedantic -Wall -D_POSIX_C_SOURCE=200809L \
-		  -DWLR_USE_UNSTABLE -Iinclude
+WCDB_LIBS = \
+	$(shell pkg-config --cflags --libs wayland-client)
+
+CFLAGS  = -g -std=c11 -pedantic -Wall -D_POSIX_C_SOURCE=200809L -I.
 CC      = cc
 
-all: options waycraft
+all: options build/waycraft build/wcdb
 
 options:
 	@echo "LDFLAGS = $(LDFLAGS)"
@@ -19,18 +22,33 @@ options:
 	@echo "CC      = $(CC)"
 	@echo
 
-waycraft: src/stb_image.o src/xdg-shell-protocol.c
-	$(CC) $(CFLAGS) -o $@ src/main.c src/stb_image.o $(LDFLAGS)
+build/waycraft: waycraft/stb_image.o waycraft/xdg-shell-protocol.c
+	@mkdir -p build/
+	@printf "CCLD\t$@\n"
+	@$(CC) $(CFLAGS) -o $@ waycraft/main.c waycraft/stb_image.o $(WAYCRAFT_LIBS)
 
-src/stb_image.o:
-	$(CC) $(CFLAGS) -DSTB_IMAGE_IMPLEMENTATION -c -o $@ src/stb_image.c
+build/wcdb: wcdb/main.c wcdb/xdg-shell-protocol.c
+	@printf "CCLD\t$@\n"
+	@$(CC) $(CFLAGS) -o $@ wcdb/main.c $(WCDB_LIBS)
 
-include/xdg-shell-protocol.h:
+waycraft/stb_image.o:
+	@printf "CC\t$@\n"
+	@$(CC) $(CFLAGS) -DSTB_IMAGE_IMPLEMENTATION -c -o $@ waycraft/stb_image.c
+
+waycraft/xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
 		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
 
-src/xdg-shell-protocol.c: include/xdg-shell-protocol.h
+waycraft/xdg-shell-protocol.c: include/xdg-shell-protocol.h
 	$(WAYLAND_SCANNER) private-code \
 		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
 
-.PHONY: waycraft
+wcdb/xdg-shell-protocol.h:
+	$(WAYLAND_SCANNER) client-header \
+		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
+
+wcdb/xdg-shell-protocol.c: wcdb/xdg-shell-protocol.h
+	$(WAYLAND_SCANNER) private-code \
+		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
+
+.PHONY: build/waycraft build/wcdb
