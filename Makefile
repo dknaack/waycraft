@@ -39,7 +39,7 @@ waycraft/xdg-shell-protocol.h:
 	$(WAYLAND_SCANNER) server-header \
 		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
 
-waycraft/xdg-shell-protocol.c: include/xdg-shell-protocol.h
+waycraft/xdg-shell-protocol.c: waycraft/xdg-shell-protocol.h
 	$(WAYLAND_SCANNER) private-code \
 		$(WAYLAND_PROTOCOLS)/stable/xdg-shell/xdg-shell.xml $@
 
