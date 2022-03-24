@@ -5,15 +5,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <wayland-server.h>
-#include <xdg-shell-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 #include <time.h>
 
-#include "backend.h"
-#include "compositor.h"
-#include "egl.h"
-#include "game.h"
-#include "gl.h"
+#include <waycraft/xdg-shell-protocol.h>
+#include <waycraft/backend.h>
+#include <waycraft/compositor.h>
+#include <waycraft/egl.h>
+#include <waycraft/game.h>
+#include <waycraft/gl.h>
 
 #define WL_POINTER_VERSION 7
 #define WL_KEYBOARD_VERSION 7
