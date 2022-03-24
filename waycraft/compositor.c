@@ -270,7 +270,7 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
         u32 height = wl_shm_buffer_get_height(shm_buffer);
         u32 format = wl_shm_buffer_get_format(shm_buffer);
         void *data = wl_shm_buffer_get_data(shm_buffer);
-        assert(format == 0);
+        assert(format == 0 || format == 1);
 
         if (surface->texture) {
             gl.DeleteTextures(1, &surface->texture);
