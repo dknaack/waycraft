@@ -168,6 +168,16 @@ struct box {
     v3 max;
 };
 
+struct box
+box_from_center(v3 center, v3 size)
+{
+    struct box box;
+
+    box.min = v3_sub(center, size);
+    box.max = v3_add(center, size);
+    return box;
+}
+
 i32
 box_contains_point(struct box box, v3 point)
 {
@@ -362,9 +372,7 @@ player_select_block(struct game_state *game, struct game_input *input,
 
     v3 block_pos = v3_round(camera->position);
     v3 block_size = {{ 0.5, 0.5, 0.5 }};
-    struct box selected_block;
-    selected_block.min = v3_sub(block_pos, block_size);
-    selected_block.max = v3_add(block_pos, block_size);
+    struct box selected_block = box_from_center(block_pos, block_size);
 
     v3 start = camera->position;
     v3 direction = camera->front;
@@ -378,7 +386,7 @@ player_select_block(struct game_state *game, struct game_input *input,
         tmax = INFINITY;
 
         ray_box_intersection(selected_block, start, direction,
-                                   &normal_min, &normal_max, &tmin, &tmax);
+                             &normal_min, &normal_max, &tmin, &tmax);
         if (tmin > 5.f) {
             break;
         }
@@ -609,11 +617,9 @@ game_update(struct backend_memory *memory, struct game_input *input,
                 v3 new_block_pos = v3_add(block_pos, block_normal);
                 v3 player_size = V3(0.25, 0.99f, 0.25f);
                 v3 player_pos = player->position;
-                struct box block_bounds;
                 v3 block_size = V3(0.5, 0.5, 0.5);
-                v3 bounds_size = v3_add(block_size, player_size);
-                block_bounds.min = v3_sub(new_block_pos, bounds_size);
-                block_bounds.max = v3_add(new_block_pos, bounds_size);
+                struct box block_bounds = box_from_center(
+                    new_block_pos, v3_add(block_size, player_size));
                 u32 can_place_block = !box_contains_point(block_bounds, player_pos);
                 if (can_place_block) {
                     u32 selected_block = player->hotbar[player->hotbar_selection];
