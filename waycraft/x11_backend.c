@@ -441,6 +441,14 @@ error_get_display:
     return -1;
 }
 
+void
+egl_finish(struct egl *egl)
+{
+    eglDestroyContext(egl->display, egl->context);
+    eglDestroySurface(egl->display, egl->surface);
+    eglTerminate(egl->display);
+}
+
 int
 x11_main(void)
 {

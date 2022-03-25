@@ -1,6 +1,5 @@
 #include "compositor.c"
 #include "debug.c"
-#include "egl.c"
 #include "game.c"
 #include "gl.c"
 #include "math.c"
