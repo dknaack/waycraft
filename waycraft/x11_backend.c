@@ -9,11 +9,11 @@
 #include <wayland-server.h>
 #include <xkbcommon/xkbcommon-x11.h>
 
-#include "backend.h"
-#include "compositor.h"
-#include "game.h"
-#include "gl.h"
-#include "x11_backend.h"
+#include <waycraft/backend.h>
+#include <waycraft/compositor.h>
+#include <waycraft/game.h>
+#include <waycraft/gl.h>
+#include <waycraft/x11_backend.h>
 
 struct x11_window {
     Display *display;
@@ -486,11 +486,12 @@ x11_main(void)
     // TODO: fix timestep
     struct timespec wait_time = { 0, 1000000 };
     while (window.is_open) {
+        compositor->update(compositor);
         x11_window_poll_events(&window, &input, compositor);
+        compositor->flush(compositor);
 
         gl.Viewport(0, 0, window.width, window.height);
         game_update(&game_memory, &input, compositor);
-        compositor->update(compositor);
 
         eglSwapBuffers(egl.display, egl.surface);
         nanosleep(&wait_time, 0);
