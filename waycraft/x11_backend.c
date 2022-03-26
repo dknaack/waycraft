@@ -1,36 +1,56 @@
 #include <errno.h>
 #include <fcntl.h>
-#include <X11/XKBlib.h>
-#include <X11/Xlib-xcb.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <sys/mman.h>
-#include <time.h>
-#include <wayland-server.h>
 #include <xkbcommon/xkbcommon-x11.h>
+#include <xkbcommon/xkbcommon-names.h>
+#include <xcb/xcb.h>
+#include <xcb/xfixes.h>
+#include <sys/mman.h>
 
-#include <waycraft/backend.h>
-#include <waycraft/compositor.h>
 #include <waycraft/game.h>
-#include <waycraft/gl.h>
-#include <waycraft/x11_backend.h>
+
+enum x11_atom {
+    X11__NET_WM_NAME,
+    X11_WM_DELETE_WINDOW,
+    X11_WM_PROTOCOLS,
+    X11_WM_NAME,
+    X11_UTF8_STRING,
+    X11_ATOM_COUNT
+};
 
 struct x11_window {
-    Display *display;
-    Drawable drawable;
-    Visual *visual;
-    XIM xim;
-    XIC xic;
-    GC gc;
-    Atom net_wm_name;
-    Atom wm_delete_win;
-    u32 width, height;
+    xcb_connection_t *connection;
+    xcb_screen_t *screen;
+    xcb_window_t window;
+
+    union {
+        struct {
+            xcb_atom_t net_wm_name;
+            xcb_atom_t wm_delete_window;
+            xcb_atom_t wm_protocols;
+            xcb_atom_t wm_name;
+            xcb_atom_t utf8_string;
+        };
+
+        xcb_atom_t atoms[X11_ATOM_COUNT];
+    };
+
+    u32 width;
+    u32 height;
     u32 is_open;
+    u32 is_focused;
     u32 lock_cursor;
-    u32 is_active;
+
     i32 keymap;
     i32 keymap_size;
     struct xkb_state *xkb_state;
+};
+
+static const char *x11_atom_names[X11_ATOM_COUNT] = {
+    [X11__NET_WM_NAME]     = "_NET_WM_NAME",
+    [X11_WM_DELETE_WINDOW] = "WM_DELETE_WINDOW",
+    [X11_WM_PROTOCOLS]     = "WM_PROTOCOLS",
+    [X11_WM_NAME]          = "WM_NAME",
+    [X11_UTF8_STRING]      = "UTF8_STRING",
 };
 
 static void
@@ -86,125 +106,94 @@ allocate_shm_file(size_t size)
 }
 
 static void
-x11_hide_cursor(struct x11_window *window)
+x11_window_hide_cursor(xcb_connection_t *connection, xcb_window_t window)
 {
-    Cursor cursor;
-    Pixmap empty_pixmap;
-    XColor black = {0};
-    static u8 empty_data[8] = {0};
-
-    empty_pixmap = XCreateBitmapFromData(window->display, window->drawable,
-                                         (const char *)empty_data, 8, 8);
-    cursor = XCreatePixmapCursor(window->display, empty_pixmap, empty_pixmap,
-                                 &black, &black, 0, 0);
-    XDefineCursor(window->display, window->drawable, cursor);
-    XFreeCursor(window->display, cursor);
-    XFreePixmap(window->display, empty_pixmap);
-}
-
-static i32
-x11_window_set_title(struct x11_window *window, char *title)
-{
-    XTextProperty prop;
-
-    window->net_wm_name = XInternAtom(window->display, "_NET_WM_NAME", False);
-    if (Xutf8TextListToTextProperty(window->display, &title, 1,
-                                    XUTF8StringStyle, &prop) != Success) {
-        fprintf(stderr, "Failed to convert title\n");
-        return -1;
-    }
-
-    XSetWMName(window->display, window->drawable, &prop);
-    XSetTextProperty(window->display, window->drawable, &prop,
-                     window->net_wm_name);
-    XFree(prop.value);
-
-    return 0;
+    xcb_xfixes_query_version(connection, 4, 0);
+    xcb_xfixes_hide_cursor(connection, window);
 }
 
 static i32
 x11_window_init(struct x11_window *window)
 {
-    char *title = "Waycraft";
-    Window root;
-    u32 mask, screen;
-
-    if (!(window->display = XOpenDisplay(0))) {
+    xcb_connection_t *connection = xcb_connect(0, 0);
+    if (xcb_connection_has_error(connection)) {
         fprintf(stderr, "Failed to connect to X display\n");
         return -1;
     }
 
-    screen = DefaultScreen(window->display);
-    root = DefaultRootWindow(window->display);
+    xcb_screen_t *screen =
+        xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
 
-    window->visual = DefaultVisual(window->display, screen);
-    window->gc = DefaultGC(window->display, screen);
-    window->width = 800;
-    window->height = 600;
-    window->drawable = XCreateSimpleWindow(window->display, root,
-                                           0, 0, 800, 600, 0, 0, 0);
-    mask = ButtonPressMask | ButtonReleaseMask | KeyPressMask | 
-        KeyReleaseMask | KeymapStateMask | ExposureMask | PointerMotionMask |
-        StructureNotifyMask | EnterWindowMask | LeaveWindowMask;
-    XSelectInput(window->display, window->drawable, mask);
-    XMapWindow(window->display, window->drawable);
+    xcb_window_t xcb_window = xcb_generate_id(connection);
+    u32 values[2];
+    u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    values[0] = screen->black_pixel;
+    values[1] = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+        XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
+        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+        XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
+        XCB_EVENT_MASK_POINTER_MOTION;
 
-#if 0
-    /* TODO: read keys as utf8 input */
-    if (!(window->xim = XOpenIM(window->display, 0, 0, 0))) {
-        fprintf(stderr, "Failed to open input method\n");
-        return -1;
+    xcb_create_window(connection, screen->root_depth, xcb_window, screen->root,
+                      0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+                      screen->root_visual, mask, values);
+    xcb_map_window(connection, xcb_window);
+
+    xcb_intern_atom_cookie_t cookies[X11_ATOM_COUNT] = {0};
+    for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
+        cookies[i] = xcb_intern_atom(connection, 0, strlen(x11_atom_names[i]), 
+                                     x11_atom_names[i]);
     }
 
-    window->xic = XCreateIC(window->xim, XNInputStyle,
-                            XIMPreeditNothing | XIMStatusNothing,
-                            XNClientWindow, &window->drawable, NULL);
-#endif
+    xcb_atom_t *atoms = window->atoms;
+    for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
+        xcb_intern_atom_reply_t *reply = 
+            xcb_intern_atom_reply(connection, cookies[i], 0);
+        atoms[i] = reply->atom;
+        free(reply);
+    }
 
-    window->wm_delete_win = XInternAtom(window->display,
-                                        "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(window->display, window->drawable,
-                    &window->wm_delete_win, 1);
+    const char *title = "Waycraft";
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window,
+                        atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
+                        strlen(title), title);
 
-    x11_window_set_title(window, title);
-    x11_hide_cursor(window);
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window,
+                        atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
+                        &atoms[X11_WM_DELETE_WINDOW]);
 
+    x11_window_hide_cursor(connection, xcb_window);
+
+    xcb_flush(connection);
+
+    /* initialize xkb */
+    struct xkb_context *xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    xkb_x11_setup_xkb_extension(connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
+                                XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
+    i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(connection);
+    struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
+        xkb_context, connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1); 
+    i32 keymap_size = strlen(keymap_string) + 1;
+    i32 keymap_file = allocate_shm_file(keymap_size);
+
+    i32 prot = PROT_READ | PROT_WRITE;
+    i32 flags = MAP_SHARED;
+    char *contents = mmap(0, keymap_size, prot, flags, keymap_file, 0);
+    memcpy(contents, keymap_string, keymap_size);
+    munmap(contents, keymap_size);
+
+    window->keymap = keymap_file;
+    window->keymap_size = keymap_size;
+    window->xkb_state = xkb_x11_state_new_from_device(
+        keymap, connection, keyboard_device_id);
+
+    window->connection = connection;
+    window->screen = screen;
+    window->window = xcb_window;
     window->is_open = 1;
-    window->lock_cursor = 1;
-
-    {
-        xcb_connection_t *connection = XGetXCBConnection(window->display);
-        struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-        xkb_x11_setup_xkb_extension(connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
-                                    XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
-        i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(connection);
-        struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
-            context, connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
-        char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1); 
-        i32 keymap_size = strlen(keymap_string) + 1;
-        i32 keymap_file = allocate_shm_file(keymap_size);
-
-        i32 prot = PROT_READ | PROT_WRITE;
-        i32 flags = MAP_SHARED;
-        char *contents = mmap(0, keymap_size, prot, flags, keymap_file, 0);
-        memcpy(contents, keymap_string, keymap_size);
-        munmap(contents, keymap_size);
-
-        window->keymap = keymap_file;
-        window->keymap_size = keymap_size;
-        window->xkb_state = xkb_x11_state_new_from_device(
-            keymap, connection, keyboard_device_id);
-    }
 
     return 0;
-}
-
-static void
-x11_window_finish(struct x11_window *window)
-{
-    close(window->keymap);
-    XDestroyWindow(window->display, window->drawable);
-    XCloseDisplay(window->display);
 }
 
 static u32
@@ -228,163 +217,176 @@ x11_window_update_modifiers(struct x11_window *window,
     compositor->send_modifiers(compositor, depressed, latched, locked, group);
 }
 
-void
+static void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
                        struct compositor *compositor)
 {
-    struct xkb_state *xkb_state = window->xkb_state;
-    KeySym key;
-    XEvent event;
-    i32 dx, dy;
+    xcb_connection_t *connection = window->connection;
+    union xcb_event_t {
+        xcb_generic_event_t *generic;
+        xcb_client_message_event_t *client_message;
+        xcb_button_press_event_t *button_press;
+        xcb_button_release_event_t *button_release;
+        xcb_key_press_event_t *key_press;
+        xcb_key_release_event_t *key_release;
+        xcb_motion_notify_event_t *motion_notify;
+        xcb_configure_notify_event_t *configure_notify;
+    } event;
 
-    for (u32 i = 0; i < LENGTH(input->mouse.buttons); i++) {
-        input->mouse.buttons[i] = 0;
-    }
+    struct xkb_state *xkb_state = window->xkb_state;
 
     input->dt = 0.01;
     input->width = window->width;
     input->height = window->height;
     input->mouse.dx = input->mouse.dy = 0;
     memset(&input->controller, 0, sizeof(input->controller));
+    memset(&input->mouse.buttons, 0, sizeof(input->mouse.buttons));
 
-    while (XPending(window->display)) {
-        XNextEvent(window->display, &event);
-
-        u32 is_pressed = 0;
-        switch (event.type) {
-        case ClientMessage:
-            if (event.xclient.data.l[0] == window->wm_delete_win) {
-                window->is_open = 0;
+    while ((event.generic = xcb_poll_for_event(connection))) {
+        switch (event.generic->response_type & ~0x80) {
+        case XCB_CONFIGURE_NOTIFY:
+            input->width = window->width = event.configure_notify->width;
+            input->height = window->height = event.configure_notify->height;
+            break;
+        case XCB_KEY_PRESS:
+            {
+                u32 keycode = event.key_press->detail;
+                u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
+                compositor->send_key(compositor, keycode - 8, state);
+                xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
             }
             break;
-        case ConfigureNotify:
-            input->width  = window->width  = event.xconfigure.width;
-            input->height = window->height = event.xconfigure.height;
-            break;
-        case MotionNotify:
+        case XCB_KEY_RELEASE:
             {
-                i32 x = event.xmotion.x;
-                i32 y = event.xmotion.y;
-
-                dx = event.xmotion.x - input->mouse.x;
-                dy = event.xmotion.y - input->mouse.y;
-                input->mouse.x = x;
-                input->mouse.y = y;
+                u32 keycode = event.key_press->detail;
+                u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
+                compositor->send_key(compositor, keycode - 8, state);
+                xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
+            }
+            break;
+        case XCB_MOTION_NOTIFY:
+            {
+                i32 x = event.motion_notify->event_x;
+                i32 y = event.motion_notify->event_y;
 
                 i32 mouse_was_warped = (x == window->width / 2 &&
                                         y == window->height / 2);
                 if (!mouse_was_warped) {
-                    // TODO: convert to relative coordinates?
-                    input->mouse.dx = dx;
-                    input->mouse.dy = dy;
+                    input->mouse.dx = x - input->mouse.x;
+                    input->mouse.dy = y - input->mouse.y;
 
                     compositor->send_motion(compositor, x, y);
                 }
-            }
-            break;
-        case ButtonPress:
-            is_pressed = 1;
-        case ButtonRelease:
-            window->lock_cursor = 1;
 
-            u32 button_index = event.xbutton.button;
-            if (button_index < 8) {
-                input->mouse.buttons[button_index] |= is_pressed;
-                u32 state = is_pressed ? 
-                    WL_POINTER_BUTTON_STATE_PRESSED : 
-                    WL_POINTER_BUTTON_STATE_RELEASED;
-                compositor->send_button(compositor, button_index, state);
+                input->mouse.x = x;
+                input->mouse.y = y;
             }
             break;
-        case KeyRelease:
+        case XCB_BUTTON_PRESS:
             {
-                key = XLookupKeysym(&event.xkey, 0);
-                u32 keycode = event.xkey.keycode - 8;
-                u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
-                compositor->send_key(compositor, keycode, state);
-                xkb_state_update_key(xkb_state, event.xkey.keycode, XKB_KEY_UP);
-            }
-            break;
-        case KeyPress:
-            {
-                key = XLookupKeysym(&event.xkey, 0);
-                u32 keycode = event.xkey.keycode - 8;
-                u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
-                compositor->send_key(compositor, keycode, state);
-                xkb_state_update_key(xkb_state, event.xkey.keycode, XKB_KEY_DOWN);
-                if (key == XK_Escape) {
-                    window->lock_cursor = 0;
-                    XUngrabPointer(window->display, CurrentTime);
+                u32 button = event.button_press->detail;
+                if (button < 8) {
+                    input->mouse.buttons[button] |= 1;
                 }
+
+                u32 state = WL_POINTER_BUTTON_STATE_PRESSED;
+                compositor->send_button(compositor, button, state);
             }
             break;
-        case EnterNotify:
-            window->is_active = 1;
+        case XCB_BUTTON_RELEASE:
+            {
+                u32 button = event.button_release->detail;
+                u32 state = WL_POINTER_BUTTON_STATE_RELEASED;
+                compositor->send_button(compositor, button, state);
+            }
             break;
-        case LeaveNotify:
-            window->is_active = 0;
+        case XCB_CLIENT_MESSAGE:
+            if (event.client_message->data.data32[0] == window->wm_delete_window) {
+                window->is_open = 0;
+            }
+            break;
+        case XCB_ENTER_NOTIFY:
+            window->is_focused = 1;
+            break;
+        case XCB_LEAVE_NOTIFY:
+            window->is_focused = 0;
             break;
         }
+
+        free(event.generic);
     }
 
-    x11_window_update_modifiers(window, compositor);
-    if (window->is_active) {
+    if (window->is_focused) {
         struct {
-            KeySym key_sym;
+            xkb_keycode_t keycode;
             u8 *pressed;
         } keys_to_check[] = {
-            { XK_space, &input->controller.jump   },
-            { XK_w, &input->controller.move_up    },
-            { XK_a, &input->controller.move_left  },
-            { XK_s, &input->controller.move_down  },
-            { XK_d, &input->controller.move_right },
+            { 65, &input->controller.jump       },
+            { 25, &input->controller.move_up    },
+            { 38, &input->controller.move_left  },
+            { 39, &input->controller.move_down  },
+            { 40, &input->controller.move_right },
         };
 
-        u8 key_vector[32] = {0};
-        XQueryKeymap(window->display, (char *)key_vector);
+        xcb_query_keymap_cookie_t cookie = xcb_query_keymap(connection);
+        xcb_query_keymap_reply_t *reply = xcb_query_keymap_reply(
+            connection, cookie, 0);
+        u8 *keys = reply->keys;
+
         for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
-            u8 key_code = XKeysymToKeycode(window->display,
-                                           keys_to_check[i].key_sym);
-            if (x11_get_key_state(key_vector, key_code)) {
-                *keys_to_check[i].pressed = 1;
+            u32 keycode = keys_to_check[i].keycode;
+            u8 *pressed = keys_to_check[i].pressed;
+            if (x11_get_key_state(keys, keycode)) {
+                *pressed = 1;
             }
         }
 
-        u8 shift_keycode = XKeysymToKeycode(window->display, XK_Shift_L); 
-        if (x11_get_key_state(key_vector, shift_keycode)) {
+        free(reply);
+
+        u32 state = XKB_STATE_MODS_DEPRESSED;
+        if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_SHIFT, state)) {
             input->controller.modifiers |= MOD_SHIFT;
         }
 
-        u8 ctrl_keycode = XKeysymToKeycode(window->display, XK_Control_L); 
-        if (x11_get_key_state(key_vector, ctrl_keycode)) {
+        if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_CTRL, state)) {
             input->controller.modifiers |= MOD_CTRL;
         }
 
-        u8 alt_keycode = XKeysymToKeycode(window->display, XK_Alt_L); 
-        if (x11_get_key_state(key_vector, alt_keycode)) {
+        if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_ALT, state)) {
             input->controller.modifiers |= MOD_ALT;
         }
+
+        x11_window_update_modifiers(window, compositor);
     }
 
-    if (window->lock_cursor) {
-        XWarpPointer(window->display, 0, window->drawable, 0, 0, 0, 0,
-                     window->width / 2, window->height / 2);
-        while (XPending(window->display)) {
-            XNextEvent(window->display, &event);
-        }
+    if (window->is_focused) {
+        xcb_warp_pointer(connection, 0, window->window, 0, 0, 0, 0,
+                         window->width / 2, window->height / 2);
     }
+
+    xcb_flush(connection);
+}
+
+static void
+x11_window_finish(struct x11_window *window)
+{
+    xkb_state_unref(window->xkb_state);
+    xcb_destroy_window(window->connection, window->window);
+    xcb_disconnect(window->connection);
 }
 
 static i32
 x11_egl_init(struct egl *egl, struct x11_window *window)
 {
-    egl->display = eglGetDisplay(window->display);
+    egl->display = eglGetDisplay(0);
     if (egl->display == EGL_NO_DISPLAY) {
+        fprintf(stderr, "Failed to get the egl display\n");
         goto error_get_display;
     }
 
     i32 major, minor;
     if (!eglInitialize(egl->display, &major, &minor)) {
+        fprintf(stderr, "Failed to initialize egl\n");
         goto error_initialize;
     }
 
@@ -400,8 +402,8 @@ x11_egl_init(struct egl *egl, struct x11_window *window)
 
     EGLConfig config;
     EGLint config_count;
-    if (!eglChooseConfig(egl->display, config_attributes, &config, 1, 
-            &config_count)) {
+    if (!eglChooseConfig(egl->display, config_attributes, &config, 1, &config_count)) {
+        fprintf(stderr, "Failed to choose config\n");
         goto error_choose_config;
     }
 
@@ -410,7 +412,7 @@ x11_egl_init(struct egl *egl, struct x11_window *window)
     }
 
     egl->surface = eglCreateWindowSurface(egl->display,
-            config, window->drawable, 0);
+            config, window->window, 0);
 
     if (!eglBindAPI(EGL_OPENGL_API)) {
         goto error_bind_api;
@@ -466,7 +468,11 @@ x11_main(void)
     }
 
     /* initialize egl */
-    x11_egl_init(&egl, &window);
+    if (x11_egl_init(&egl, &window) != 0) {
+        fprintf(stderr, "Failed to initialize egl\n");
+        return 1;
+    }
+
     gl_init(&gl, (gl_get_proc_address_t *)eglGetProcAddress);
 
     game_memory.size = MB(256);
@@ -497,10 +503,10 @@ x11_main(void)
         nanosleep(&wait_time, 0);
     }
 
-    egl_finish(&egl);
     compositor->finish(compositor);
     free(compositor_memory.data);
     free(game_memory.data);
+    egl_finish(&egl);
     x11_window_finish(&window);
     return 0;
 }
