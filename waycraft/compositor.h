@@ -11,6 +11,7 @@ struct compositor_surface {
 
 struct compositor {
     void (*update)(struct compositor *compositor);
+    void (*flush)(struct compositor *compositor);
     void (*send_key)(struct compositor *compositor, i32 key, i32 state);
     void (*send_button)(struct compositor *compositor, i32 key, i32 state);
     void (*send_motion)(struct compositor *compositor, i32 x, i32 y);

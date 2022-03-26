@@ -9,6 +9,7 @@
 #include "world.c"
 #include "x11_backend.c"
 #include "xdg-shell-protocol.c"
+#include "xwayland.c"
 
 int
 main(void)

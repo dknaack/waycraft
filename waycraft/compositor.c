@@ -6,14 +6,16 @@
 #include <unistd.h>
 #include <wayland-server.h>
 #include <xkbcommon/xkbcommon.h>
+#include <X11/Xlib.h>
 #include <time.h>
 
-#include <waycraft/xdg-shell-protocol.h>
 #include <waycraft/backend.h>
 #include <waycraft/compositor.h>
 #include <waycraft/egl.h>
 #include <waycraft/game.h>
 #include <waycraft/gl.h>
+#include <waycraft/xdg-shell-protocol.h>
+#include <waycraft/xwayland.h>
 
 #define WL_POINTER_VERSION 7
 #define WL_KEYBOARD_VERSION 7
@@ -30,6 +32,8 @@
 
 #define MAX_SURFACE_COUNT 256
 #define MAX_CLIENT_COUNT  256
+
+#define perror(msg) assert(!(msg))
 
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
@@ -73,6 +77,7 @@ struct wc_surface {
 struct wc_compositor {
     struct compositor base;
 
+    struct xwayland xwayland;
     struct wl_display *wl_display;
     struct wl_event_loop *wl_event_loop;
     EGLDisplay *egl_display;
@@ -299,12 +304,17 @@ wl_surface_resource_destroy(struct wl_resource *resource)
 {
     // TODO: fix the order of windows
     struct wc_surface *surface = wl_resource_get_user_data(resource);
+    struct wc_compositor *compositor = surface->compositor;
+    //struct wc_client *client = surface->client;
+
     surface->texture = 0;
     surface->wl_frame_callback = 0;
     wl_list_remove(&surface->link);
+    //wl_list_insert(&compositor->free_surfaces, &surface->link);
 
-    struct wc_compositor *compositor = surface->compositor;
-    wl_list_insert(&compositor->free_surfaces, &surface->link);
+    //wl_list_remove(&client->link);
+    //wl_list_insert(&compositor->free_clients, &client->link);
+
     if (surface == compositor->active_surface) {
         compositor->active_surface = 0;
     }
@@ -709,6 +719,7 @@ compositor_finish(struct compositor *base)
     struct wc_compositor *compositor = 
         CONTAINER_OF(base, struct wc_compositor, base);
 
+    xwayland_finish(&compositor->xwayland);
     wl_display_destroy(compositor->wl_display);
 }
 
@@ -775,6 +786,11 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 
     compositor->keymap = keymap;
     compositor->keymap_size = keymap_size;
+
+    if (xwayland_init(&compositor->xwayland, display) != 0) {
+        fprintf(stderr, "Failed to initialize xwayland\n");
+        return 0;
+    }
 
     return &compositor->base;
 }
