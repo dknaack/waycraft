@@ -359,9 +359,9 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 		if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_ALT, state)) {
 			input->controller.modifiers |= MOD_ALT;
 		}
-
-		x11_window_update_modifiers(window, compositor);
 	}
+
+	x11_window_update_modifiers(window, compositor);
 
 	if (window->is_focused) {
 		xcb_warp_pointer(connection, 0, window->window, 0, 0, 0, 0,
