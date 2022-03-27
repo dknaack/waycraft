@@ -1,7 +1,7 @@
-#include "debug.h"
-#include "game.h"
-#include "math.h"
-#include "gl.h"
+#include <waycraft/debug.h>
+#include <waycraft/game.h>
+#include <waycraft/math.h>
+#include <waycraft/gl.h>
 
 #define DEBUG_VERTEX_BUFFER_SIZE MB(8)
 
