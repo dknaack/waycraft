@@ -2,7 +2,7 @@ WAYLAND_PROTOCOLS = $(shell pkg-config --variable=pkgdatadir wayland-protocols)
 WAYLAND_SCANNER   = $(shell pkg-config --variable=wayland_scanner wayland-scanner)
 
 WAYCRAFT_LIBS = \
-	 $(shell pkg-config --cflags --libs x11 x11-xcb) \
+	 $(shell pkg-config --cflags --libs xcb xcb-xfixes) \
 	 $(shell pkg-config --cflags --libs wayland-server) \
 	 $(shell pkg-config --cflags --libs xkbcommon-x11) \
 	 $(shell pkg-config --cflags --libs egl gl) \
