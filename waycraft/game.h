@@ -100,11 +100,6 @@ struct game_state {
 struct backend_memory;
 struct compositor;
 
-#define arena_alloc(arena, count, type) \
-	((type *)arena_alloc_(arena, count * sizeof(type)))
-
-void *arena_alloc_(struct memory_arena *arena, u64 size);
-
 void game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);
 
