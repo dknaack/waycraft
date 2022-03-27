@@ -497,7 +497,7 @@ x11_main(void)
 	struct timespec wait_time = { 0, 1000000 };
 	while (window.is_open) {
 		x11_window_poll_events(&window, &input, &compositor_memory);
-		compositor_update(&compositor_memory);
+		compositor_update(&compositor_memory, &window_manager);
 
 		gl.Viewport(0, 0, window.width, window.height);
 		game_update(&game_memory, &input, &window_manager);

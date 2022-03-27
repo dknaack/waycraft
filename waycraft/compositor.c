@@ -559,10 +559,10 @@ static const struct wl_subcompositor_interface wl_subcompositor_implementation =
 static void
 wl_subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-	struct wl_resource *subcompositor = wl_resource_create(
-		client, &wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, id);
-	wl_resource_set_implementation(
-		subcompositor, &wl_subcompositor_implementation, data, 0);
+	struct wl_resource *subcompositor = wl_resource_create(client,
+		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, id);
+	wl_resource_set_implementation(subcompositor,
+		&wl_subcompositor_implementation, data, 0);
 }
 
 // TODO: fill out the data device manager functions
@@ -576,11 +576,10 @@ static void
 wl_data_device_manager_bind(struct wl_client *client, void *data,
 	u32 version, u32 id)
 {
-	struct wl_resource *data_device_manager = wl_resource_create(
-		client, &wl_data_device_manager_interface,
-		WL_DATA_DEVICE_MANAGER_VERSION, id);
-	wl_resource_set_implementation(
-		data_device_manager, &wl_data_device_manager_implementation, data, 0);
+	struct wl_resource *data_device_manager = wl_resource_create(client,
+		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, id);
+	wl_resource_set_implementation(data_device_manager,
+		&wl_data_device_manager_implementation, data, 0);
 }
 
 static u32
@@ -593,22 +592,45 @@ compositor_time_msec(void)
 }
 
 static void
-compositor_update(struct backend_memory *memory)
+compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 {
 	struct compositor *compositor = memory->data;
 
 	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
 	wl_display_flush_clients(compositor->wl_display);
 
+	u32 active_surface_index = wm->active_window - wm->windows;
+	u32 surface_index = 0;
+	u32 window_count = 0;
+
+	struct surface *active_surface = compositor->active_surface;
 	struct surface *surface;
+	struct game_window *window = wm->windows;
+
 	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
+		window->texture = surface->texture;
+
 		if (surface->wl_frame_callback) {
 			wl_callback_send_done(surface->wl_frame_callback,
 				compositor_time_msec());
 			wl_resource_destroy(surface->wl_frame_callback);
 			surface->wl_frame_callback = 0;
 		}
+
+		u32 is_active_surface = surface_index == active_surface_index;
+		if (is_active_surface && surface != active_surface) {
+			surface_deactivate(active_surface);
+			surface_activate(surface);
+
+			compositor->active_surface = surface;
+		}
+
+		window++;
+		window_count++;
+		surface_index++;
 	}
+
+	wm->window_count = window_count;
 }
 
 static void
