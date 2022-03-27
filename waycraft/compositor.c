@@ -38,7 +38,7 @@
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
-struct wc_client {
+struct client {
 	struct wl_client *wl_client;
 
 	struct wl_resource *wl_pointer;
@@ -46,15 +46,15 @@ struct wc_client {
 	struct wl_list link;
 };
 
-struct wc_subsurface {
+struct subsurface {
 	struct wl_resource *wl_subsurface;
 
-	struct wc_surface *surface;
-	struct wc_surface *parent;
+	struct surface *surface;
+	struct surface *parent;
 	struct wl_list link;
 };
 
-struct wc_surface {
+struct surface {
 	struct wl_resource *wl_surface;
 	struct wl_resource *wl_buffer;
 	struct wl_resource *xdg_surface;
@@ -67,16 +67,14 @@ struct wc_surface {
 	i32 height;
 	u32 texture;
 
-	struct wc_compositor *compositor;
-	struct wc_surface *parent;
-	struct wc_client *client;
+	struct compositor *compositor;
+	struct surface *parent;
+	struct client *client;
 	struct wl_list link;
 	struct wl_list subsurfaces;
 };
 
-struct wc_compositor {
-	struct compositor base;
-
+struct compositor {
 	struct xwayland xwayland;
 	struct wl_display *wl_display;
 	struct wl_event_loop *wl_event_loop;
@@ -88,9 +86,8 @@ struct wc_compositor {
 	struct wl_list free_surfaces;
 	struct wl_list free_clients;
 
-	struct wc_surface *active_surface;
+	struct surface *active_surface;
 
-	// NOTE: surface_count is the same as window_count
 	i32 keymap;
 	i32 keymap_size;
 	struct {
@@ -101,33 +98,32 @@ struct wc_compositor {
 	} modifiers;
 };
 
-static struct wc_surface *
-compositor_create_surface(struct wc_compositor *compositor)
+static struct surface *
+compositor_create_surface(struct compositor *compositor)
 {
 	struct wl_list *free_surfaces = &compositor->free_surfaces;
 	struct wl_list *surfaces = &compositor->surfaces;
-	struct wc_surface *surface = 0;
+	struct surface *surface = 0;
 	if (wl_list_empty(free_surfaces)) {
-		surface = arena_alloc(&compositor->arena, 1, struct wc_surface);
+		surface = arena_alloc(&compositor->arena, 1, struct surface);
 		surface->compositor = compositor;
 		wl_list_insert(surfaces, &surface->link);
 		wl_list_init(&surface->subsurfaces);
 	} else {
-		struct wc_surface *surface = wl_container_of(
+		struct surface *surface = wl_container_of(
 			free_surfaces->next, surface, link);
 		wl_list_remove(&surface->link);
 	}
 
-	compositor->base.window_count++;
 	return surface;
 }
 
-static struct wc_client *
-compositor_get_client(struct wc_compositor *compositor,
+static struct client *
+compositor_get_client(struct compositor *compositor,
 	struct wl_client *wl_client)
 {
-	struct wc_client *result = 0;
-	struct wc_client *client;
+	struct client *result = 0;
+	struct client *client;
 	wl_list_for_each(client, &compositor->clients, link) {
 		if (wl_client == client->wl_client) {
 			result = client;
@@ -136,7 +132,7 @@ compositor_get_client(struct wc_compositor *compositor,
 	}
 
 	if (!result) {
-		result = arena_alloc(&compositor->arena, 1, struct wc_client);
+		result = arena_alloc(&compositor->arena, 1, struct client);
 		result->wl_client = wl_client;
 		wl_list_insert(&compositor->clients, &result->link);
 	}
@@ -145,7 +141,7 @@ compositor_get_client(struct wc_compositor *compositor,
 }
 
 static void
-surface_activate(struct wc_surface *surface)
+surface_activate(struct surface *surface)
 {
 	if (!surface) {
 		return;
@@ -174,7 +170,7 @@ surface_activate(struct wc_surface *surface)
 }
 
 static void
-surface_deactivate(struct wc_surface *surface)
+surface_deactivate(struct surface *surface)
 {
 	if (!surface) {
 		return;
@@ -215,7 +211,7 @@ static void
 wl_surface_attach(struct wl_client *client, struct wl_resource *resource,
 	struct wl_resource *buffer, i32 x, i32 y)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
+	struct surface *surface = wl_resource_get_user_data(resource);
 	surface->wl_buffer = buffer;
 }
 
@@ -223,7 +219,7 @@ static void
 wl_surface_frame(struct wl_client *client, struct wl_resource *resource,
 	u32 callback)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
+	struct surface *surface = wl_resource_get_user_data(resource);
 
 	surface->wl_frame_callback =
 		wl_resource_create(client, &wl_callback_interface, 1, callback);
@@ -232,8 +228,8 @@ wl_surface_frame(struct wl_client *client, struct wl_resource *resource,
 static void
 wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
-	struct wc_compositor *compositor = surface->compositor;
+	struct surface *surface = wl_resource_get_user_data(resource);
+	struct compositor *compositor = surface->compositor;
 	EGLDisplay *egl_display = compositor->egl_display;
 	i32 texture_format;
 
@@ -309,9 +305,9 @@ static void
 wl_surface_resource_destroy(struct wl_resource *resource)
 {
 	// TODO: fix the order of windows
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
-	struct wc_compositor *compositor = surface->compositor;
-	//struct wc_client *client = surface->client;
+	struct surface *surface = wl_resource_get_user_data(resource);
+	struct compositor *compositor = surface->compositor;
+	//struct client *client = surface->client;
 
 	surface->texture = 0;
 	surface->wl_frame_callback = 0;
@@ -324,9 +320,6 @@ wl_surface_resource_destroy(struct wl_resource *resource)
 	if (surface == compositor->active_surface) {
 		compositor->active_surface = 0;
 	}
-
-	compositor->base.window_count--;
-	compositor->base.active_window = 0;
 }
 
 /* wl_compositor functions */
@@ -334,9 +327,9 @@ static void
 wl_compositor_create_surface(struct wl_client *wl_client,
 	struct wl_resource *resource, u32 id)
 {
-	struct wc_compositor *compositor = wl_resource_get_user_data(resource);
-	struct wc_surface *surface = compositor_create_surface(compositor);
-	struct wc_client *client = compositor_get_client(compositor, wl_client);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
+	struct surface *surface = compositor_create_surface(compositor);
+	struct client *client = compositor_get_client(compositor, wl_client);
 	struct wl_resource *wl_surface = wl_resource_create(
 		wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
 	wl_resource_set_implementation(wl_surface, &wl_surface_implementation,
@@ -405,7 +398,7 @@ static void
 xdg_surface_get_toplevel(struct wl_client *client,
 	struct wl_resource *resource, u32 id)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
+	struct surface *surface = wl_resource_get_user_data(resource);
 	struct wl_resource *xdg_toplevel = wl_resource_create(
 		client, &xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
 	wl_resource_set_implementation(
@@ -419,7 +412,7 @@ xdg_surface_set_window_geometry(struct wl_client *client,
 	struct wl_resource *resource,
 	i32 x, i32 y, i32 width, i32 height)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(resource);
+	struct surface *surface = wl_resource_get_user_data(resource);
 	surface->width = width;
 	surface->height = height;
 	surface->x = x;
@@ -440,7 +433,7 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
 	struct wl_resource *resource,
 	u32 id, struct wl_resource *wl_surface)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(wl_surface);
+	struct surface *surface = wl_resource_get_user_data(wl_surface);
 	struct wl_resource *xdg_surface = wl_resource_create(
 		client, &xdg_surface_interface, XDG_SURFACE_VERSION, id);
 	wl_resource_set_implementation(
@@ -481,12 +474,12 @@ static void
 wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
 	u32 id)
 {
-	struct wc_compositor *compositor = wl_resource_get_user_data(resource);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *pointer = wl_resource_create(
 		wl_client, &wl_pointer_interface, WL_POINTER_VERSION, id);
 
 	wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
-	struct wc_client *client = compositor_get_client(compositor, wl_client);
+	struct client *client = compositor_get_client(compositor, wl_client);
 	client->wl_pointer = pointer;
 }
 
@@ -494,12 +487,12 @@ static void
 wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
 	u32 id)
 {
-	struct wc_compositor *compositor = wl_resource_get_user_data(resource);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(
 		wl_client, &wl_keyboard_interface, WL_KEYBOARD_VERSION, id);
 	wl_resource_set_implementation(keyboard, &wl_keyboard_implementation, 0, 0);
 
-	struct wc_client *client = compositor_get_client(compositor, wl_client);
+	struct client *client = compositor_get_client(compositor, wl_client);
 	client->wl_keyboard = keyboard;
 
 	wl_keyboard_send_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
@@ -539,11 +532,11 @@ wl_subcompositor_get_subsurface(
 	struct wl_client *client, struct wl_resource *resource, u32 id,
 	struct wl_resource *wl_surface, struct wl_resource *wl_parent)
 {
-	struct wc_surface *surface = wl_resource_get_user_data(wl_surface);
-	struct wc_surface *parent = wl_resource_get_user_data(wl_parent);
-	struct wc_compositor *compositor = wl_resource_get_user_data(resource);
-	struct wc_subsurface *subsurface =
-		arena_alloc(&compositor->arena, 1, struct wc_subsurface);
+	struct surface *surface = wl_resource_get_user_data(wl_surface);
+	struct surface *parent = wl_resource_get_user_data(wl_parent);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
+	struct subsurface *subsurface =
+		arena_alloc(&compositor->arena, 1, struct subsurface);
 	wl_list_insert(&surface->subsurfaces, &subsurface->link);
 
 	struct wl_resource *wl_subsurface = wl_resource_create(
@@ -599,109 +592,82 @@ compositor_time_msec(void)
 }
 
 static void
-compositor_update(struct compositor *base)
+compositor_update(struct backend_memory *memory)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
+	struct compositor *compositor = memory->data;
 
 	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
 	wl_display_flush_clients(compositor->wl_display);
 
-	struct wc_surface *surface;
-	struct compositor_surface *window = compositor->base.windows;
+	struct surface *surface;
 	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
-		window->texture = surface->texture;
-
 		if (surface->wl_frame_callback) {
 			wl_callback_send_done(surface->wl_frame_callback,
 				compositor_time_msec());
 			wl_resource_destroy(surface->wl_frame_callback);
 			surface->wl_frame_callback = 0;
 		}
-
-		window++;
-	}
-
-	struct compositor_surface *active_window = compositor->base.active_window;
-	struct wc_surface *active_surface = 0;
-	if (active_window) {
-		u32 window_index = active_window - compositor->base.windows;
-		struct wc_surface *surface;
-		wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
-			if (window_index-- == 0) {
-				active_surface = surface;
-			}
-		}
-	}
-
-	struct wc_surface *prev_active_surface = compositor->active_surface;
-	if (active_surface != prev_active_surface) {
-		compositor->active_surface = active_surface;
-
-		surface_deactivate(prev_active_surface);
-		surface_activate(active_surface);
 	}
 }
 
 static void
-compositor_send_key(struct compositor *base, i32 key, i32 state)
+compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
+	struct compositor *compositor = memory->data;
 
-	struct wc_surface *active_surface = compositor->active_surface;
+	struct surface *active_surface = compositor->active_surface;
 	if (active_surface) {
 		struct wl_resource *keyboard = active_surface->client->wl_keyboard;
 		if (keyboard) {
-			wl_keyboard_send_key(keyboard, 0, compositor_time_msec(), key, state);
+			u32 time = compositor_time_msec();
+			wl_keyboard_send_key(keyboard, 0, time, key, state);
 		}
 	}
 }
 
 static void
-compositor_send_button(struct compositor *base, i32 button, i32 state)
+compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
-
-	struct wc_surface *active_surface = compositor->active_surface;
+	struct compositor *compositor = memory->data;
+	struct surface *active_surface = compositor->active_surface;
 	if (active_surface) {
 		struct wl_resource *pointer = active_surface->client->wl_pointer;
 		if (pointer) {
-			wl_pointer_send_button(pointer, 0, compositor_time_msec(), button, state);
+			u32 time = compositor_time_msec();
+			wl_pointer_send_button(pointer, 0, time, button, state);
 		}
 	}
 }
 
 static void
-compositor_send_motion(struct compositor *base, i32 x, i32 y)
+compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
-
-	struct wc_surface *active_surface = compositor->active_surface;
+	struct compositor *compositor = memory->data;
+	struct surface *active_surface = compositor->active_surface;
 	if (active_surface) {
 		struct wl_resource *pointer = active_surface->client->wl_pointer;
 		if (pointer) {
-			v2 cursor_pos = base->cursor_pos;
+			// TODO: fix the cursor position
+#if 0
+			v2 cursor_pos = game_wm->cursor_pos;
 			f32 surface_width = active_surface->width;
 			f32 surface_height = active_surface->height;
 			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
 			f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
 			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
 			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
-			wl_pointer_send_motion(pointer, compositor_time_msec(),
-				surface_x, surface_y);
+			u32 time = compositor_time_msec();
+			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
+#endif
 		}
 	}
 }
 
 static void
-compositor_send_modifiers(struct compositor *base, u32 depressed,
+compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
 	u32 latched, u32 locked, u32 group)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
+	struct compositor *compositor = memory->data;
 
 	if (depressed == compositor->modifiers.depressed &&
 			latched == compositor->modifiers.latched &&
@@ -715,7 +681,7 @@ compositor_send_modifiers(struct compositor *base, u32 depressed,
 	compositor->modifiers.locked = locked;
 	compositor->modifiers.group = group;
 
-	struct wc_surface *active_surface = compositor->active_surface;
+	struct surface *active_surface = compositor->active_surface;
 	if (active_surface) {
 		struct wl_resource *keyboard = active_surface->client->wl_keyboard;
 		if (keyboard) {
@@ -725,22 +691,21 @@ compositor_send_modifiers(struct compositor *base, u32 depressed,
 }
 
 static void
-compositor_finish(struct compositor *base)
+compositor_finish(struct backend_memory *memory)
 {
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
+	struct compositor *compositor = memory->data;
 
-#if 0
+#if ENABLE_WAYLAND
 	xwayland_finish(&compositor->xwayland);
 #endif
 	wl_display_destroy(compositor->wl_display);
 }
 
-struct compositor *
+i32
 compositor_init(struct backend_memory *memory, struct egl *egl,
 	i32 keymap, i32 keymap_size)
 {
-	struct wc_compositor *compositor = memory->data;
+	struct compositor *compositor = memory->data;
 	struct memory_arena *arena = &compositor->arena;
 	struct wl_display *display;
 	const char *socket;
@@ -784,20 +749,16 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	wl_list_init(&compositor->clients);
 	wl_list_init(&compositor->free_surfaces);
 	wl_list_init(&compositor->free_clients);
-	compositor->base.windows = arena_alloc(
-		&compositor->arena, MAX_SURFACE_COUNT, struct compositor_surface);
-
-	compositor->base.active_window = 0;
 
 	compositor->keymap = keymap;
 	compositor->keymap_size = keymap_size;
 
-#if 0
+#if ENABLE_XWAYLAND
 	if (xwayland_init(&compositor->xwayland, display) != 0) {
 		fprintf(stderr, "Failed to initialize xwayland\n");
-		return 0;
+		return -1;
 	}
 #endif
 
-	return &compositor->base;
+	return 0;
 }

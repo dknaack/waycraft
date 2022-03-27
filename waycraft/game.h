@@ -1,9 +1,9 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "types.h"
-#include "world.h"
-#include "memory.h"
+#include <waycraft/types.h>
+#include <waycraft/world.h>
+#include <waycraft/memory.h>
 
 struct game_window {
 	v3 position;
@@ -11,6 +11,19 @@ struct game_window {
 	v3 y_axis;
 	v3 z_axis;
 	u32 texture;
+
+	struct game_window *next;
+	struct game_window *prev;
+};
+
+struct game_window_manager {
+	struct game_window *windows;
+	struct game_window *hot_window;
+	struct game_window *active_window;
+
+	u32 window_count;
+	u32 is_active;
+	v2 cursor_pos;
 };
 
 struct camera {
@@ -75,14 +88,6 @@ struct game_state {
 		i8 hotbar_selection;
 	} player;
 
-	// NOTE: the active window is the window that is interacted with when
-	// the compositor is active.
-	struct game_window *active_window;
-	// NOTE: the hot window is the window that is moved when the player
-	// selects the window.
-	struct game_window *hot_window;
-	struct game_window *windows;
-	u32 window_count;
 	u32 window_vertex_array;
 	u32 window_vertex_buffer;
 	u32 window_index_buffer;
@@ -101,6 +106,6 @@ struct compositor;
 void *arena_alloc_(struct memory_arena *arena, u64 size);
 
 void game_update(struct backend_memory *memory, struct game_input *input,
-	struct compositor *compositor);
+	struct game_window_manager *window_manager);
 
 #endif /* GAME_H */

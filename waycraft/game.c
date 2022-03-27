@@ -11,7 +11,6 @@
 #include <waycraft/world.h>
 #include <waycraft/timer.h>
 #include <waycraft/backend.h>
-#include <waycraft/compositor.h>
 
 static const u8 *vert_shader_source = (u8 *)
 	"#version 330 core\n"
@@ -134,9 +133,6 @@ game_init(struct backend_memory *memory)
 	game->shader.projection = gl.GetUniformLocation(program, "projection");
 	game->shader.program = program;
 
-	game->hot_window = game->active_window = 0;
-	game->windows = arena_alloc(arena, 1024, struct game_window);
-	game->window_count = 0;
 	{
 		static const struct vertex vertices[] = {
 			{ {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
@@ -537,7 +533,7 @@ window_find(struct game_window *window, u32 window_count,
 
 void
 game_update(struct backend_memory *memory, struct game_input *input,
-	struct compositor *compositor)
+	struct game_window_manager *wm)
 {
 	struct game_state *game = memory->data;
 	struct world *world = &game->world;
@@ -562,19 +558,9 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
 	gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
 
-	if (!compositor->active_window) {
-		game->active_window = 0;
-	}
-
-	game->window_count = compositor->window_count;
-	u32 window_count = game->window_count;
-	struct game_window *active_window = game->active_window;
-	struct game_window *windows = game->windows;
-	struct compositor_surface *compositor_surfaces = compositor->windows;
-	for (u32 i = 0; i < window_count; i++) {
-		windows[i].texture = compositor_surfaces[i].texture;
-	}
-
+	u32 window_count = wm->window_count;
+	struct game_window *windows = wm->windows;
+	struct game_window *active_window = wm->active_window;
 	if (!active_window) {
 		struct player *player = &game->player;
 
@@ -582,10 +568,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		v3 block_pos = {0};
 		v3 block_normal = {0};
 		f32 t = 0.f;
-		u32 has_selected_block =
-			player_select_block(game, input, &block_pos, &block_normal, &t);
+		u32 has_selected_block = player_select_block(game, input,
+			&block_pos, &block_normal, &t);
 
-		struct game_window *hot_window = game->hot_window;
+		struct game_window *hot_window = wm->hot_window;
 		if (hot_window && has_selected_block) {
 			v3 relative_up = V3(0, 1, 0);
 			if (block_normal.y > 0.5) {
@@ -607,10 +593,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 			if (is_pressing_alt) {
 				if (hot_window) {
-					game->hot_window = hot_window = 0;
+					hot_window = 0;
 				} else {
-					game->hot_window = hot_window = window_find(
-						windows, window_count, camera_pos, camera_front);
+					hot_window = window_find(windows, window_count, camera_pos,
+						camera_front);
 				}
 			} else if ((window = window_find(windows, window_count, camera_pos,
 						camera_front))) {
@@ -640,12 +626,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				struct game_window *window = window_find(windows, window_count,
 					camera_pos, camera_front);
 				if (window) {
-					game->active_window = window;
-					compositor->is_active = 1;
-					compositor->active_window =
-						&compositor->windows[window - windows];
+					wm->is_active = 1;
+					wm->active_window = window;
 				} else if (selected_block == BLOCK_WINDOW) {
-					hot_window = hot_window ? hot_window + 1 : game->windows;
+					hot_window = hot_window ? hot_window + 1 : wm->windows;
 					if (hot_window - windows > window_count) {
 						hot_window = &windows[0];
 					}
@@ -656,7 +640,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			}
 		}
 
-		game->hot_window = hot_window;
+		wm->hot_window = hot_window;
 	} else {
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
@@ -681,13 +665,13 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		if (input->mouse.buttons[3] && is_pressing_alt) {
 			// TODO: change this to resizing the window, choose a different
 			// keybind for deselecting the active window.
-			game->active_window = 0;
-			compositor->active_window = 0;
-			compositor->is_active = 0;
+			wm->active_window = 0;
+			wm->active_window = 0;
+			wm->is_active = 0;
 		}
 
 		game->mouse_pos = mouse_pos;
-		compositor->cursor_pos = cursor_pos;
+		wm->cursor_pos = cursor_pos;
 	}
 
 	world_update(&game->world, game->camera.position);

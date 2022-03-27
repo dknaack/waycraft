@@ -119,8 +119,8 @@ allocate_shm_file(size_t size)
 static void
 x11_window_hide_cursor(xcb_connection_t *connection, xcb_window_t window)
 {
-	xcb_xfixes_query_version(connection, 4, 0);
-	xcb_xfixes_hide_cursor(connection, window);
+	//xcb_xfixes_query_version(connection, 4, 0);
+	//xcb_xfixes_hide_cursor(connection, window);
 }
 
 static i32
@@ -216,7 +216,7 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 
 static void
 x11_window_update_modifiers(struct x11_window *window,
-	struct compositor *compositor)
+	struct backend_memory *compositor)
 {
 	struct xkb_state *state = window->xkb_state;
 
@@ -230,7 +230,7 @@ x11_window_update_modifiers(struct x11_window *window,
 
 static void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
-	struct compositor *compositor)
+	struct backend_memory *compositor)
 {
 	xcb_connection_t *connection = window->connection;
 	union x11_event event;
@@ -458,7 +458,7 @@ egl_finish(struct egl *egl)
 int
 x11_main(void)
 {
-	struct compositor *compositor;
+	struct game_window_manager window_manager = {0};
 	struct x11_window window = {0};
 	struct game_input input = {0};
 	struct backend_memory game_memory = {0};
@@ -487,8 +487,7 @@ x11_main(void)
 
 	i32 keymap = window.keymap;
 	i32 keymap_size = window.keymap_size;
-	compositor = compositor_init(&compositor_memory, &egl, keymap, keymap_size);
-	if (!compositor) {
+	if (compositor_init(&compositor_memory, &egl, keymap, keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
 	}
@@ -496,17 +495,17 @@ x11_main(void)
 	// TODO: fix timestep
 	struct timespec wait_time = { 0, 1000000 };
 	while (window.is_open) {
-		x11_window_poll_events(&window, &input, compositor);
-		compositor_update(compositor);
+		x11_window_poll_events(&window, &input, &compositor_memory);
+		compositor_update(&compositor_memory);
 
 		gl.Viewport(0, 0, window.width, window.height);
-		game_update(&game_memory, &input, compositor);
+		game_update(&game_memory, &input, &window_manager);
 
 		eglSwapBuffers(egl.display, egl.surface);
 		nanosleep(&wait_time, 0);
 	}
 
-	compositor_finish(compositor);
+	compositor_finish(&compositor_memory);
 	free(compositor_memory.data);
 	free(game_memory.data);
 	egl_finish(&egl);
