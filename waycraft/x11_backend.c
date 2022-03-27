@@ -225,7 +225,7 @@ x11_window_update_modifiers(struct x11_window *window,
 	u32 locked = xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
 	u32 group = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
 
-	compositor->send_modifiers(compositor, depressed, latched, locked, group);
+	compositor_send_modifiers(compositor, depressed, latched, locked, group);
 }
 
 static void
@@ -254,7 +254,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			{
 				u32 keycode = event.key_press->detail;
 				u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
-				compositor->send_key(compositor, keycode - 8, state);
+				compositor_send_key(compositor, keycode - 8, state);
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
 			}
 			break;
@@ -262,7 +262,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			{
 				u32 keycode = event.key_press->detail;
 				u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
-				compositor->send_key(compositor, keycode - 8, state);
+				compositor_send_key(compositor, keycode - 8, state);
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_UP);
 			}
 			break;
@@ -277,7 +277,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 					input->mouse.dx = x - input->mouse.x;
 					input->mouse.dy = y - input->mouse.y;
 
-					compositor->send_motion(compositor, x, y);
+					compositor_send_motion(compositor, x, y);
 				}
 
 				input->mouse.x = x;
@@ -292,14 +292,14 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				}
 
 				u32 state = WL_POINTER_BUTTON_STATE_PRESSED;
-				compositor->send_button(compositor, button, state);
+				compositor_send_button(compositor, button, state);
 			}
 			break;
 		case XCB_BUTTON_RELEASE:
 			{
 				u32 button = event.button_release->detail;
 				u32 state = WL_POINTER_BUTTON_STATE_RELEASED;
-				compositor->send_button(compositor, button, state);
+				compositor_send_button(compositor, button, state);
 			}
 			break;
 		case XCB_CLIENT_MESSAGE:
@@ -497,8 +497,8 @@ x11_main(void)
 	struct timespec wait_time = { 0, 1000000 };
 	while (window.is_open) {
 		x11_window_poll_events(&window, &input, compositor);
-		compositor->update(compositor);
-		compositor->flush(compositor);
+		compositor_update(compositor);
+		compositor_flush(compositor);
 
 		gl.Viewport(0, 0, window.width, window.height);
 		game_update(&game_memory, &input, compositor);
@@ -507,7 +507,7 @@ x11_main(void)
 		nanosleep(&wait_time, 0);
 	}
 
-	compositor->finish(compositor);
+	compositor_finish(compositor);
 	free(compositor_memory.data);
 	free(game_memory.data);
 	egl_finish(&egl);

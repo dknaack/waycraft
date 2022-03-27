@@ -10,14 +10,6 @@ struct compositor_surface {
 };
 
 struct compositor {
-    void (*update)(struct compositor *compositor);
-    void (*flush)(struct compositor *compositor);
-    void (*send_key)(struct compositor *compositor, i32 key, i32 state);
-    void (*send_button)(struct compositor *compositor, i32 key, i32 state);
-    void (*send_motion)(struct compositor *compositor, i32 x, i32 y);
-    void (*send_modifiers)(struct compositor *compositor, u32 depressed,
-                           u32 latched, u32 locked, u32 group);
-    void (*finish)(struct compositor *compositor);
 
     struct compositor_surface *windows;
     struct compositor_surface *active_window;
@@ -28,7 +20,16 @@ struct compositor {
 };
 
 struct backend_memory;
-struct compositor *compositor_init(struct backend_memory *memory, 
-                                   struct egl *egl, i32 keymap, i32 keymap_size);
+static struct compositor *compositor_init(struct backend_memory *memory,
+	struct egl *egl, i32 keymap, i32 keymap_size);
 
-#endif /* COMPOSITOR_H */ 
+static void compositor_update(struct compositor *compositor);
+static void compositor_flush(struct compositor *compositor);
+static void compositor_send_key(struct compositor *compositor, i32 key, i32 state);
+static void compositor_send_button(struct compositor *compositor, i32 key, i32 state);
+static void compositor_send_motion(struct compositor *compositor, i32 x, i32 y);
+static void compositor_send_modifiers(struct compositor *compositor,
+	u32 depressed, u32 latched, u32 locked, u32 group);
+static void compositor_finish(struct compositor *compositor);
+
+#endif /* COMPOSITOR_H */

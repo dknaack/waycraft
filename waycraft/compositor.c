@@ -605,6 +605,7 @@ compositor_update(struct compositor *base)
 		CONTAINER_OF(base, struct wc_compositor, base);
 
 	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
+	wl_display_flush_clients(compositor->wl_display);
 
 	struct wc_surface *surface;
 	struct compositor_surface *window = compositor->base.windows;
@@ -640,14 +641,6 @@ compositor_update(struct compositor *base)
 		surface_deactivate(prev_active_surface);
 		surface_activate(active_surface);
 	}
-}
-
-static void
-compositor_flush(struct compositor *base)
-{
-	struct wc_compositor *compositor =
-		CONTAINER_OF(base, struct wc_compositor, base);
-	wl_display_flush_clients(compositor->wl_display);
 }
 
 static void
@@ -795,13 +788,6 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		&compositor->arena, MAX_SURFACE_COUNT, struct compositor_surface);
 
 	compositor->base.active_window = 0;
-	compositor->base.update = compositor_update;
-	compositor->base.flush = compositor_flush;
-	compositor->base.finish = compositor_finish;
-	compositor->base.send_key = compositor_send_key;
-	compositor->base.send_button = compositor_send_button;
-	compositor->base.send_motion = compositor_send_motion;
-	compositor->base.send_modifiers = compositor_send_modifiers;
 
 	compositor->keymap = keymap;
 	compositor->keymap_size = keymap_size;
