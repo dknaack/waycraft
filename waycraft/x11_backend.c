@@ -496,8 +496,8 @@ x11_main(void)
 	// TODO: fix timestep
 	struct timespec wait_time = { 0, 1000000 };
 	while (window.is_open) {
-		compositor->update(compositor);
 		x11_window_poll_events(&window, &input, compositor);
+		compositor->update(compositor);
 		compositor->flush(compositor);
 
 		gl.Viewport(0, 0, window.width, window.height);
