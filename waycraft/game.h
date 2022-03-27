@@ -74,7 +74,7 @@ struct game_state {
         u8 hotbar[9];
         u8 hotbar_selection;
     } player;
-    
+
     struct game_window *windows;
     u32 window_count;
     u32 window_vertex_array;
@@ -99,4 +99,4 @@ void *arena_alloc_(struct memory_arena *arena, u64 size);
 void game_update(struct backend_memory *memory, struct game_input *input,
                  struct compositor *compositor);
 
-#endif /* GAME_H */ 
+#endif /* GAME_H */

@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "debug.h"
-#include "gl.h"
-#include "game.h"
-#include "math.h"
-#include "memory.h"
-#include "noise.h"
-#include "world.h"
-#include "timer.h"
-#include "backend.h"
-#include "compositor.h"
+#include <waycraft/debug.h>
+#include <waycraft/gl.h>
+#include <waycraft/game.h>
+#include <waycraft/math.h>
+#include <waycraft/memory.h>
+#include <waycraft/noise.h>
+#include <waycraft/world.h>
+#include <waycraft/timer.h>
+#include <waycraft/backend.h>
+#include <waycraft/compositor.h>
 
 static const u8 *vert_shader_source = (u8 *)
 	"#version 330 core\n"

@@ -1,7 +1,7 @@
 #ifndef MATH_H
 #define MATH_H
 
-#include "types.h"
+#include <waycraft/types.h>
 
 f32  v2_len(v2 a);
 f32  v2_dot(v2 a, v2 b);
@@ -50,4 +50,4 @@ m4x4 m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward);
 
 v3i v3i_vec3(v3 a);
 
-#endif /* MATH_H */ 
+#endif /* MATH_H */
