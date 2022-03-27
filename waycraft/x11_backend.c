@@ -17,6 +17,17 @@ enum x11_atom {
 	X11_ATOM_COUNT
 };
 
+union x11_event {
+	xcb_generic_event_t *generic;
+	xcb_client_message_event_t *client_message;
+	xcb_button_press_event_t *button_press;
+	xcb_button_release_event_t *button_release;
+	xcb_key_press_event_t *key_press;
+	xcb_key_release_event_t *key_release;
+	xcb_motion_notify_event_t *motion_notify;
+	xcb_configure_notify_event_t *configure_notify;
+};
+
 struct x11_window {
 	xcb_connection_t *connection;
 	xcb_screen_t *screen;
@@ -222,16 +233,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 	struct compositor *compositor)
 {
 	xcb_connection_t *connection = window->connection;
-	union xcb_event_t {
-		xcb_generic_event_t *generic;
-		xcb_client_message_event_t *client_message;
-		xcb_button_press_event_t *button_press;
-		xcb_button_release_event_t *button_release;
-		xcb_key_press_event_t *key_press;
-		xcb_key_release_event_t *key_release;
-		xcb_motion_notify_event_t *motion_notify;
-		xcb_configure_notify_event_t *configure_notify;
-	} event;
+	union x11_event event;
 
 	struct xkb_state *xkb_state = window->xkb_state;
 
