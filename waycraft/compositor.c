@@ -74,6 +74,7 @@ struct surface {
 };
 
 struct compositor {
+	struct game_window_manager *wm;
 	struct xwayland xwayland;
 	struct wl_display *wl_display;
 	struct wl_event_loop *wl_event_loop;
@@ -593,6 +594,7 @@ static void
 compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 {
 	struct compositor *compositor = memory->data;
+	compositor->wm = wm;
 
 	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
 	wl_display_flush_clients(compositor->wl_display);
@@ -668,9 +670,7 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 	if (active_surface) {
 		struct wl_resource *pointer = active_surface->client->wl_pointer;
 		if (pointer) {
-			// TODO: fix the cursor position
-#if 0
-			v2 cursor_pos = game_wm->cursor_pos;
+			v2 cursor_pos = compositor->wm->cursor_pos;
 			f32 surface_width = active_surface->width;
 			f32 surface_height = active_surface->height;
 			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
@@ -679,7 +679,6 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
 			u32 time = compositor_time_msec();
 			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
-#endif
 		}
 	}
 }
