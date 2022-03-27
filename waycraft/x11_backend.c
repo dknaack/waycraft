@@ -261,7 +261,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				u32 keycode = event.key_press->detail;
 				u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
 				compositor->send_key(compositor, keycode - 8, state);
-				xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
+				xkb_state_update_key(xkb_state, keycode, XKB_KEY_UP);
 			}
 			break;
 		case XCB_MOTION_NOTIFY:
