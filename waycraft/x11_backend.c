@@ -498,7 +498,6 @@ x11_main(void)
 	while (window.is_open) {
 		x11_window_poll_events(&window, &input, compositor);
 		compositor_update(compositor);
-		compositor_flush(compositor);
 
 		gl.Viewport(0, 0, window.width, window.height);
 		game_update(&game_memory, &input, compositor);
