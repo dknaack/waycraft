@@ -5,11 +5,6 @@
 #include "world.h"
 #include "memory.h"
 
-enum game_mode {
-    GAME_MODE_GAME,
-    GAME_MODE_WINDOW,
-};
-
 struct game_window {
     v3 position;
     v3 x_axis;
