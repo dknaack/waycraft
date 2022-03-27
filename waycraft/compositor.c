@@ -93,6 +93,12 @@ struct wc_compositor {
     // NOTE: surface_count is the same as window_count
     i32 keymap;
     i32 keymap_size;
+	struct {
+		u32 depressed;
+		u32 latched;
+		u32 locked;
+		u32 group;
+	} modifiers;
 };
 
 static struct wc_surface *
@@ -699,10 +705,22 @@ compositor_send_motion(struct compositor *base, i32 x, i32 y)
 
 static void
 compositor_send_modifiers(struct compositor *base, u32 depressed,
-                          u32 latched, u32 locked, u32 group)
+	u32 latched, u32 locked, u32 group)
 {
-    struct wc_compositor *compositor = 
+    struct wc_compositor *compositor =
         CONTAINER_OF(base, struct wc_compositor, base);
+
+	if (depressed == compositor->modifiers.depressed &&
+			latched == compositor->modifiers.latched &&
+			locked == compositor->modifiers.locked &&
+			group == compositor->modifiers.group) {
+		return;
+	}
+
+	compositor->modifiers.depressed = depressed;
+	compositor->modifiers.latched = latched;
+	compositor->modifiers.locked = locked;
+	compositor->modifiers.group = group;
 
     struct wc_surface *active_surface = compositor->active_surface;
     if (active_surface) {
