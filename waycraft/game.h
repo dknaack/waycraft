@@ -11,9 +11,6 @@ struct game_window {
 	v3 y_axis;
 	v3 z_axis;
 	u32 texture;
-
-	struct game_window *next;
-	struct game_window *prev;
 };
 
 struct game_window_manager {
