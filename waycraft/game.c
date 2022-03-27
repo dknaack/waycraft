@@ -35,61 +35,62 @@ static const u8 *frag_shader_source = (u8 *)
 	"    frag_color = texture(tex, coords);"
 	"}";
 
-void
-camera_init(struct camera *camera, v3 position, f32 speed, f32 fov)
+static void
+camera_init(struct camera *camera, v3 position, f32 fov)
 {
 	camera->view = m4x4_id(1.f);
 	camera->projection = m4x4_id(1.f);
 	camera->position = position;
-	camera->front = V3(0, 0, 1);
-	camera->up = V3(0, 1, 0);
-	camera->right = V3(1, 0, 0);
 	camera->yaw = 0.f;
 	camera->pitch = 0.f;
-	camera->speed = speed;
 	camera->fov = fov;
 }
 
-void
+static void
 camera_resize(struct camera *camera, f32 width, f32 height)
 {
-	camera->projection = m4x4_perspective(camera->fov, width / height, 0.1f, 1000.f);
+	f32 fov = camera->fov;
+	f32 znear = 0.1f;
+	f32 zfar = 1000.f;
+	f32 aspect_ratio = width / height;
+
+	camera->projection = m4x4_perspective(fov, aspect_ratio, znear, zfar);
 }
 
-void
+static void
 camera_rotate(struct camera *camera, f32 dx, f32 dy)
 {
-	const f32 sensitivity = 0.1f;
+	f32 sensitivity = 0.1f;
 
-	camera->yaw   += dx * sensitivity;
-	camera->pitch -= dy * sensitivity;
+	f32 yaw   = camera->yaw + dx * sensitivity;
+	f32 pitch = camera->pitch - dy * sensitivity;
 
-	camera->yaw   = fmodf(camera->yaw + 360.f, 360.f);
-	camera->pitch = CLAMP(camera->pitch, -89.f, 89.f);
+	camera->yaw   = fmodf(yaw + 360.f, 360.f);
+	camera->pitch = CLAMP(pitch, -89.f, 89.f);
 
-	camera->front.x = cosf(DEG2RAD(camera->yaw)) *
-		cosf(DEG2RAD(camera->pitch));
-	camera->front.y = sinf(DEG2RAD(camera->pitch));
-	camera->front.z = sinf(DEG2RAD(camera->yaw)) *
-		cosf(DEG2RAD(camera->pitch));
+	v3 front;
+	front.x = cosf(DEG2RAD(camera->yaw)) * cosf(DEG2RAD(camera->pitch));
+	front.y = sinf(DEG2RAD(camera->pitch));
+	front.z = sinf(DEG2RAD(camera->yaw)) * cosf(DEG2RAD(camera->pitch));
 
-	camera->front = v3_norm(camera->front);
-	camera->right = v3_norm(v3_cross(camera->front, V3(0, 1, 0)));
-	camera->up    = v3_norm(v3_cross(camera->right, camera->front));
+	camera->front = v3_norm(front);
+	camera->right = v3_norm(v3_cross(front, V3(0, 1, 0)));
+	camera->up = v3_norm(v3_cross(camera->right, camera->front));
 
 	v3 target = v3_add(camera->position, camera->front);
-	camera->view  = m4x4_look_at(camera->position, target, camera->up);
+	camera->view = m4x4_look_at(camera->position, target, camera->up);
 }
 
-void
+static void
 player_init(struct player *player, struct camera *camera)
 {
 	f32 player_speed = 150.f;
 	f32 camera_fov = 65.f;
 	v3 player_position = V3(0, 20, 0);
 
-	camera_init(camera, player_position, player_speed, camera_fov);
+	camera_init(camera, player_position, camera_fov);
 	player->position = player_position;
+	player->speed = player_speed;
 
 	u8 *hotbar = player->hotbar;
 	*hotbar++ = BLOCK_WINDOW;
@@ -103,7 +104,7 @@ player_init(struct player *player, struct camera *camera)
 	*hotbar++ = BLOCK_WATER;
 }
 
-void
+static void
 game_init(struct backend_memory *memory)
 {
 	struct game_state *game = memory->data;
@@ -212,10 +213,9 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 }
 
 // NOTE: assumes ray starts outside the box and intersects the box
-u32
+static u32
 ray_box_intersection(struct box box, v3 start, v3 direction,
-	v3 *normal_min, v3 *normal_max,
-	f32 *out_tmin, f32 *out_tmax)
+	v3 *normal_min, v3 *normal_max, f32 *out_tmin, f32 *out_tmax)
 {
 	f32 tmin = 0.f;
 	f32 tmax = INFINITY;
@@ -263,7 +263,7 @@ player_move(struct game_state *game, struct game_input *input)
 
 	v3 front = camera->front;
 	v3 right = camera->right;
-	f32 speed = camera->speed;
+	f32 speed = player->speed;
 	v3 position = player->position;
 	v3 velocity = player->velocity;
 	v3 acceleration = player_direction_from_input(input, front, right, speed);
@@ -679,6 +679,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
+			// TODO: change this to resizing the window, choose a different
+			// keybind for deselecting the active window.
 			game->active_window = 0;
 			compositor->active_window = 0;
 			compositor->is_active = 0;

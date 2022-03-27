@@ -17,10 +17,9 @@ struct camera {
 	m4x4 view;
 	m4x4 projection;
 	v3 position;
-	v3 right;
 	v3 front;
 	v3 up;
-	f32 speed;
+	v3 right;
 	f32 yaw;
 	f32 pitch;
 	f32 fov;
@@ -66,22 +65,27 @@ struct game_state {
 	u32 program;
 
 	struct player {
+		f32 speed;
 		v3 position;
 		v3 velocity;
 		u8 is_jumping;
 		u8 frames_since_jump;
 
 		u8 hotbar[9];
-		u8 hotbar_selection;
+		i8 hotbar_selection;
 	} player;
 
+	// NOTE: the active window is the window that is interacted with when
+	// the compositor is active.
+	struct game_window *active_window;
+	// NOTE: the hot window is the window that is moved when the player
+	// selects the window.
+	struct game_window *hot_window;
 	struct game_window *windows;
 	u32 window_count;
 	u32 window_vertex_array;
 	u32 window_vertex_buffer;
 	u32 window_index_buffer;
-	u32 active_window;
-	u32 hot_window;
 	v3 mouse_pos;
 	v2 cursor_pos;
 
