@@ -34,8 +34,6 @@
 #define MAX_SURFACE_COUNT 256
 #define MAX_CLIENT_COUNT  256
 
-#define perror(msg) assert(!(msg))
-
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
 
