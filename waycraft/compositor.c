@@ -30,6 +30,7 @@
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
 
+#define MAX_WINDOW_COUNT  256
 #define MAX_SURFACE_COUNT 256
 #define MAX_CLIENT_COUNT  256
 
@@ -702,8 +703,8 @@ compositor_finish(struct backend_memory *memory)
 }
 
 i32
-compositor_init(struct backend_memory *memory, struct egl *egl,
-	i32 keymap, i32 keymap_size)
+compositor_init(struct backend_memory *memory, struct egl *egl, struct
+	game_window_manager *wm, i32 keymap, i32 keymap_size)
 {
 	struct compositor *compositor = memory->data;
 	struct memory_arena *arena = &compositor->arena;
@@ -759,6 +760,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		return -1;
 	}
 #endif
+
+	wm->windows = arena_alloc(&compositor->arena, MAX_WINDOW_COUNT,
+		struct game_window);
 
 	return 0;
 }

@@ -487,7 +487,8 @@ x11_main(void)
 
 	i32 keymap = window.keymap;
 	i32 keymap_size = window.keymap_size;
-	if (compositor_init(&compositor_memory, &egl, keymap, keymap_size) != 0) {
+	if (compositor_init(&compositor_memory, &egl, &window_manager, keymap,
+			keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
 	}
