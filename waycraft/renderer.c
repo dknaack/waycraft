@@ -1,8 +1,17 @@
 #include <waycraft/gl.h>
 #include <waycraft/renderer.h>
 
+#define VERTEX_BUFFER_SIZE KB(8)
+#define INDEX_BUFFER_SIZE KB(12)
+
+static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
+	[RENDER_CLEAR] = sizeof(struct render_command_clear),
+	[RENDER_TEXTURED_QUAD] = sizeof(struct render_command_textured_quad),
+	[RENDER_QUADS] = sizeof(struct render_command_quads),
+};
+
 static void
-renderer_init(struct renderer *renderer)
+renderer_init(struct renderer *renderer, struct memory_arena *arena)
 {
 	gl.Enable(GL_DEPTH_TEST);
 	gl.Enable(GL_CULL_FACE);
@@ -22,6 +31,11 @@ renderer_init(struct renderer *renderer)
 	renderer->shader.view = gl.GetUniformLocation(program, "view");
 	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
 	renderer->shader.program = program;
+
+	renderer->command_buffer.vertex_buffer =
+		arena_alloc(arena, VERTEX_BUFFER_SIZE, struct vertex);
+	renderer->command_buffer.index_buffer =
+		arena_alloc(arena, VERTEX_BUFFER_SIZE, u32);
 
 	static const struct vertex vertices[] = {
 		{ {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
@@ -64,28 +78,40 @@ renderer_finish(struct renderer *renderer)
 static struct render_command_buffer *
 renderer_begin_frame(struct renderer *renderer)
 {
-	struct render_command_buffer *command_buffer = &renderer->command_buffer;
+	struct render_command_buffer *cmd_buffer = &renderer->command_buffer;
 
-	command_buffer->command_count = 0;
-	command_buffer->push_buffer_size = 0;
-	return command_buffer;
+	cmd_buffer->command_count = 0;
+	cmd_buffer->push_buffer_size = 0;
+	cmd_buffer->vertex_count = 0;
+	cmd_buffer->index_count = 0;
+
+	return cmd_buffer;
 }
 
 static void
 renderer_end_frame(struct renderer *renderer,
-	struct render_command_buffer *command_buffer)
+	struct render_command_buffer *cmd_buffer)
 {
-	u32 command_count = command_buffer->command_count;
-	u8 *push_buffer = command_buffer->push_buffer;
+	u32 command_count = cmd_buffer->command_count;
+	u8 *push_buffer = cmd_buffer->push_buffer;
 
 	m4x4 model = m4x4_id(1);
-	m4x4 view = command_buffer->transform.view;
-	m4x4 projection = command_buffer->transform.projection;
+	m4x4 view = cmd_buffer->transform.view;
+	m4x4 projection = cmd_buffer->transform.projection;
 
 	gl.UseProgram(renderer->shader.program);
 	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, model.e);
 	gl.UniformMatrix4fv(renderer->shader.projection, 1, GL_FALSE, projection.e);
 	gl.UniformMatrix4fv(renderer->shader.view, 1, GL_FALSE, view.e);
+
+	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
+	gl.BufferData(GL_ARRAY_BUFFER,
+		cmd_buffer->vertex_count * sizeof(*cmd_buffer->index_buffer),
+		cmd_buffer->vertex_buffer, GL_STREAM_DRAW);
+	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
+	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER,
+		cmd_buffer->index_count * sizeof(*cmd_buffer->index_buffer),
+		cmd_buffer->index_buffer, GL_STREAM_DRAW);
 
 	while (command_count-- > 0){
 		struct render_command *base_command = (struct render_command *)push_buffer;
@@ -118,34 +144,104 @@ renderer_end_frame(struct renderer *renderer,
 				push_buffer += sizeof(*command);
 			}
 			break;
+
+		case RENDER_QUADS:
+			{
+				struct render_command_quads *command = CONTAINER_OF(
+					base_command, struct render_command_quads, base);
+
+				gl.BindVertexArray(renderer->vertex_array);
+				gl.BindTexture(GL_TEXTURE_2D, command->texture);
+				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
+					GL_UNSIGNED_INT, (const void *)command->index_offset);
+
+				push_buffer += sizeof(*command);
+			}
+			break;
+
+		default:
+			assert(!"Invalid command type");
 		}
 	}
 }
 
-static void
-render_clear(struct render_command_buffer *command_buffer, v4 color)
+static void *
+push_command(struct render_command_buffer *cmd_buffer, u32 type)
 {
-	struct render_command_clear *clear = (struct render_command_clear *)(
-		command_buffer->push_buffer + command_buffer->push_buffer_size);
+	struct render_command *command = (struct render_command *)
+		(cmd_buffer->push_buffer + cmd_buffer->push_buffer_size);
 
-	clear->base.type = RENDER_CLEAR;
-	clear->color = color;
+	u32 command_size = render_command_size[type];
 
-	command_buffer->push_buffer_size += sizeof(*clear);
-	command_buffer->command_count++;
+	assert(type < RENDER_COMMAND_COUNT);
+	assert(command_size != 0);
+
+	command->type = type;
+	cmd_buffer->push_buffer_size += command_size;
+	cmd_buffer->command_count++;
+	return command;
 }
 
 static void
-render_textured_quad(struct render_command_buffer *command_buffer,
+render_clear(struct render_command_buffer *cmd_buffer, v4 color)
+{
+	struct render_command_clear *clear =
+		push_command(cmd_buffer, RENDER_CLEAR);
+
+	clear->color = color;
+}
+
+static void
+render_textured_quad(struct render_command_buffer *cmd_buffer,
 	m4x4 transform, u32 texture)
 {
-	struct render_command_textured_quad *command = (struct render_command_textured_quad *)(
-		command_buffer->push_buffer + command_buffer->push_buffer_size);
+	struct render_command_textured_quad *command =
+		push_command(cmd_buffer, RENDER_TEXTURED_QUAD);
 
-	command->base.type = RENDER_TEXTURED_QUAD;
 	command->transform = transform;
 	command->texture = texture;
+}
 
-	command_buffer->push_buffer_size += sizeof(*command);
-	command_buffer->command_count++;
+static void
+render_quad(struct render_command_buffer *cmd_buffer,
+	v3 pos0, v3 pos1, v3 pos2, v3 pos3,
+	v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture)
+{
+	struct render_command_quads *command = cmd_buffer->current_quads;
+	if (!command || command->texture != texture) {
+		command = push_command(cmd_buffer, RENDER_QUADS);
+		command->texture = texture;
+		command->index_offset = cmd_buffer->index_count;
+	}
+
+	u32 vertex_count = cmd_buffer->vertex_count;
+	u32 index_count = cmd_buffer->index_count;
+	struct vertex *out_vertex = cmd_buffer->vertex_buffer + vertex_count;
+	u32 *out_index = cmd_buffer->index_buffer + index_count;
+
+	out_vertex->position = pos0;
+	out_vertex->texcoord = uv0;
+	out_vertex++;
+
+	out_vertex->position = pos1;
+	out_vertex->texcoord = uv1;
+	out_vertex++;
+
+	out_vertex->position = pos2;
+	out_vertex->texcoord = uv2;
+	out_vertex++;
+
+	out_vertex->position = pos3;
+	out_vertex->texcoord = uv3;
+	out_vertex++;
+
+	*out_index++ = vertex_count;
+	*out_index++ = vertex_count + 2;
+	*out_index++ = vertex_count + 1;
+	*out_index++ = vertex_count + 2;
+	*out_index++ = vertex_count + 3;
+	*out_index++ = vertex_count + 1;
+
+	cmd_buffer->index_count += 6;
+	cmd_buffer->vertex_count += 4;
 }

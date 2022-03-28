@@ -111,7 +111,7 @@ game_init(struct backend_memory *memory)
 	debug_init(arena);
 	world_init(&game->world, arena);
 	player_init(&game->player, &game->camera);
-	renderer_init(&game->renderer);
+	renderer_init(&game->renderer, arena);
 }
 
 struct box {

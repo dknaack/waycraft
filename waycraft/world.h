@@ -39,11 +39,6 @@ enum chunk_state {
     CHUNK_MODIFIED    = 0x2,
 };
 
-struct vertex {
-    v3 position;
-    v2 texcoord;
-};
-
 struct mesh {
     struct vertex *vertices;
     u32 *indices;
@@ -52,8 +47,8 @@ struct mesh {
     u32 index_count;
 };
 
-/* 
- * NOTE: world and chunks should be initialized to zero 
+/*
+ * NOTE: world and chunks should be initialized to zero
  */
 struct world {
     struct chunk *chunks;
@@ -88,9 +83,9 @@ void world_update(struct world *world, v3 player_position);
 void world_render(const struct world *world);
 void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
-void world_place_block(struct world *world, f32 x, f32 y, f32 z, 
+void world_place_block(struct world *world, f32 x, f32 y, f32 z,
                        enum block_type block);
 
 u32 block_is_empty(enum block_type block);
 
-#endif /* WORLD_H */ 
+#endif /* WORLD_H */
