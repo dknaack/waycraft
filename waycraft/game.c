@@ -6,9 +6,7 @@
 #include <waycraft/gl.h>
 #include <waycraft/game.h>
 #include <waycraft/math.h>
-#include <waycraft/memory.h>
 #include <waycraft/noise.h>
-#include <waycraft/world.h>
 #include <waycraft/timer.h>
 #include <waycraft/backend.h>
 
@@ -87,20 +85,20 @@ player_init(struct player *player, struct camera *camera)
 	f32 camera_fov = 65.f;
 	v3 player_position = V3(0, 20, 0);
 
+	inventory_init(&player->inventory);
 	camera_init(camera, player_position, camera_fov);
 	player->position = player_position;
 	player->speed = player_speed;
 
-	u8 *hotbar = player->hotbar;
-	*hotbar++ = BLOCK_WINDOW;
-	*hotbar++ = BLOCK_STONE;
-	*hotbar++ = BLOCK_DIRT;
-	*hotbar++ = BLOCK_GRASS;
-	*hotbar++ = BLOCK_SAND;
-	*hotbar++ = BLOCK_PLANKS;
-	*hotbar++ = BLOCK_OAK_LOG;
-	*hotbar++ = BLOCK_OAK_LEAVES;
-	*hotbar++ = BLOCK_WATER;
+	struct inventory_item *hotbar = player->inventory.items;
+	(*hotbar++).type = ITEM_STONE_BLOCK;
+	(*hotbar++).type = ITEM_DIRT_BLOCK;
+	(*hotbar++).type = ITEM_GRASS_BLOCK;
+	(*hotbar++).type = ITEM_SAND_BLOCK;
+	(*hotbar++).type = ITEM_PLANKS_BLOCK;
+	(*hotbar++).type = ITEM_OAK_LOG_BLOCK;
+	(*hotbar++).type = ITEM_OAK_LEAVES_BLOCK;
+	(*hotbar++).type = ITEM_WATER_BLOCK;
 }
 
 static void
@@ -408,12 +406,12 @@ player_select_block(struct game_state *game, struct game_input *input,
 
 	if (input->mouse.buttons[5]) {
 		player->hotbar_selection++;
-		player->hotbar_selection %= LENGTH(player->hotbar);
+		player->hotbar_selection %= 9;
 	}
 
 	if (input->mouse.buttons[4] && player->hotbar_selection > 0) {
 		if (player->hotbar_selection == 0) {
-			player->hotbar_selection = LENGTH(player->hotbar) - 1;
+			player->hotbar_selection = 8;
 		} else {
 			player->hotbar_selection--;
 		}
@@ -561,9 +559,11 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
 	struct game_window *active_window = wm->active_window;
-	if (!active_window) {
-		struct player *player = &game->player;
 
+	struct player *player = &game->player;
+	u32 inventory_is_active = player->inventory.is_active;
+
+	if (!active_window && !inventory_is_active) {
 		player_move(game, input);
 		v3 block_pos = {0};
 		v3 block_normal = {0};
@@ -614,7 +614,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				}
 			} else {
 				u32 hotbar_selection = player->hotbar_selection;
-				u32 selected_block = player->hotbar[hotbar_selection];
+				u32 selected_block = item_to_block(
+					player->inventory.items[hotbar_selection].type);
 
 				v3 new_block_pos = v3_add(block_pos, block_normal);
 				v3 player_size = V3(0.25, 0.99f, 0.25f);
@@ -641,6 +642,9 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 
 		wm->hot_window = hot_window;
+	} else if (inventory_is_active) {
+		// TODO: render the inventory
+		inventory_render(&player->inventory);
 	} else {
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);

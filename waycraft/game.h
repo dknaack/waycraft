@@ -4,6 +4,7 @@
 #include <waycraft/types.h>
 #include <waycraft/world.h>
 #include <waycraft/memory.h>
+#include <waycraft/inventory.h>
 
 struct game_window {
 	v3 position;
@@ -81,7 +82,7 @@ struct game_state {
 		u8 is_jumping;
 		u8 frames_since_jump;
 
-		u8 hotbar[9];
+		struct inventory inventory;
 		i8 hotbar_selection;
 	} player;
 
