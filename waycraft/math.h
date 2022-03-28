@@ -45,6 +45,7 @@ m4x4 m4x4_add(m4x4 a, m4x4 b);
 m4x4 m4x4_sub(m4x4 a, m4x4 b);
 m4x4 m4x4_mulf(m4x4 a, float f);
 m4x4 m4x4_mul(m4x4 a, m4x4 b);
+v4   m4x4_mulv(m4x4 m, v4 v);
 m4x4 m4x4_perspective(float fov, float aspect, float near, float far);
 m4x4 m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward);
 
