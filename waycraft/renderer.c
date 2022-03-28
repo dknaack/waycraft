@@ -202,11 +202,11 @@ render_quad(struct render_command_buffer *cmd_buffer,
 	out_vertex++;
 
 	*out_index++ = vertex_count;
-	*out_index++ = vertex_count + 1;
-	*out_index++ = vertex_count + 3;
+	*out_index++ = vertex_count + 2;
 	*out_index++ = vertex_count + 1;
 	*out_index++ = vertex_count + 2;
 	*out_index++ = vertex_count + 3;
+	*out_index++ = vertex_count + 1;
 
 	command->quad_count++;
 	cmd_buffer->index_count += 6;
@@ -217,15 +217,15 @@ static void
 render_textured_quad(struct render_command_buffer *cmd_buffer,
 	m4x4 transform, u32 texture)
 {
-	v3 pos0 = m4x4_mulv(transform, V4( 1,  1, 0, 1)).xyz;
-	v3 pos1 = m4x4_mulv(transform, V4( 1, -1, 0, 1)).xyz;
-	v3 pos2 = m4x4_mulv(transform, V4(-1, -1, 0, 1)).xyz;
-	v3 pos3 = m4x4_mulv(transform, V4(-1,  1, 0, 1)).xyz;
+	v3 pos0 = m4x4_mulv(transform, V4(+1, +1, 0, 1)).xyz;
+	v3 pos1 = m4x4_mulv(transform, V4(-1, +1, 0, 1)).xyz;
+	v3 pos2 = m4x4_mulv(transform, V4(+1, -1, 0, 1)).xyz;
+	v3 pos3 = m4x4_mulv(transform, V4(-1, -1, 0, 1)).xyz;
 
 	v2 uv0 = V2(1, 0);
-	v2 uv1 = V2(1, 1);
-	v2 uv2 = V2(0, 1);
-	v2 uv3 = V2(0, 0);
+	v2 uv1 = V2(0, 0);
+	v2 uv2 = V2(1, 1);
+	v2 uv3 = V2(0, 1);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
