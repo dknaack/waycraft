@@ -17,7 +17,6 @@ CC      = cc
 all: options build/waycraft build/wcdb
 
 options:
-	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "CFLAGS  = $(CFLAGS)"
 	@echo "CC      = $(CC)"
 	@echo
