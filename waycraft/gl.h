@@ -101,68 +101,67 @@
 #define GL_LINK_STATUS 0x8B82
 
 struct gl {
-    void (*Viewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-    void (*Clear)(GLbitfield mask);
-    void (*ClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
-    void (*GenBuffers)(GLsizei n, GLuint *buffers);
-    void (*BindBuffer)(GLenum target, GLuint buffer);
-    void (*DeleteBuffers)(GLsizei n, const GLuint *buffers);
-    void (*BufferData)(GLenum target, GLsizeiptr size, const void *data, 
-                       GLenum usage);
-    void (*BufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size,
-                          const void *data);
-    void (*GenVertexArrays)(GLsizei n, GLuint *arrays);
-    void (*DeleteVertexArrays)(GLsizei n, const GLuint *arrays);
-    void (*BindVertexArray)(GLuint array);
-    void (*VertexAttribPointer)(GLuint index, GLint size, GLenum type, 
-                                GLboolean normalized, GLsizei stride,
-                                const void *pointer);
-    void (*EnableVertexAttribArray)(GLuint index);
-    GLuint (*CreateShader)(GLenum type);
-    void (*ShaderSource)(GLuint shader, GLsizei count, 
-                         const GLchar *const *string, const GLint *length);
-    void (*CompileShader)(GLuint shader);
-    void (*GetShaderiv)(GLuint shader, GLenum pname, GLint *params);
-    void (*GetShaderInfoLog)(GLuint shader, GLsizei bufSize, GLsizei *length,
-                             GLchar *infoLog);
-    void (*DeleteShader)(GLuint shader);
-    GLuint (*CreateProgram)(void);
-    void (*AttachShader)(GLuint program, GLuint shader);
-    void (*LinkProgram)(GLuint program);
-    void (*GetProgramiv)(GLuint program, GLenum pname, GLint *params);
-    void (*GetProgramInfoLog)(GLuint program, GLsizei bufSize, GLsizei *length,
-                              GLchar *infoLog);
-    void (*UseProgram)(GLuint program);
-    void (*DeleteProgram)(GLuint program);
-    void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
-    void (*DrawElements)(GLenum mode, GLsizei count, GLenum type, 
-                         const void *indices);
-    void (*GenTextures)(GLsizei n, GLuint *textures);
-    void (*TexImage2D)(GLenum target, GLint level, GLint internalformat,
-                       GLsizei width, GLsizei height, GLint border,
-                       GLenum format, GLenum type, const void *pixels);
-    void (*DeleteTextures)(GLsizei n, const GLuint *textures);
-    void (*BindTexture)(GLenum target, GLuint texture);
-    void (*ActiveTexture)(GLenum texture);
-    void (*TexParameteri)(GLenum target, GLenum pname, GLint param);
-    void (*GenerateMipmap)(GLenum target);
-    GLint (*GetUniformLocation)(GLuint program, const GLchar *name);
-    void (*Uniform1f)(GLint location, GLfloat v0);
-    void (*Uniform2f)(GLint location, GLfloat v0, GLfloat v1);
-    void (*Uniform3f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
-    void (*Uniform4f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2,
-                      GLfloat v3);
-    void (*UniformMatrix4fv)(GLint location, GLsizei count, 
-                             GLboolean transpose, const GLfloat *value);
-    void (*Enable)(GLenum cap);
-    void (*Disable)(GLenum cap);
-    void (*CullFace)(GLenum mode);
-    void (*EGLImageTargetTexture2DOES)(GLenum target, EGLImage image);
-    void (*BlendFunc)(GLenum sfactor, GLenum dfactor);
-    void (*PolygonMode)(GLenum face, GLenum mode);
-    void (*LineWidth)(GLfloat width);
+	void (*Viewport)(GLint x, GLint y, GLsizei width, GLsizei height);
+	void (*Clear)(GLbitfield mask);
+	void (*ClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+	void (*GenBuffers)(GLsizei n, GLuint *buffers);
+	void (*BindBuffer)(GLenum target, GLuint buffer);
+	void (*DeleteBuffers)(GLsizei n, const GLuint *buffers);
+	void (*BufferData)(GLenum target, GLsizeiptr size, const void *data,
+		GLenum usage);
+	void (*BufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size,
+		const void *data);
+	void (*GenVertexArrays)(GLsizei n, GLuint *arrays);
+	void (*DeleteVertexArrays)(GLsizei n, const GLuint *arrays);
+	void (*BindVertexArray)(GLuint array);
+	void (*VertexAttribPointer)(GLuint index, GLint size, GLenum type,
+		GLboolean normalized, GLsizei stride, const void *pointer);
+	void (*EnableVertexAttribArray)(GLuint index);
+	GLuint (*CreateShader)(GLenum type);
+	void (*ShaderSource)(GLuint shader, GLsizei count,
+		const GLchar *const *string, const GLint *length);
+	void (*CompileShader)(GLuint shader);
+	void (*GetShaderiv)(GLuint shader, GLenum pname, GLint *params);
+	void (*GetShaderInfoLog)(GLuint shader, GLsizei bufSize, GLsizei *length,
+		GLchar *infoLog);
+	void (*DeleteShader)(GLuint shader);
+	GLuint (*CreateProgram)(void);
+	void (*AttachShader)(GLuint program, GLuint shader);
+	void (*LinkProgram)(GLuint program);
+	void (*GetProgramiv)(GLuint program, GLenum pname, GLint *params);
+	void (*GetProgramInfoLog)(GLuint program, GLsizei bufSize, GLsizei *length,
+		GLchar *infoLog);
+	void (*UseProgram)(GLuint program);
+	void (*DeleteProgram)(GLuint program);
+	void (*DrawArrays)(GLenum mode, GLint first, GLsizei count);
+	void (*DrawElements)(GLenum mode, GLsizei count, GLenum type,
+		const void *indices);
+	void (*GenTextures)(GLsizei n, GLuint *textures);
+	void (*TexImage2D)(GLenum target, GLint level, GLint internalformat,
+		GLsizei width, GLsizei height, GLint border,
+		GLenum format, GLenum type, const void *pixels);
+	void (*DeleteTextures)(GLsizei n, const GLuint *textures);
+	void (*BindTexture)(GLenum target, GLuint texture);
+	void (*ActiveTexture)(GLenum texture);
+	void (*TexParameteri)(GLenum target, GLenum pname, GLint param);
+	void (*GenerateMipmap)(GLenum target);
+	GLint (*GetUniformLocation)(GLuint program, const GLchar *name);
+	void (*Uniform1f)(GLint location, GLfloat v0);
+	void (*Uniform2f)(GLint location, GLfloat v0, GLfloat v1);
+	void (*Uniform3f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+	void (*Uniform4f)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2,
+		GLfloat v3);
+	void (*UniformMatrix4fv)(GLint location, GLsizei count,
+		GLboolean transpose, const GLfloat *value);
+	void (*Enable)(GLenum cap);
+	void (*Disable)(GLenum cap);
+	void (*CullFace)(GLenum mode);
+	void (*EGLImageTargetTexture2DOES)(GLenum target, EGLImage image);
+	void (*BlendFunc)(GLenum sfactor, GLenum dfactor);
+	void (*PolygonMode)(GLenum face, GLenum mode);
+	void (*LineWidth)(GLfloat width);
 
-    void *context;
+	void *context;
 };
 
 struct x11_window;
@@ -173,12 +172,12 @@ typedef gl_proc_t *gl_get_proc_address_t(const u8 *proc_name);
 static struct gl gl;
 
 static i32 gl_init(struct gl *gl,
-                   gl_get_proc_address_t *gl_get_proc_address);
+	gl_get_proc_address_t *gl_get_proc_address);
 
 static u32 gl_shader_create(const u8 *src, u32 type);
 static void gl_shader_error(u32 shader, u8 *buffer, u32 size);
 static u32 gl_program_create(const u8 *vert_shader_source,
-        const u8 *frag_shader_source);
+	const u8 *frag_shader_source);
 static void gl_program_error(u32 program, u8 *buffer, u32 size);
 
-#endif /* GL_H */ 
+#endif /* GL_H */

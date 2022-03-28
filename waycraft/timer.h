@@ -1,6 +1,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#include <waycraft/types.h>
+
 struct timer {
     const char *name;
     f64 start;
@@ -23,4 +25,4 @@ static void timer_end_(struct timer *timer);
 #define timer_end_func()
 #endif
 
-#endif /* TIMER_H */ 
+#endif /* TIMER_H */
