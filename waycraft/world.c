@@ -184,7 +184,7 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 		if (!chunk->blocks) {
 			v3 chunk_pos = world_get_chunk_position(world, chunk);
 
-			u64 offset = chunk_index * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+			usize offset = chunk_index * CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 			u16 *blocks = world->blocks + offset;
 			chunk_init(chunk, blocks, chunk_pos.x, chunk_pos.y, chunk_pos.z);
 			world_unload_chunk(world, chunk);
@@ -508,8 +508,8 @@ world_init(struct world *world, struct memory_arena *arena)
 
 	free(data);
 
-	u64 chunk_size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-	u64 block_size = WORLD_CHUNK_COUNT * chunk_size;
+	usize chunk_size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+	usize block_size = WORLD_CHUNK_COUNT * chunk_size;
 	world->blocks = arena_alloc(arena, block_size, u16);
 
 	world->unloaded_chunks = arena_alloc(arena, WORLD_CHUNK_COUNT, u32);
