@@ -393,22 +393,9 @@ window_render(struct game_window *window, u32 window_count,
 	struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		v3 window_pos = window->position;
-		v3 window_x = window->x_axis;
-		v3 window_y = window->y_axis;
+		m4x4 transform = window_transform(window);
 
-		v3 pos0 = v3_add(v3_add(window_pos, window_x), window_y);
-		v3 pos1 = v3_sub(v3_add(window_pos, window_x), window_y);
-		v3 pos2 = v3_sub(v3_sub(window_pos, window_x), window_y);
-		v3 pos3 = v3_add(v3_sub(window_pos, window_x), window_y);
-
-		v2 uv0 = V2(1, 0);
-		v2 uv1 = V2(1, 1);
-		v2 uv2 = V2(0, 1);
-		v2 uv3 = V2(0, 0);
-
-		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-			uv0, uv1, uv2, uv3, window->texture);
+		render_textured_quad(cmd_buffer, transform, window->texture);
 		window++;
 	}
 }
