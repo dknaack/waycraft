@@ -390,11 +390,11 @@ window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 
 static void
 window_render(struct game_window *window, u32 window_count,
-	struct renderer *renderer)
+	struct render_command_buffer *render_commands)
 {
 	while (window_count-- > 0) {
 		m4x4 transform = window_transform(window);
-		render_textured_quad(renderer, transform, window->texture);
+		render_textured_quad(render_commands, transform, window->texture);
 		window++;
 	}
 }
@@ -468,7 +468,11 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	v3 camera_pos = camera->position;
 	v3 camera_front = camera->front;
 
-	renderer_begin_frame(&game->renderer, view, projection);
+	struct render_command_buffer *render_commands =
+		renderer_begin_frame(&game->renderer);
+	render_commands->transform.view = view;
+	render_commands->transform.projection = projection;
+	render_clear(render_commands, V4(0.45, 0.65, 0.85, 1.0));
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
@@ -593,10 +597,12 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	}
 
 	world_update(&game->world, game->camera.position);
-	world_render(&game->world);
 
 	gl.BindVertexArray(game->window_vertex_array);
-	window_render(windows, window_count, &game->renderer);
+	window_render(windows, window_count, render_commands);
+
+	renderer_end_frame(&game->renderer, render_commands);
+	world_render(&game->world);
 
 	debug_render(view, projection);
 }

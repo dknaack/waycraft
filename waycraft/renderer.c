@@ -1,3 +1,4 @@
+#include <waycraft/gl.h>
 #include <waycraft/renderer.h>
 
 static void
@@ -60,23 +61,91 @@ renderer_finish(struct renderer *renderer)
 	gl.DeleteProgram(renderer->shader.program);
 }
 
-static void
-renderer_begin_frame(struct renderer *renderer, m4x4 view, m4x4 projection)
+static struct render_command_buffer *
+renderer_begin_frame(struct renderer *renderer)
 {
-	m4x4 model = m4x4_id(1);
+	struct render_command_buffer *command_buffer = &renderer->command_buffer;
 
-	gl.ClearColor(0.45, 0.65, 0.85, 1.0);
-	gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	command_buffer->command_count = 0;
+	command_buffer->push_buffer_size = 0;
+	return command_buffer;
+}
+
+static void
+renderer_end_frame(struct renderer *renderer,
+	struct render_command_buffer *command_buffer)
+{
+	u32 command_count = command_buffer->command_count;
+	u8 *push_buffer = command_buffer->push_buffer;
+
+	m4x4 model = m4x4_id(1);
+	m4x4 view = command_buffer->transform.view;
+	m4x4 projection = command_buffer->transform.projection;
+
 	gl.UseProgram(renderer->shader.program);
 	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, model.e);
 	gl.UniformMatrix4fv(renderer->shader.projection, 1, GL_FALSE, projection.e);
 	gl.UniformMatrix4fv(renderer->shader.view, 1, GL_FALSE, view.e);
+
+	while (command_count-- > 0){
+		struct render_command *base_command = (struct render_command *)push_buffer;
+
+		switch (base_command->type) {
+		case RENDER_CLEAR:
+			{
+				struct render_command_clear *clear = CONTAINER_OF(base_command,
+					struct render_command_clear, base);
+
+				v4 color = clear->color;
+				gl.ClearColor(color.r, color.g, color.b, color.a);
+				gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				push_buffer += sizeof(*clear);
+			}
+			break;
+		case RENDER_TEXTURED_QUAD:
+			{
+				struct render_command_textured_quad *command = CONTAINER_OF(
+					base_command, struct render_command_textured_quad, base);
+				m4x4 transform = command->transform;
+				u32 texture = command->texture;
+
+				gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, transform.e);
+				gl.BindVertexArray(renderer->vertex_array);
+				gl.BindTexture(GL_TEXTURE_2D, texture);
+				gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+				push_buffer += sizeof(*command);
+			}
+			break;
+		}
+	}
 }
 
 static void
-render_textured_quad(struct renderer *renderer, m4x4 transform, u32 texture)
+render_clear(struct render_command_buffer *command_buffer, v4 color)
 {
-	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, transform.e);
-	gl.BindTexture(GL_TEXTURE_2D, texture);
-	gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	struct render_command_clear *clear = (struct render_command_clear *)(
+		command_buffer->push_buffer + command_buffer->push_buffer_size);
+
+	clear->base.type = RENDER_CLEAR;
+	clear->color = color;
+
+	command_buffer->push_buffer_size += sizeof(*clear);
+	command_buffer->command_count++;
+}
+
+static void
+render_textured_quad(struct render_command_buffer *command_buffer,
+	m4x4 transform, u32 texture)
+{
+	struct render_command_textured_quad *command = (struct render_command_textured_quad *)(
+		command_buffer->push_buffer + command_buffer->push_buffer_size);
+
+	command->base.type = RENDER_TEXTURED_QUAD;
+	command->transform = transform;
+	command->texture = texture;
+
+	command_buffer->push_buffer_size += sizeof(*command);
+	command_buffer->command_count++;
 }
