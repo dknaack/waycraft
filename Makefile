@@ -11,7 +11,7 @@ WAYCRAFT_LIBS = \
 WCDB_LIBS = \
 	$(shell pkg-config --cflags --libs wayland-client)
 
-CFLAGS  = -g -std=c11 -pedantic -Wall -D_POSIX_C_SOURCE=200809L -I.
+CFLAGS  = -g -std=c11 -pedantic -Wall -Wno-unused-function -D_POSIX_C_SOURCE=200809L -I.
 CC      = cc
 
 all: options build/waycraft build/wcdb
