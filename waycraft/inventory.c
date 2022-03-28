@@ -78,14 +78,21 @@ inventory_add_item(struct inventory *inventory, enum item_type item, u32 count)
 {
 	struct inventory_item *items = inventory->items;
 
+	u32 max_stack_size = item_stack_size(item);
 	for (u32 i = 0; i < LENGTH(inventory->items); i++) {
 		enum item_type item_type = items[i].type;
-		u32 max_stack_size = item_stack_size(items[i].type);
 		if (item_type == 0 || item_type == item) {
 			u32 item_count = items[i].count;
 			assert(item_type == 0 ? item_count == 0 : 1);
 
-			if (item_count < max_stack_size) {
+			u32 is_empty = item_count == 0;
+			u32 is_non_stackable = max_stack_size == 0;
+			if (is_non_stackable && is_empty) {
+				items[i].type = item;
+				items[i].count = count;
+				break;
+			} else if (is_empty || item_count < max_stack_size) {
+				items[i].type = item;
 				items[i].count = MAX(item_count + count, max_stack_size);
 				if (item_count + count < max_stack_size) {
 					break;
