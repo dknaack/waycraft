@@ -202,11 +202,11 @@ render_quad(struct render_command_buffer *cmd_buffer,
 	out_vertex++;
 
 	*out_index++ = vertex_count;
-	*out_index++ = vertex_count + 2;
+	*out_index++ = vertex_count + 1;
+	*out_index++ = vertex_count + 3;
 	*out_index++ = vertex_count + 1;
 	*out_index++ = vertex_count + 2;
 	*out_index++ = vertex_count + 3;
-	*out_index++ = vertex_count + 1;
 
 	command->quad_count++;
 	cmd_buffer->index_count += 6;
