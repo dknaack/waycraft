@@ -367,7 +367,7 @@ block_texcoords_back(enum block_type block, v2 *uv)
 
 static void
 block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
-	struct world *world, struct mesh *mesh)
+	struct world *world, struct render_command_buffer *cmd_buffer)
 {
 	v3 pos[8];
 	v2 uv[4];
@@ -397,46 +397,48 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 		}
 	}
 
+	u32 texture = world->texture;
 
 	block_texcoords_bottom(block, uv);
 	if (is_empty(world_at(world, x, y - 1, z))) {
-		mesh_push_quad(mesh, pos[7], pos[6], pos[3], pos[2],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[7], pos[6], pos[3], pos[2],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_top(block, uv);
 	if (is_empty(world_at(world, x, y + 1, z))) {
-		mesh_push_quad(mesh, pos[4], pos[5], pos[0], pos[1],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[4], pos[5], pos[0], pos[1],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_right(block, uv);
 	if (is_empty(world_at(world, x + 1, y, z))) {
-		mesh_push_quad(mesh, pos[4], pos[0], pos[6], pos[2],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[4], pos[0], pos[6], pos[2],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_left(block, uv);
 	if (is_empty(world_at(world, x - 1, y, z))) {
-		mesh_push_quad(mesh, pos[1], pos[5], pos[3], pos[7],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[1], pos[5], pos[3], pos[7],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_front(block, uv);
 	if (is_empty(world_at(world, x, y, z + 1))) {
-		mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_back(block, uv);
 	if (is_empty(world_at(world, x, y, z - 1))) {
-		mesh_push_quad(mesh, pos[5], pos[4], pos[7], pos[6],
-			uv[0], uv[1], uv[2], uv[3]);
+		render_quad(cmd_buffer, pos[5], pos[4], pos[7], pos[6],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 }
 
 static void
-chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
+chunk_generate_mesh(struct chunk *chunk, struct world *world,
+	struct render_command_buffer *cmd_buffer)
 {
 	v3 min = world_get_chunk_position(world, chunk);
 	v3 max = v3_add(min, V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
@@ -449,11 +451,12 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 					continue;
 				}
 
-				block_generate_mesh(block, x, y, z, world, mesh);
+				block_generate_mesh(block, x, y, z, world, cmd_buffer);
 			}
 		}
 	}
 
+#if 0
 	gl.BindVertexArray(chunk->vao);
 	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
 	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
@@ -463,6 +466,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 		sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
 
 	chunk->index_count = mesh->index_count;
+#endif
 }
 
 i32
@@ -477,6 +481,7 @@ world_init(struct world *world, struct memory_arena *arena)
 	f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
 	world->position = V3(offset, yoffset, offset);
 
+#if 0
 	struct mesh *mesh = &world->mesh;
 	u32 size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 	mesh->vertices = arena_alloc(arena, size * 64, struct vertex);
@@ -484,10 +489,12 @@ world_init(struct world *world, struct memory_arena *arena)
 	if (!mesh->vertices || !mesh->indices) {
 		return -1;
 	}
+#endif
 
 	i32 width, height, comp;
 	u8 *data;
 
+	// TODO: load this separate from the game
 	if (!(data = stbi_load("res/textures.png", &width, &height, &comp, 3))) {
 		fprintf(stderr, "Failed to load texture atlas\n");
 		return -1;
@@ -522,9 +529,12 @@ world_init(struct world *world, struct memory_arena *arena)
 }
 
 void
-world_update(struct world *world, v3 player_position)
+world_update(struct world *world, v3 player_position,
+	struct render_command_buffer *cmd_buffer)
 {
+#if 0
 	struct mesh *mesh = &world->mesh;
+#endif
 	struct chunk *chunks = world->chunks;
 
 	u32 max_load = 4;
@@ -532,10 +542,8 @@ world_update(struct world *world, v3 player_position)
 	u32 *unloaded_chunks = world->unloaded_chunks +
 		world->unloaded_chunk_count;
 
-	for (u32 i = 0; i < batch_count; i++) {
-		mesh->index_count = 0;
-		mesh->vertex_count = 0;
-
+	for (u32 i = 0; i < world->chunk_count; i++) {
+#if 0
 		unloaded_chunks--;
 		u32 chunk_index = *unloaded_chunks;
 		struct chunk *chunk = &chunks[chunk_index];
@@ -544,10 +552,15 @@ world_update(struct world *world, v3 player_position)
 		if (!is_initialized) {
 			chunk->flags |= CHUNK_INITIALIZED;
 
+#if 0
 			gl.GenVertexArrays(1, &chunk->vao);
 			gl.GenBuffers(1, &chunk->ebo);
 			gl.GenBuffers(1, &chunk->vbo);
+#endif
 		}
+
+		mesh->index_count = 0;
+		mesh->vertex_count = 0;
 
 		u32 vao = chunk->vao;
 		gl.BindVertexArray(vao);
@@ -562,6 +575,10 @@ world_update(struct world *world, v3 player_position)
 		gl.EnableVertexAttribArray(1);
 
 		chunk->flags &= ~CHUNK_MODIFIED;
+#endif
+
+		struct chunk *chunk = &chunks[i];
+		chunk_generate_mesh(chunk, world, cmd_buffer);
 	}
 
 	world->unloaded_chunk_count -= batch_count;

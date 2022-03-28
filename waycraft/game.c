@@ -600,7 +600,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		wm->cursor_pos = cursor_pos;
 	}
 
-	world_update(&game->world, game->camera.position);
+	world_update(&game->world, game->camera.position, render_commands);
 
 	window_render(windows, window_count, render_commands);
 

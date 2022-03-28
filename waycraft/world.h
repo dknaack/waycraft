@@ -1,7 +1,7 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#define WORLD_SIZE 8
+#define WORLD_SIZE 1
 #define WORLD_HEIGHT 4
 #define CHUNK_SIZE 16
 
@@ -54,7 +54,9 @@ struct world {
     struct chunk *chunks;
     u16 *blocks;
 
+#if 0
     struct mesh mesh;
+#endif
     u32 *unloaded_chunks;
     u32 unloaded_chunk_count;
     u32 unloaded_chunk_start;
@@ -76,10 +78,12 @@ struct chunk {
 };
 
 struct memory_arena;
+struct render_command_buffer;
 
 i32 world_init(struct world *world, struct memory_arena *arena);
 u32 world_at(struct world *world, f32 x, f32 y, f32 z);
-void world_update(struct world *world, v3 player_position);
+void world_update(struct world *world, v3 player_position,
+	struct render_command_buffer *cmd_buffer);
 void world_render(const struct world *world);
 void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
