@@ -91,7 +91,7 @@ player_init(struct player *player, struct camera *camera)
 	player->speed = player_speed;
 
 	struct inventory_item *hotbar = player->inventory.items;
-	(*hotbar++).type = ITEM_STONE_BLOCK;
+	(*hotbar++).type = ITEM_NONE;
 	(*hotbar++).type = ITEM_DIRT_BLOCK;
 	(*hotbar++).type = ITEM_GRASS_BLOCK;
 	(*hotbar++).type = ITEM_SAND_BLOCK;
@@ -390,19 +390,32 @@ window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 
 static void
 window_render(struct game_window *window, u32 window_count,
-	struct render_command_buffer *render_commands)
+	struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		m4x4 transform = window_transform(window);
-		render_textured_quad(render_commands, transform, window->texture);
+		v3 window_pos = window->position;
+		v3 window_x = window->x_axis;
+		v3 window_y = window->y_axis;
+
+		v3 pos0 = v3_add(v3_add(window_pos, window_x), window_y);
+		v3 pos1 = v3_sub(v3_add(window_pos, window_x), window_y);
+		v3 pos2 = v3_sub(v3_sub(window_pos, window_x), window_y);
+		v3 pos3 = v3_add(v3_sub(window_pos, window_x), window_y);
+
+		v2 uv0 = V2(1, 0);
+		v2 uv1 = V2(1, 1);
+		v2 uv2 = V2(0, 1);
+		v2 uv3 = V2(0, 0);
+
+		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
+			uv0, uv1, uv2, uv3, window->texture);
 		window++;
 	}
 }
 
 static u32
 window_ray_intersection_point(struct game_window *window,
-	v3 ray_start, v3 ray_direction,
-	v2 *point_on_window)
+	v3 ray_start, v3 ray_direction, v2 *point_on_window)
 {
 	u32 hit = 0;
 	v3 normal = window->z_axis;
@@ -481,6 +494,13 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	struct player *player = &game->player;
 	u32 inventory_is_active = player->inventory.is_active;
 
+	for (u32 i = 0; i < window_count; i++) {
+		if (!windows[i].is_initialized) {
+			inventory_add_item(&player->inventory, ITEM_WINDOW, i);
+			windows[i].is_initialized = 1;
+		}
+	}
+
 	if (!active_window && !inventory_is_active) {
 		player_move(game, input);
 		v3 block_pos = {0};
@@ -517,7 +537,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 						camera_front);
 				}
 			} else if ((window = window_find(windows, window_count, camera_pos,
-						camera_front))) {
+					camera_front))) {
 				// TODO: destroy the window
 			} else if (has_selected_block) {
 				world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
@@ -532,9 +552,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				}
 			} else {
 				u32 hotbar_selection = player->hotbar_selection;
-				u32 selected_item = player->inventory.items[hotbar_selection].type;
-				u32 selected_block = item_to_block(selected_item, camera_front);
+				struct inventory_item selected_item =
+					player->inventory.items[hotbar_selection];
 
+				u32 selected_block = item_to_block(selected_item.type, camera_front);
 				v3 new_block_pos = v3_add(block_pos, block_normal);
 				v3 player_size = V3(0.25, 0.99f, 0.25f);
 				v3 player_pos = player->position;
@@ -547,11 +568,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				if (window) {
 					wm->is_active = 1;
 					wm->active_window = window;
-				} else if (selected_block == BLOCK_WINDOW) {
-					hot_window = hot_window ? hot_window + 1 : wm->windows;
-					if (hot_window - windows > window_count) {
-						hot_window = &windows[0];
-					}
+				} else if (selected_item.type == ITEM_WINDOW) {
+					hot_window = &wm->windows[selected_item.count];
 				} else if (!box_contains_point(block_bounds, player_pos)) {
 					world_place_block(world, new_block_pos.x, new_block_pos.y,
 						new_block_pos.z, selected_block);
@@ -588,7 +606,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			// TODO: change this to resizing the window, choose a different
 			// keybind for deselecting the active window.
 			wm->active_window = 0;
-			wm->active_window = 0;
 			wm->is_active = 0;
 		}
 
@@ -598,10 +615,15 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	world_update(&game->world, game->camera.position);
 
-	gl.BindVertexArray(game->window_vertex_array);
 	window_render(windows, window_count, render_commands);
 
 	renderer_end_frame(&game->renderer, render_commands);
+
+	gl.UseProgram(game->renderer.shader.program);
+	gl.UniformMatrix4fv(game->renderer.shader.model, 1, GL_FALSE, m4x4_id(1).e);
+	gl.UniformMatrix4fv(game->renderer.shader.view, 1, GL_FALSE, view.e);
+	gl.UniformMatrix4fv(game->renderer.shader.projection, 1, GL_FALSE, projection.e);
+
 	world_render(&game->world);
 
 	debug_render(view, projection);

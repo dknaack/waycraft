@@ -84,5 +84,7 @@ static void renderer_end_frame(struct renderer *renderer,
 static void render_clear(struct render_command_buffer *comands, v4 color);
 static void render_textured_quad(struct render_command_buffer *commands,
 	m4x4 transform, u32 texture);
+static void render_quad(struct render_command_buffer *cmd_buffer,
+	v3 pos0, v3 pos1, v3 pos2, v3 pos3, v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture);
 
 #endif /* WAYCRAFT_RENDERER_H */

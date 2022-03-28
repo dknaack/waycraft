@@ -13,6 +13,7 @@ struct game_window {
 	v3 y_axis;
 	v3 z_axis;
 	u32 texture;
+	u32 is_initialized;
 };
 
 struct game_window_manager {

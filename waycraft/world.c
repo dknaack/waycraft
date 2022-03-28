@@ -454,6 +454,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world, struct mesh *mesh)
 		}
 	}
 
+	gl.BindVertexArray(chunk->vao);
 	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
 	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
 		sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);

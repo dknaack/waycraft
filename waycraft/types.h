@@ -37,6 +37,7 @@ typedef union {
 typedef union {
     struct { f32 x, y, z, w; };
     struct { f32 r, g, b, a; };
+	struct { v3 xyz; f32 _w; };
     f32 e[4];
 } v4;
 
@@ -94,4 +95,4 @@ typedef union {
 
 #define F32_EPSILON 1e-5f
 
-#endif /* TYPES_H */ 
+#endif /* TYPES_H */

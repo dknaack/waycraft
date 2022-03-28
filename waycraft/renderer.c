@@ -37,27 +37,13 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	renderer->command_buffer.index_buffer =
 		arena_alloc(arena, VERTEX_BUFFER_SIZE, u32);
 
-	static const struct vertex vertices[] = {
-		{ {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
-		{ {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
-		{ {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
-		{ {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
-	};
-
-	static const u32 indices[] = { 0, 1, 3, 1, 2, 3, };
-
 	gl.GenVertexArrays(1, &renderer->vertex_array);
-	gl.BindVertexArray(renderer->vertex_array);
-
 	gl.GenBuffers(1, &renderer->vertex_buffer);
-	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
-	gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-		GL_STATIC_DRAW);
-
 	gl.GenBuffers(1, &renderer->index_buffer);
+
+	gl.BindVertexArray(renderer->vertex_array);
+	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
 	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
-	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-		GL_STATIC_DRAW);
 
 	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
 		(const void *)offsetof(struct vertex, position));
@@ -80,10 +66,11 @@ renderer_begin_frame(struct renderer *renderer)
 {
 	struct render_command_buffer *cmd_buffer = &renderer->command_buffer;
 
-	cmd_buffer->command_count = 0;
+	cmd_buffer->current_quads    = 0;
+	cmd_buffer->command_count    = 0;
 	cmd_buffer->push_buffer_size = 0;
-	cmd_buffer->vertex_count = 0;
-	cmd_buffer->index_count = 0;
+	cmd_buffer->vertex_count     = 0;
+	cmd_buffer->index_count      = 0;
 
 	return cmd_buffer;
 }
@@ -130,31 +117,17 @@ renderer_end_frame(struct renderer *renderer,
 				push_buffer += sizeof(*clear);
 			}
 			break;
-		case RENDER_TEXTURED_QUAD:
-			{
-				struct render_command_textured_quad *command = CONTAINER_OF(
-					base_command, struct render_command_textured_quad, base);
-				m4x4 transform = command->transform;
-				u32 texture = command->texture;
-
-				gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, transform.e);
-				gl.BindVertexArray(renderer->vertex_array);
-				gl.BindTexture(GL_TEXTURE_2D, texture);
-				gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-				push_buffer += sizeof(*command);
-			}
-			break;
 
 		case RENDER_QUADS:
 			{
 				struct render_command_quads *command = CONTAINER_OF(
 					base_command, struct render_command_quads, base);
 
-				gl.BindVertexArray(renderer->vertex_array);
+				u64 index_offset = sizeof(u32) * command->index_offset;
+
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
-					GL_UNSIGNED_INT, (const void *)command->index_offset);
+					GL_UNSIGNED_INT, (void *)index_offset);
 
 				push_buffer += sizeof(*command);
 			}
@@ -193,26 +166,18 @@ render_clear(struct render_command_buffer *cmd_buffer, v4 color)
 }
 
 static void
-render_textured_quad(struct render_command_buffer *cmd_buffer,
-	m4x4 transform, u32 texture)
-{
-	struct render_command_textured_quad *command =
-		push_command(cmd_buffer, RENDER_TEXTURED_QUAD);
-
-	command->transform = transform;
-	command->texture = texture;
-}
-
-static void
 render_quad(struct render_command_buffer *cmd_buffer,
 	v3 pos0, v3 pos1, v3 pos2, v3 pos3,
 	v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture)
 {
 	struct render_command_quads *command = cmd_buffer->current_quads;
+
 	if (!command || command->texture != texture) {
 		command = push_command(cmd_buffer, RENDER_QUADS);
 		command->texture = texture;
 		command->index_offset = cmd_buffer->index_count;
+		command->quad_count = 0;
+		cmd_buffer->current_quads = command;
 	}
 
 	u32 vertex_count = cmd_buffer->vertex_count;
@@ -243,6 +208,24 @@ render_quad(struct render_command_buffer *cmd_buffer,
 	*out_index++ = vertex_count + 3;
 	*out_index++ = vertex_count + 1;
 
+	command->quad_count++;
 	cmd_buffer->index_count += 6;
 	cmd_buffer->vertex_count += 4;
+}
+
+static void
+render_textured_quad(struct render_command_buffer *cmd_buffer,
+	m4x4 transform, u32 texture)
+{
+	v3 pos0 = m4x4_mulv(transform, V4( 1,  1, 0, 1)).xyz;
+	v3 pos1 = m4x4_mulv(transform, V4( 1, -1, 0, 1)).xyz;
+	v3 pos2 = m4x4_mulv(transform, V4(-1, -1, 0, 1)).xyz;
+	v3 pos3 = m4x4_mulv(transform, V4(-1,  1, 0, 1)).xyz;
+
+	v2 uv0 = V2(1, 0);
+	v2 uv1 = V2(1, 1);
+	v2 uv2 = V2(0, 1);
+	v2 uv3 = V2(0, 0);
+
+	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
