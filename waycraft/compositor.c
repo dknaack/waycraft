@@ -630,6 +630,11 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 		surface_index++;
 	}
 
+	if (wm->active_window == 0 && active_surface) {
+		surface_deactivate(active_surface);
+		compositor->active_surface = 0;
+	}
+
 	wm->window_count = window_count;
 }
 
