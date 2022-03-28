@@ -1,8 +1,10 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#define WORLD_SIZE 1
+#define WORLD_WIDTH 1
+#define WORLD_DEPTH 1
 #define WORLD_HEIGHT 4
+#define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
 #define CHUNK_SIZE 16
 
 // NOTE: block with different directions should have the block facing to the
@@ -60,10 +62,6 @@ struct world {
     u32 *unloaded_chunks;
     u32 unloaded_chunk_count;
     u32 unloaded_chunk_start;
-    u32 chunk_count;
-    u32 width;
-    u32 height;
-    u32 depth;
     u32 texture;
     // NOTE: bottom left corner of the world, such that (0, 0, 0) relative to
     // world is the first chunk (0, 0, 0)

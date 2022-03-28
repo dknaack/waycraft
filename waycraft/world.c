@@ -126,9 +126,9 @@ world_get_chunk_position(const struct world *world, const struct chunk *chunk)
 {
 	v3 world_position = world->position;
 	i32 index  = chunk - world->chunks;
-	i32 width  = world->width;
-	i32 height = world->height;
-	i32 depth  = world->depth;
+	i32 width  = WORLD_WIDTH;
+	i32 height = WORLD_HEIGHT;
+	i32 depth  = WORLD_DEPTH;
 
 	v3 result;
 	result.x = world_position.x + CHUNK_SIZE * (index % width);
@@ -148,7 +148,7 @@ world_unload_chunk(struct world *world, struct chunk *chunk)
 
 			u32 chunk_index = chunk - world->chunks;
 			u32 index = world->unloaded_chunk_count++;
-			assert(index < world->chunk_count);
+			assert(index < WORLD_CHUNK_COUNT);
 
 			world->unloaded_chunks[index] = chunk_index;
 		}
@@ -168,13 +168,13 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 	i32 chunk_x = x / CHUNK_SIZE;
 	i32 chunk_y = y / CHUNK_SIZE;
 	i32 chunk_z = z / CHUNK_SIZE;
-	i32 chunk_is_inside_world = (0 <= chunk_x && chunk_x < world->width)
-		&& (0 <= chunk_y && chunk_y < world->height)
-		&& (0 <= chunk_z && chunk_z < world->depth);
+	i32 chunk_is_inside_world = (0 <= chunk_x && chunk_x < WORLD_WIDTH)
+		&& (0 <= chunk_y && chunk_y < WORLD_HEIGHT)
+		&& (0 <= chunk_z && chunk_z < WORLD_DEPTH);
 	if (chunk_is_inside_world) {
-		u32 width  = world->width;
-		u32 height = world->height;
-		u32 depth  = world->depth;
+		u32 width  = WORLD_WIDTH;
+		u32 height = WORLD_HEIGHT;
+		u32 depth  = WORLD_DEPTH;
 
 		u32 chunk_index = (chunk_z * height + chunk_y) * width + chunk_x;
 		u32 chunk_count = width * height * depth;
@@ -472,12 +472,9 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 i32
 world_init(struct world *world, struct memory_arena *arena)
 {
-	u32 world_size = WORLD_SIZE * WORLD_HEIGHT * WORLD_SIZE;
+	u32 world_size = WORLD_WIDTH * WORLD_HEIGHT * WORLD_WIDTH;
 	world->chunks = arena_alloc(arena, world_size, struct chunk);
-	world->width  = WORLD_SIZE;
-	world->height = WORLD_HEIGHT;
-	world->depth  = WORLD_SIZE;
-	f32 offset = -WORLD_SIZE * CHUNK_SIZE / 2.f;
+	f32 offset = -WORLD_WIDTH * CHUNK_SIZE / 2.f;
 	f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
 	world->position = V3(offset, yoffset, offset);
 
@@ -511,16 +508,14 @@ world_init(struct world *world, struct memory_arena *arena)
 
 	free(data);
 
-	u64 chunk_count = world->width * world->height * world->depth;
-	world->chunk_count = chunk_count;
-
 	u64 chunk_size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-	u64 block_size = chunk_count * chunk_size;
+	u64 block_size = WORLD_CHUNK_COUNT * chunk_size;
 	world->blocks = arena_alloc(arena, block_size, u16);
 
-	world->unloaded_chunks = arena_alloc(arena, chunk_count, u32);
+	world->unloaded_chunks = arena_alloc(arena, WORLD_CHUNK_COUNT, u32);
 	world->unloaded_chunk_count = 0;
 
+	u32 chunk_count = WORLD_CHUNK_COUNT;
 	while (chunk_count-- > 0) {
 		world_unload_chunk(world, world->chunks + chunk_count);
 	}
@@ -542,7 +537,7 @@ world_update(struct world *world, v3 player_position,
 	u32 *unloaded_chunks = world->unloaded_chunks +
 		world->unloaded_chunk_count;
 
-	for (u32 i = 0; i < world->chunk_count; i++) {
+	for (u32 i = 0; i < WORLD_CHUNK_COUNT; i++) {
 #if 0
 		unloaded_chunks--;
 		u32 chunk_index = *unloaded_chunks;
@@ -589,7 +584,7 @@ world_render(const struct world *world)
 {
 	gl.BindTexture(GL_TEXTURE_2D, world->texture);
 
-	u32 chunk_count = world->chunk_count;
+	u32 chunk_count = WORLD_CHUNK_COUNT;
 	struct chunk *chunk = world->chunks;
 	while (chunk_count-- > 0) {
 		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
@@ -605,7 +600,7 @@ world_render(const struct world *world)
 void
 world_finish(struct world *world)
 {
-	u32 chunk_count = world->chunk_count;
+	u32 chunk_count = WORLD_CHUNK_COUNT;
 	struct chunk *chunk = world->chunks;
 	while (chunk_count-- > 0) {
 		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
