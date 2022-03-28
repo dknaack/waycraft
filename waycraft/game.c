@@ -399,34 +399,6 @@ window_render(struct game_window *window, u32 window_count,
 	}
 }
 
-#if 0
-static enum block_type
-block_from_direction(enum block_type base_block, v3 direction)
-{
-	enum block_type block = base_block;
-	v3 abs_direction = v3_abs(direction);
-
-	u32 is_facing_x_axis = (abs_direction.x > abs_direction.y &&
-		abs_direction.x > abs_direction.z);
-	u32 is_facing_y_axis = (abs_direction.y > abs_direction.x &&
-		abs_direction.y > abs_direction.z);
-
-	u32 is_facing_in_negative_direction = 0;
-	if (is_facing_x_axis) {
-		is_facing_in_negative_direction = direction.x < 0;
-	} else if (is_facing_y_axis) {
-		is_facing_in_negative_direction = direction.y < 0;
-		block += 2;
-	} else {
-		is_facing_in_negative_direction = direction.z < 0;
-		block += 4;
-	}
-
-	block += is_facing_in_negative_direction;
-	return block;
-}
-#endif
-
 static u32
 window_ray_intersection_point(struct game_window *window,
 	v3 ray_start, v3 ray_direction,
@@ -556,8 +528,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				}
 			} else {
 				u32 hotbar_selection = player->hotbar_selection;
-				u32 selected_block = item_to_block(
-					player->inventory.items[hotbar_selection].type);
+				u32 selected_item = player->inventory.items[hotbar_selection].type;
+				u32 selected_block = item_to_block(selected_item, camera_front);
 
 				v3 new_block_pos = v3_add(block_pos, block_normal);
 				v3 player_size = V3(0.25, 0.99f, 0.25f);
