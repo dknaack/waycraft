@@ -6,6 +6,19 @@
 #include <waycraft/memory.h>
 #include <waycraft/inventory.h>
 
+struct renderer {
+	u32 vertex_array;
+	u32 vertex_buffer;
+	u32 index_buffer;
+
+	struct {
+		u32 program;
+		i32 model;
+		i32 view;
+		i32 projection;
+	} shader;
+};
+
 struct game_window {
 	v3 position;
 	v3 x_axis;
@@ -67,13 +80,7 @@ struct game_state {
 	struct world world;
 	struct camera camera;
 	struct memory_arena arena;
-	struct {
-		u32 program;
-		i32 model;
-		i32 view;
-		i32 projection;
-	} shader;
-	u32 program;
+	struct renderer renderer;
 
 	struct player {
 		f32 speed;

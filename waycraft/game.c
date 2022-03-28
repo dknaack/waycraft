@@ -102,16 +102,8 @@ player_init(struct player *player, struct camera *camera)
 }
 
 static void
-game_init(struct backend_memory *memory)
+renderer_init(struct renderer *renderer)
 {
-	struct game_state *game = memory->data;
-	struct memory_arena *arena = &game->arena;
-	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
-
-	debug_init(arena);
-	world_init(&game->world, arena);
-	player_init(&game->player, &game->camera);
-
 	gl.Enable(GL_DEPTH_TEST);
 	gl.Enable(GL_CULL_FACE);
 	gl.Enable(GL_BLEND);
@@ -126,43 +118,54 @@ game_init(struct backend_memory *memory)
 		return;
 	}
 
-	game->shader.model = gl.GetUniformLocation(program, "model");
-	game->shader.view = gl.GetUniformLocation(program, "view");
-	game->shader.projection = gl.GetUniformLocation(program, "projection");
-	game->shader.program = program;
+	renderer->shader.model = gl.GetUniformLocation(program, "model");
+	renderer->shader.view = gl.GetUniformLocation(program, "view");
+	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
+	renderer->shader.program = program;
 
-	{
-		static const struct vertex vertices[] = {
-			{ {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
-			{ {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
-			{ {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
-			{ {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
-		};
+	static const struct vertex vertices[] = {
+		{ {{  1.,  1., 0.0f }}, {{ 1.0, 0.0 }} },
+		{ {{  1., -1., 0.0f }}, {{ 1.0, 1.0 }} },
+		{ {{ -1., -1., 0.0f }}, {{ 0.0, 1.0 }} },
+		{ {{ -1.,  1., 0.0f }}, {{ 0.0, 0.0 }} },
+	};
 
-		static const u32 indices[] = { 0, 1, 3, 1, 2, 3, };
+	static const u32 indices[] = { 0, 1, 3, 1, 2, 3, };
 
-		gl.GenVertexArrays(1, &game->window_vertex_array);
-		gl.BindVertexArray(game->window_vertex_array);
+	gl.GenVertexArrays(1, &renderer->vertex_array);
+	gl.BindVertexArray(renderer->vertex_array);
 
-		gl.GenBuffers(1, &game->window_vertex_buffer);
-		gl.BindBuffer(GL_ARRAY_BUFFER, game->window_vertex_buffer);
-		gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-			GL_STATIC_DRAW);
+	gl.GenBuffers(1, &renderer->vertex_buffer);
+	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
+	gl.BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
+		GL_STATIC_DRAW);
 
-		gl.GenBuffers(1, &game->window_index_buffer);
-		gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, game->window_index_buffer);
-		gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-			GL_STATIC_DRAW);
+	gl.GenBuffers(1, &renderer->index_buffer);
+	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
+	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+		GL_STATIC_DRAW);
 
-		gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-			(const void *)offsetof(struct vertex, position));
-		gl.EnableVertexAttribArray(0);
-		gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-			(const void *)offsetof(struct vertex, texcoord));
-		gl.EnableVertexAttribArray(1);
+	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+		(const void *)offsetof(struct vertex, position));
+	gl.EnableVertexAttribArray(0);
+	gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+		(const void *)offsetof(struct vertex, texcoord));
+	gl.EnableVertexAttribArray(1);
 
-		gl.BindVertexArray(0);
-	}
+	gl.BindVertexArray(0);
+}
+
+static void
+game_init(struct backend_memory *memory)
+{
+	struct game_state *game = memory->data;
+	struct memory_arena *arena = &game->arena;
+	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
+
+	debug_init(arena);
+	world_init(&game->world, arena);
+	player_init(&game->player, &game->camera);
+	renderer_init(&game->renderer);
 }
 
 struct box {
@@ -440,13 +443,20 @@ window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 }
 
 static void
-window_render(struct game_window *window, u32 window_count, u32 model_uniform)
+render_textured_quad(struct renderer *renderer, m4x4 transform, u32 texture)
+{
+	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, transform.e);
+	gl.BindTexture(GL_TEXTURE_2D, texture);
+	gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+static void
+window_render(struct game_window *window, u32 window_count,
+	struct renderer *renderer)
 {
 	while (window_count-- > 0) {
 		m4x4 transform = window_transform(window);
-		gl.UniformMatrix4fv(model_uniform, 1, GL_FALSE, transform.e);
-		gl.BindTexture(GL_TEXTURE_2D, window->texture);
-		gl.DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		render_textured_quad(renderer, transform, window->texture);
 		window++;
 	}
 }
@@ -529,6 +539,19 @@ window_find(struct game_window *window, u32 window_count,
 	return 0;
 }
 
+static void
+renderer_begin_frame(struct renderer *renderer, m4x4 view, m4x4 projection)
+{
+	m4x4 model = m4x4_id(1);
+
+	gl.ClearColor(0.45, 0.65, 0.85, 1.0);
+	gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	gl.UseProgram(renderer->shader.program);
+	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, model.e);
+	gl.UniformMatrix4fv(renderer->shader.projection, 1, GL_FALSE, projection.e);
+	gl.UniformMatrix4fv(renderer->shader.view, 1, GL_FALSE, view.e);
+}
+
 void
 game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *wm)
@@ -544,17 +567,11 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	m4x4 projection = game->camera.projection;
 	m4x4 view = game->camera.view;
-	m4x4 model = m4x4_id(1);
 
 	v3 camera_pos = camera->position;
 	v3 camera_front = camera->front;
 
-	gl.ClearColor(0.45, 0.65, 0.85, 1.0);
-	gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	gl.UseProgram(game->shader.program);
-	gl.UniformMatrix4fv(game->shader.model, 1, GL_FALSE, model.e);
-	gl.UniformMatrix4fv(game->shader.projection, 1, GL_FALSE, projection.e);
-	gl.UniformMatrix4fv(game->shader.view, 1, GL_FALSE, view.e);
+	renderer_begin_frame(&game->renderer, view, projection);
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
@@ -682,9 +699,15 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	world_render(&game->world);
 
 	gl.BindVertexArray(game->window_vertex_array);
-	window_render(windows, window_count, game->shader.model);
+	window_render(windows, window_count, &game->renderer);
 
 	debug_render(view, projection);
+}
+
+static void
+renderer_finish(struct renderer *renderer)
+{
+	gl.DeleteProgram(renderer->shader.program);
 }
 
 void
@@ -694,6 +717,6 @@ game_finish(struct game_state *game)
 	gl.DeleteBuffers(1, &game->window_vertex_buffer);
 	gl.DeleteBuffers(1, &game->window_index_buffer);
 
-	gl.DeleteProgram(game->shader.program);
+	renderer_finish(&game->renderer);
 	world_finish(&game->world);
 }
