@@ -6,6 +6,7 @@
 #include "math.c"
 #include "memory.c"
 #include "noise.c"
+#include "renderer.c"
 #include "timer.c"
 #include "world.c"
 #include "x11_backend.c"
