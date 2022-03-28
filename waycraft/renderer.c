@@ -104,9 +104,10 @@ renderer_end_frame(struct renderer *renderer,
 	gl.UniformMatrix4fv(renderer->shader.projection, 1, GL_FALSE, projection.e);
 	gl.UniformMatrix4fv(renderer->shader.view, 1, GL_FALSE, view.e);
 
+	gl.BindVertexArray(renderer->vertex_array);
 	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
 	gl.BufferData(GL_ARRAY_BUFFER,
-		cmd_buffer->vertex_count * sizeof(*cmd_buffer->index_buffer),
+		cmd_buffer->vertex_count * sizeof(*cmd_buffer->vertex_buffer),
 		cmd_buffer->vertex_buffer, GL_STREAM_DRAW);
 	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
 	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER,
