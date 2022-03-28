@@ -11,7 +11,6 @@
 
 #include <waycraft/backend.h>
 #include <waycraft/compositor.h>
-#include <waycraft/egl.h>
 #include <waycraft/game.h>
 #include <waycraft/gl.h>
 #include <waycraft/xdg-shell-protocol.h>

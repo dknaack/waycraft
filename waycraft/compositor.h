@@ -3,7 +3,12 @@
 
 #include <waycraft/types.h>
 
-struct egl;
+struct egl {
+	EGLDisplay *display;
+	EGLSurface *surface;
+	EGLContext *context;
+};
+
 struct backend_memory;
 struct game_window_manager;
 
