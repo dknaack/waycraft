@@ -1,8 +1,8 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#define WORLD_WIDTH 1
-#define WORLD_DEPTH 1
+#define WORLD_WIDTH 32
+#define WORLD_DEPTH 32
 #define WORLD_HEIGHT 4
 #define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
 #define CHUNK_SIZE 16
@@ -56,7 +56,7 @@ struct world {
     struct chunk *chunks;
     u16 *blocks;
 
-#if 0
+#if 1
     struct mesh mesh;
 #endif
     u32 *unloaded_chunks;
