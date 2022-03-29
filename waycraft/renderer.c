@@ -1,8 +1,8 @@
 #include <waycraft/gl.h>
 #include <waycraft/renderer.h>
 
-#define VERTEX_BUFFER_SIZE KB(8)
-#define INDEX_BUFFER_SIZE KB(12)
+#define VERTEX_BUFFER_SIZE MB(4)
+#define INDEX_BUFFER_SIZE MB(6)
 
 static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
