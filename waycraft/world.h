@@ -3,9 +3,10 @@
 
 #define WORLD_WIDTH 32
 #define WORLD_DEPTH 32
-#define WORLD_HEIGHT 4
+#define WORLD_HEIGHT 8
 #define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
 #define CHUNK_SIZE 16
+#define CHUNK_BLOCK_COUNT (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
 
 // NOTE: block with different directions should have the block facing to the
 // right first, then the block facing left next, and then the block facing up

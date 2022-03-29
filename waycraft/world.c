@@ -466,162 +466,7 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 	}
 }
 
-#if 1
-static void
-chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct mesh *mesh)
-{
-	u16 blocks_empty[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE] = {0};
-	v3 pos[8];
-	v2 uv[4];
-
-	v3 min = world_get_chunk_position(world, chunk);
-	v3 max = v3_add(min, V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
-	u32 texture = world->texture;
-
-	assert(chunk->blocks);
-	if (!chunk->blocks) {
-		return;
-	}
-
-	struct chunk *chunk_first = world->chunks;
-
-	// x-axis
-	struct chunk *chunk_left = chunk - 1;
-	u16 *blocks_left = blocks_empty;
-	if (chunk_left >= chunk_first) {
-		world_generate_chunk(world, chunk_left);
-
-		blocks_left = chunk_left->blocks + CHUNK_SIZE - 1;
-	}
-
-	u16 *blocks = chunk->blocks;
-	for (i32 z = min.z; z < max.z; z++) {
-		for (i32 y = min.y; y < max.y; y++) {
-			u32 prev_block = *blocks_left;
-			blocks_left += CHUNK_SIZE;
-
-			for (i32 x = min.x; x < max.x; x++) {
-				pos[0] = V3(x - 0.5, y + 0.5, z + 0.5);
-				pos[1] = V3(x - 0.5, y + 0.5, z - 0.5);
-				pos[2] = V3(x - 0.5, y - 0.5, z + 0.5);
-				pos[3] = V3(x - 0.5, y - 0.5, z - 0.5);
-
-				u32 curr_block = *blocks++;
-
-				u32 is_curr_block_empty = block_is_empty(curr_block);
-				u32 is_prev_block_empty = block_is_empty(prev_block);
-
-				if (is_prev_block_empty && !is_curr_block_empty) {
-					block_texcoords_left(curr_block, uv);
-					mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				} else if (!is_prev_block_empty && is_curr_block_empty) {
-					block_texcoords_right(prev_block, uv);
-					mesh_push_quad(mesh, pos[1], pos[0], pos[3], pos[2],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				}
-
-				prev_block = curr_block;
-			}
-		}
-	}
-
-	// y-axis
-	struct chunk *chunk_below = chunk - WORLD_WIDTH;
-	u16 *blocks_below = blocks_empty;
-	if (chunk_below >= chunk_first) {
-		world_generate_chunk(world, chunk_below);
-
-		blocks_below = chunk_below->blocks + CHUNK_SIZE * (CHUNK_SIZE - 1);
-	}
-
-	blocks = chunk->blocks;
-	for (i32 z = min.z; z < max.z; z++) {
-		u16 *prev_blocks = blocks_below;
-		for (i32 y = min.y; y < max.y; y++) {
-			for (i32 x = min.x; x < max.x; x++) {
-				pos[0] = V3(x + 0.5, y + 0.5, z + 0.5);
-				pos[1] = V3(x - 0.5, y + 0.5, z + 0.5);
-				pos[2] = V3(x + 0.5, y - 0.5, z + 0.5);
-				pos[3] = V3(x - 0.5, y - 0.5, z + 0.5);
-
-				pos[4] = V3(x + 0.5, y + 0.5, z - 0.5);
-				pos[5] = V3(x - 0.5, y + 0.5, z - 0.5);
-				pos[6] = V3(x + 0.5, y - 0.5, z - 0.5);
-				pos[7] = V3(x - 0.5, y - 0.5, z - 0.5);
-
-				u32 prev_block = *prev_blocks++;
-				u32 curr_block = *blocks++;
-
-				if (block_is_empty(prev_block) && !block_is_empty(curr_block)) {
-					block_texcoords_bottom(curr_block, uv);
-					mesh_push_quad(mesh, pos[7], pos[6], pos[3], pos[2],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				} else if (!block_is_empty(prev_block) && block_is_empty(curr_block)) {
-					block_texcoords_top(prev_block, uv);
-					mesh_push_quad(mesh, pos[6], pos[7], pos[2], pos[3],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				}
-			}
-
-			prev_blocks = blocks - CHUNK_SIZE;
-		}
-
-		blocks_below += CHUNK_SIZE * CHUNK_SIZE;
-	}
-
-	// z-axis
-	struct chunk *chunk_behind = chunk - WORLD_WIDTH * WORLD_HEIGHT;
-	u16 *blocks_behind = blocks_empty;
-	if (chunk_behind >= chunk_first) {
-		world_generate_chunk(world, chunk_behind);
-
-		u32 offset = CHUNK_SIZE * CHUNK_SIZE * (CHUNK_SIZE - 1);
-		blocks_behind = chunk_behind->blocks + offset;
-		assert(chunk_behind->blocks);
-	}
-
-	blocks = chunk->blocks;
-	for (i32 z = min.z; z < max.z; z++) {
-		for (i32 y = min.y; y < max.y; y++) {
-			for (i32 x = min.x; x < max.x; x++) {
-				pos[0] = V3(x - 0.5, y + 0.5, z - 0.5);
-				pos[1] = V3(x + 0.5, y + 0.5, z - 0.5);
-				pos[2] = V3(x - 0.5, y - 0.5, z - 0.5);
-				pos[3] = V3(x + 0.5, y - 0.5, z - 0.5);
-
-				u32 prev_block = *blocks_behind++;
-				u32 curr_block = *blocks++;
-				if (block_is_empty(prev_block) && !block_is_empty(curr_block)) {
-					block_texcoords_front(curr_block, uv);
-					mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				} else if (!block_is_empty(prev_block) && block_is_empty(curr_block)) {
-					block_texcoords_back(prev_block, uv);
-					mesh_push_quad(mesh, pos[1], pos[0], pos[3], pos[2],
-						uv[0], uv[1], uv[2], uv[3], texture);
-				}
-			}
-		}
-
-		blocks_behind = blocks - CHUNK_SIZE * CHUNK_SIZE;
-	}
-
-#if 1
-	gl.BindVertexArray(chunk->vao);
-	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
-	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
-		sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
-	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
-	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
-		sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
-
-	chunk->index_count = mesh->index_count;
-#endif
-}
-
-#else
+#if 0
 static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world,
 	struct mesh *mesh)
@@ -653,6 +498,182 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 
 	chunk->index_count = mesh->index_count;
 #endif
+}
+#else
+static inline u32
+block_index(u32 x, u32 y, u32 z)
+{
+	return (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+}
+
+static void
+chunk_generate_mesh(struct chunk *chunk, struct world *world,
+	struct mesh *mesh)
+{
+	u16 blocks_empty[CHUNK_BLOCK_COUNT] = {0};
+
+
+	struct chunk *chunk_first = world->chunks;
+	struct chunk *chunk_last = world->chunks + WORLD_CHUNK_COUNT;
+
+	struct chunk *chunk_right  = chunk + 1;
+	struct chunk *chunk_left   = chunk - 1;
+	struct chunk *chunk_top    = chunk + WORLD_WIDTH;
+	struct chunk *chunk_bottom = chunk - WORLD_WIDTH;
+	struct chunk *chunk_front  = chunk + WORLD_WIDTH * WORLD_HEIGHT;
+	struct chunk *chunk_back   = chunk - WORLD_WIDTH * WORLD_HEIGHT;
+
+	u16 *blocks_right  = blocks_empty;
+	u16 *blocks_left   = blocks_empty;
+	u16 *blocks_top    = blocks_empty;
+	u16 *blocks_bottom = blocks_empty;
+	u16 *blocks_front  = blocks_empty;
+	u16 *blocks_back   = blocks_empty;
+
+	if (chunk_right < chunk_last) {
+		world_generate_chunk(world, chunk_right);
+		blocks_right = chunk_right->blocks;
+	}
+
+	if (chunk_left >= chunk_first) {
+		world_generate_chunk(world, chunk_left);
+		blocks_left = chunk_left->blocks;
+	}
+
+	if (chunk_top < chunk_last) {
+		world_generate_chunk(world, chunk_top);
+		blocks_top = chunk_top->blocks;
+	}
+
+	if (chunk_bottom >= chunk_first) {
+		world_generate_chunk(world, chunk_bottom);
+		blocks_bottom = chunk_bottom->blocks;
+	}
+
+	if (chunk_front < chunk_last) {
+		world_generate_chunk(world, chunk_front);
+		blocks_front = chunk_front->blocks;
+	}
+
+	if (chunk_back >= chunk_first) {
+		world_generate_chunk(world, chunk_back);
+		blocks_back = chunk_back->blocks;
+	}
+
+	u32 texture = world->texture;
+	u16 *blocks = chunk->blocks;
+	assert(blocks);
+
+	v3 chunk_pos = world_get_chunk_position(world, chunk);
+
+	for (u32 i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
+		u32 block = blocks[i];
+		if (block == BLOCK_AIR) {
+			continue;
+		}
+
+		i32 x = i % CHUNK_SIZE;
+		i32 y = i / CHUNK_SIZE % CHUNK_SIZE;
+		i32 z = i / CHUNK_SIZE / CHUNK_SIZE % CHUNK_SIZE;
+
+		v3 pos[8];
+		v2 uv[4];
+
+		pos[0] = v3_add(chunk_pos, V3(x + 0.5, y + 0.5, z + 0.5));
+		pos[1] = v3_add(chunk_pos, V3(x - 0.5, y + 0.5, z + 0.5));
+		pos[2] = v3_add(chunk_pos, V3(x + 0.5, y - 0.5, z + 0.5));
+		pos[3] = v3_add(chunk_pos, V3(x - 0.5, y - 0.5, z + 0.5));
+
+		pos[4] = v3_add(chunk_pos, V3(x + 0.5, y + 0.5, z - 0.5));
+		pos[5] = v3_add(chunk_pos, V3(x - 0.5, y + 0.5, z - 0.5));
+		pos[6] = v3_add(chunk_pos, V3(x + 0.5, y - 0.5, z - 0.5));
+		pos[7] = v3_add(chunk_pos, V3(x - 0.5, y - 0.5, z - 0.5));
+
+		u32 (*is_empty)(enum block_type block) = block_is_empty;
+
+		u16 block_right = x + 1 >= CHUNK_SIZE ?
+			blocks_right[block_index(x + 1 - CHUNK_SIZE, y, z)] :
+			blocks[block_index(x + 1, y, z)];
+
+		u16 block_left = x - 1 < 0 ?
+			blocks_left[block_index(x - 1 + CHUNK_SIZE, y, z)] :
+			blocks[block_index(x - 1, y, z)];
+
+		u16 block_top = y + 1 >= CHUNK_SIZE ?
+			blocks_top[block_index(x, y + 1 - CHUNK_SIZE, z)] :
+			blocks[block_index(x, y + 1, z)];
+
+		u16 block_bottom = y - 1 < 0 ?
+			blocks_bottom[block_index(x, y - 1 + CHUNK_SIZE, z)] :
+			blocks[block_index(x, y - 1, z)];
+
+		u16 block_front = z + 1 >= CHUNK_SIZE ?
+			blocks_front[block_index(x, y, z + 1 - CHUNK_SIZE)] :
+			blocks[block_index(x, y, z + 1)];
+
+		u16 block_back = z - 1 < 0 ?
+			blocks_back[block_index(x, y, z - 1 + CHUNK_SIZE)] :
+			blocks[block_index(x, y, z - 1)];
+
+		if (block == BLOCK_WATER) {
+			is_empty = block_is_not_water;
+
+			if (block_top == BLOCK_AIR) {
+				f32 offset = 0.1f;
+
+				pos[0].y -= offset;
+				pos[1].y -= offset;
+				pos[4].y -= offset;
+				pos[5].y -= offset;
+			}
+		}
+
+		if (is_empty(block_right)) {
+			block_texcoords_right(block, uv);
+			mesh_push_quad(mesh, pos[4], pos[0], pos[6], pos[2],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+
+		if (is_empty(block_left)) {
+			block_texcoords_left(block, uv);
+			mesh_push_quad(mesh, pos[1], pos[5], pos[3], pos[7],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+
+		if (is_empty(block_top)) {
+			block_texcoords_top(block, uv);
+			mesh_push_quad(mesh, pos[4], pos[5], pos[0], pos[1],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+
+		if (is_empty(block_bottom)) {
+			block_texcoords_bottom(block, uv);
+			mesh_push_quad(mesh, pos[7], pos[6], pos[3], pos[2],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+
+		if (is_empty(block_front)) {
+			block_texcoords_front(block, uv);
+			mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+
+		if (is_empty(block_back)) {
+			block_texcoords_back(block, uv);
+			mesh_push_quad(mesh, pos[5], pos[4], pos[7], pos[6],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+	}
+
+	gl.BindVertexArray(chunk->vao);
+	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
+	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
+		sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
+	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
+	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
+		sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
+
+	chunk->index_count = mesh->index_count;
 }
 #endif
 
