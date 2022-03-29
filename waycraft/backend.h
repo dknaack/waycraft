@@ -5,9 +5,9 @@
 
 struct backend_memory {
     void *data;
-    u64 size;
+    usize size;
 
     u32 is_initialized;
 };
 
-#endif /* BACKEND_H */ 
+#endif /* BACKEND_H */

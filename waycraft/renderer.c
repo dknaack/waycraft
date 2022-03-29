@@ -123,7 +123,7 @@ renderer_end_frame(struct renderer *renderer,
 				struct render_command_quads *command = CONTAINER_OF(
 					base_command, struct render_command_quads, base);
 
-				u64 index_offset = sizeof(u32) * command->index_offset;
+				usize index_offset = sizeof(u32) * command->index_offset;
 
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,

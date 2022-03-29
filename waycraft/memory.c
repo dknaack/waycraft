@@ -9,9 +9,9 @@ arena_init(struct memory_arena *arena, void *data, u64 size)
 }
 
 void *
-arena_alloc_(struct memory_arena *arena, u64 size)
+arena_alloc_(struct memory_arena *arena, usize size)
 {
-    u64 used = arena->used;
+    usize used = arena->used;
     assert(used + size < arena->size);
 
     void *ptr = arena->data + used;
