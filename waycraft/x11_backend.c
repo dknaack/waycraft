@@ -479,7 +479,7 @@ x11_main(void)
 
 	gl_init(&gl, (gl_get_proc_address_t *)eglGetProcAddress);
 
-	game_memory.size = MB(256);
+	game_memory.size = MB(512);
 	game_memory.data = calloc(game_memory.size, 1);
 
 	compositor_memory.size = MB(64);
