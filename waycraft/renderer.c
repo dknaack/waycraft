@@ -153,6 +153,8 @@ push_command(struct render_command_buffer *cmd_buffer, u32 type)
 	command->type = type;
 	cmd_buffer->push_buffer_size += command_size;
 	cmd_buffer->command_count++;
+
+	assert(cmd_buffer->push_buffer_size < sizeof(cmd_buffer->push_buffer));
 	return command;
 }
 
@@ -211,6 +213,9 @@ render_quad(struct render_command_buffer *cmd_buffer,
 	command->quad_count++;
 	cmd_buffer->index_count += 6;
 	cmd_buffer->vertex_count += 4;
+
+	assert(cmd_buffer->index_count < INDEX_BUFFER_SIZE);
+	assert(cmd_buffer->vertex_count < VERTEX_BUFFER_SIZE);
 }
 
 static void
