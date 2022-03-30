@@ -1,6 +1,8 @@
 #ifndef WORLD_H
 #define WORLD_H
 
+#include <waycraft/renderer.h>
+
 #define WORLD_WIDTH 32
 #define WORLD_DEPTH 32
 #define WORLD_HEIGHT 8
@@ -42,14 +44,6 @@ enum chunk_state {
     CHUNK_MODIFIED    = 0x2,
 };
 
-struct mesh {
-    struct vertex *vertices;
-    u32 *indices;
-
-    u32 vertex_count;
-    u32 index_count;
-};
-
 /*
  * NOTE: world and chunks should be initialized to zero
  */
@@ -57,9 +51,7 @@ struct world {
     struct chunk *chunks;
     u16 *blocks;
 
-#if 1
-    struct mesh mesh;
-#endif
+    struct mesh_data mesh;
     u32 *unloaded_chunks;
     u32 unloaded_chunk_count;
     u32 unloaded_chunk_start;
@@ -71,8 +63,7 @@ struct world {
 
 struct chunk {
     u16 *blocks;
-    u32 vao, vbo, ebo;
-    u32 index_count;
+	u32 mesh;
     u8 flags;
 };
 
@@ -83,7 +74,8 @@ i32 world_init(struct world *world, struct memory_arena *arena);
 u32 world_at(struct world *world, f32 x, f32 y, f32 z);
 void world_update(struct world *world, v3 player_position,
 	struct render_command_buffer *cmd_buffer);
-void world_render(const struct world *world);
+void world_render(const struct world *world,
+	struct render_command_buffer *cmd_buffer);
 void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
 void world_place_block(struct world *world, f32 x, f32 y, f32 z,

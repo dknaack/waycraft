@@ -8,8 +8,10 @@
 #include "debug.h"
 #include "timer.h"
 
+// TODO: fix bug for top faces
+
 static void
-mesh_push_quad(struct mesh *mesh,
+mesh_push_quad(struct mesh_data *mesh,
 	v3 pos0, v3 pos1, v3 pos2, v3 pos3,
 	v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture)
 {
@@ -397,7 +399,7 @@ block_texcoords_back(enum block_type block, v2 *uv)
 
 static void
 block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
-	struct world *world, struct mesh *mesh)
+	struct world *world, struct mesh_data *mesh)
 {
 	v3 pos[8];
 	v2 uv[4];
@@ -469,7 +471,7 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 #if 0
 static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct mesh *mesh)
+	struct mesh_data *mesh)
 {
 	v3 min = world_get_chunk_position(world, chunk);
 	v3 max = v3_add(min, V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
@@ -508,10 +510,9 @@ block_index(u32 x, u32 y, u32 z)
 
 static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct mesh *mesh)
+	struct mesh_data *mesh, struct render_command_buffer *cmd_buffer)
 {
 	u16 blocks_empty[CHUNK_BLOCK_COUNT] = {0};
-
 
 	struct chunk *chunk_first = world->chunks;
 	struct chunk *chunk_last = world->chunks + WORLD_CHUNK_COUNT;
@@ -665,15 +666,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 		}
 	}
 
-	gl.BindVertexArray(chunk->vao);
-	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
-	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
-		sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
-	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
-	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
-		sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
-
-	chunk->index_count = mesh->index_count;
+	chunk->mesh = mesh_create(cmd_buffer, mesh);
 }
 #endif
 
@@ -682,19 +675,19 @@ world_init(struct world *world, struct memory_arena *arena)
 {
 	u32 world_size = WORLD_WIDTH * WORLD_HEIGHT * WORLD_WIDTH;
 	world->chunks = arena_alloc(arena, world_size, struct chunk);
-	f32 offset = -WORLD_WIDTH * CHUNK_SIZE / 2.f;
-	f32 yoffset = -WORLD_HEIGHT * CHUNK_SIZE / 2.f;
-	world->position = V3(offset, yoffset, offset);
 
-#if 1
-	struct mesh *mesh = &world->mesh;
+	f32 xoffset = -0.5f * WORLD_WIDTH  * CHUNK_SIZE;
+	f32 yoffset = -0.5f * WORLD_HEIGHT * CHUNK_SIZE;
+	f32 zoffset = -0.5f * WORLD_DEPTH  * CHUNK_SIZE;
+	world->position = V3(xoffset, yoffset, zoffset);
+
+	struct mesh_data *mesh = &world->mesh;
 	u32 size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 	mesh->vertices = arena_alloc(arena, size * 64, struct vertex);
 	mesh->indices = arena_alloc(arena, size * 36, u32);
 	if (!mesh->vertices || !mesh->indices) {
 		return -1;
 	}
-#endif
 
 	i32 width, height, comp;
 	u8 *data;
@@ -736,8 +729,7 @@ void
 world_update(struct world *world, v3 player_pos,
 	struct render_command_buffer *cmd_buffer)
 {
-#if 1
-	struct mesh *mesh = &world->mesh;
+	struct mesh_data *mesh = &world->mesh;
 	struct chunk *chunks = world->chunks;
 
 	u32 max_load = 8;
@@ -756,63 +748,31 @@ world_update(struct world *world, v3 player_pos,
 			world_get_chunk(world, chunk_pos.x, chunk_pos.y, chunk_pos.z);
 
 			chunk->flags |= CHUNK_INITIALIZED;
-
-			gl.GenVertexArrays(1, &chunk->vao);
-			gl.GenBuffers(1, &chunk->ebo);
-			gl.GenBuffers(1, &chunk->vbo);
 		}
 
 		mesh->index_count = 0;
 		mesh->vertex_count = 0;
 
-		u32 vao = chunk->vao;
-		gl.BindVertexArray(vao);
-
-		chunk_generate_mesh(chunk, world, mesh);
-
-		gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-			(const void *)offsetof(struct vertex, position));
-		gl.EnableVertexAttribArray(0);
-		gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-			(const void *)offsetof(struct vertex, texcoord));
-		gl.EnableVertexAttribArray(1);
-
-		chunk->index_count = mesh->index_count;
+		chunk_generate_mesh(chunk, world, mesh, cmd_buffer);
 		chunk->flags &= ~CHUNK_MODIFIED;
 	}
 
 	world->unloaded_chunk_count -= batch_count;
-#else
-	struct chunk *chunk = world->chunks;
-
-	for (u32 i = 0; i < WORLD_CHUNK_COUNT; i++) {
-		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
-		if (!is_initialized) {
-			v3 chunk_pos = world_get_chunk_position(world, chunk);
-			world_get_chunk(world, chunk_pos.x, chunk_pos.y, chunk_pos.z);
-
-			chunk->flags |= CHUNK_INITIALIZED;
-		}
-
-		chunk_generate_mesh(chunk, world, cmd_buffer);
-		chunk++;
-	}
-#endif
 }
 
 void
-world_render(const struct world *world)
+world_render(const struct world *world, struct render_command_buffer *cmd_buffer)
 {
 #if 1
-	gl.BindTexture(GL_TEXTURE_2D, world->texture);
+	m4x4 transform = m4x4_id(1);
+	u32 texture = world->texture;
 
 	u32 chunk_count = WORLD_CHUNK_COUNT;
 	struct chunk *chunk = world->chunks;
 	while (chunk_count-- > 0) {
 		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
 		if (is_initialized) {
-			gl.BindVertexArray(chunk->vao);
-			gl.DrawElements(GL_TRIANGLES, chunk->index_count, GL_UNSIGNED_INT, 0);
+			render_mesh(cmd_buffer, chunk->mesh, transform, texture);
 		}
 
 		chunk++;
@@ -823,20 +783,6 @@ world_render(const struct world *world)
 void
 world_finish(struct world *world)
 {
-#if 1
-	u32 chunk_count = WORLD_CHUNK_COUNT;
-	struct chunk *chunk = world->chunks;
-	while (chunk_count-- > 0) {
-		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
-		if (is_initialized) {
-			gl.DeleteVertexArrays(1, &chunk->vao);
-			gl.DeleteBuffers(1, &chunk->vbo);
-			gl.DeleteBuffers(1, &chunk->ebo);
-			chunk++;
-		}
-	}
-#endif
-
 	gl.DeleteTextures(1, &world->texture);
 }
 
