@@ -1,9 +1,38 @@
+#include <waycraft/stb_image.h>
 #include <waycraft/inventory.h>
+
+static i32
+texture_init(struct texture *texture, const char *path)
+{
+	i32 width, height, comp;
+	u8 *data = 0;
+
+	if (!(data = stbi_load(path, &width, &height, &comp, 3))) {
+		fprintf(stderr, "Failed to load texture\n");
+		return -1;
+	}
+
+	u32 texture_handle;
+	gl.GenTextures(1, &texture_handle);
+	gl.BindTexture(GL_TEXTURE_2D, texture_handle);
+	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	gl.GenerateMipmap(GL_TEXTURE_2D);
+
+	texture->handle = texture_handle;
+	texture->width  = width;
+	texture->height = height;
+
+	free(data);
+	return 0;
+}
 
 void
 inventory_init(struct inventory *inventory)
 {
-	// TODO: create a mesh for the inventory
+	texture_init(&inventory->inventory_texture, "res/inventory.png");
+	texture_init(&inventory->hotbar_texture, "res/hotbar.png");
 }
 
 static void
@@ -13,16 +42,34 @@ item_render(struct inventory_item *item, u32 y, u32 x)
 }
 
 void
-inventory_render(struct inventory *inventory)
+inventory_render(struct inventory *inventory, f32 width, f32 height,
+	struct render_command_buffer *cmd_buffer)
 {
-	// TODO: draw a grid for the items
+	if (inventory->is_active) {
+		m4x4 transform = m4x4_id(0.75);
+		u32 texture = inventory->inventory_texture.handle;
+		render_textured_quad(cmd_buffer, transform, texture);
 
-	struct inventory_item *item = inventory->items;
-	u32 y = LENGTH(inventory->items) / 9;
-	while (y-- > 0) {
-		for (u32 x = 0; x < 9; x++) {
-			item_render(item++, x, y);
+		struct inventory_item *item = inventory->items;
+		u32 y = LENGTH(inventory->items) / 9;
+		while (y-- > 0) {
+			for (u32 x = 0; x < 9; x++) {
+				item_render(item++, x, y);
+			}
 		}
+	} else {
+		f32 hotbar_width = inventory->hotbar_texture.width;
+		f32 hotbar_height = inventory->hotbar_texture.height;
+		f32 hotbar_aspect_ratio = hotbar_width / hotbar_height;
+		f32 screen_aspect_ratio = width / height;
+		f32 scale = 0.6;
+		f32 h = screen_aspect_ratio / hotbar_aspect_ratio;
+
+		m4x4 transform = m4x4_mul(m4x4_translate(0, -1 + h * scale, 0),
+			m4x4_scale(scale, h * scale, scale));
+
+		u32 texture = inventory->hotbar_texture.handle;
+		render_textured_quad(cmd_buffer, transform, texture);
 	}
 }
 
