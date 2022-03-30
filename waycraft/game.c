@@ -10,33 +10,6 @@
 #include <waycraft/timer.h>
 #include <waycraft/backend.h>
 
-static const u8 *vert_shader_source = (u8 *)
-	"#version 330 core\n"
-	"layout (location = 0) in vec3 pos;"
-	"layout (location = 1) in vec2 in_coords;"
-	"out vec2 coords;"
-	"out vec3 frag_pos;"
-	"uniform mat4 model;"
-	"uniform mat4 view;"
-	"uniform mat4 projection;"
-	"void main() {"
-	"    gl_Position = projection * view * model * vec4(pos, 1.);"
-	"    frag_pos = pos;"
-	"    coords = in_coords;"
-	"}";
-
-static const u8 *frag_shader_source = (u8 *)
-	"#version 330 core\n"
-	"in vec2 coords;"
-	"in vec3 frag_pos;"
-	"out vec4 frag_color;"
-	"uniform sampler2D tex;"
-	"uniform vec3 camera_pos;"
-	"void main() {"
-	"	frag_color = texture(tex, coords);"
-	"	frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, clamp(16-0.1*distance(camera_pos, frag_pos), 0, 1));"
-	"}";
-
 static void
 camera_init(struct camera *camera, v3 position, f32 fov)
 {
