@@ -468,40 +468,6 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 	}
 }
 
-#if 0
-static void
-chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct mesh_data *mesh)
-{
-	v3 min = world_get_chunk_position(world, chunk);
-	v3 max = v3_add(min, V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
-
-	for (i32 z = min.z; z < max.z; z++) {
-		for (i32 y = min.y; y < max.y; y++) {
-			for (i32 x = min.x; x < max.x; x++) {
-				u32 block = world_at(world, x, y, z);
-				if (block == BLOCK_AIR) {
-					continue;
-				}
-
-				block_generate_mesh(block, x, y, z, world, mesh);
-			}
-		}
-	}
-
-#if 1
-	gl.BindVertexArray(chunk->vao);
-	gl.BindBuffer(GL_ARRAY_BUFFER, chunk->vbo);
-	gl.BufferData(GL_ARRAY_BUFFER, mesh->vertex_count *
-		sizeof(*mesh->vertices), mesh->vertices, GL_STATIC_DRAW);
-	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, chunk->ebo);
-	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->index_count *
-		sizeof(*mesh->indices), mesh->indices, GL_STATIC_DRAW);
-
-	chunk->index_count = mesh->index_count;
-#endif
-}
-#else
 static inline u32
 block_index(u32 x, u32 y, u32 z)
 {
@@ -668,7 +634,6 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 
 	chunk->mesh = mesh_create(cmd_buffer, mesh);
 }
-#endif
 
 i32
 world_init(struct world *world, struct memory_arena *arena)
