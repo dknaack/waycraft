@@ -356,15 +356,15 @@ player_select_block(struct game_state *game, struct game_input *input,
 	}
 
 	if (input->mouse.buttons[5]) {
-		player->hotbar_selection++;
-		player->hotbar_selection %= 9;
+		player->inventory.active_item++;
+		player->inventory.active_item %= 9;
 	}
 
-	if (input->mouse.buttons[4] && player->hotbar_selection > 0) {
-		if (player->hotbar_selection == 0) {
-			player->hotbar_selection = 8;
+	if (input->mouse.buttons[4]) {
+		if (player->inventory.active_item == 0) {
+			player->inventory.active_item = 8;
 		} else {
-			player->hotbar_selection--;
+			player->inventory.active_item--;
 		}
 	}
 

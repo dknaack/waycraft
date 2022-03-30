@@ -39,9 +39,11 @@ struct inventory_item {
 
 struct inventory {
 	struct inventory_item items[36];
+	u8 active_item;
 	u8 is_active;
 	struct texture inventory_texture;
 	struct texture hotbar_texture;
+	struct texture active_slot_texture;
 };
 
 // NOTE: the direction determines the direction that the block faces after

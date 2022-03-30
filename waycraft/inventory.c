@@ -33,6 +33,7 @@ inventory_init(struct inventory *inventory)
 {
 	texture_init(&inventory->inventory_texture, "res/inventory.png");
 	texture_init(&inventory->hotbar_texture, "res/hotbar.png");
+	texture_init(&inventory->active_slot_texture, "res/active_slot.png");
 }
 
 static void
@@ -42,7 +43,8 @@ item_render(struct inventory_item *item, u32 y, u32 x)
 }
 
 void
-inventory_render(struct inventory *inventory, f32 width, f32 height,
+inventory_render(struct inventory *inventory,
+	f32 screen_width, f32 screen_height,
 	struct render_command_buffer *cmd_buffer)
 {
 	if (inventory->is_active) {
@@ -58,18 +60,39 @@ inventory_render(struct inventory *inventory, f32 width, f32 height,
 			}
 		}
 	} else {
-		f32 hotbar_width = inventory->hotbar_texture.width;
-		f32 hotbar_height = inventory->hotbar_texture.height;
-		f32 hotbar_aspect_ratio = hotbar_width / hotbar_height;
-		f32 screen_aspect_ratio = width / height;
-		f32 scale = 0.6;
-		f32 h = screen_aspect_ratio / hotbar_aspect_ratio;
+		f32 width = inventory->hotbar_texture.width;
+		f32 height = inventory->hotbar_texture.height;
+		f32 hotbar_aspect_ratio = width / height;
+		f32 screen_aspect_ratio = screen_width / screen_height;
 
-		m4x4 transform = m4x4_mul(m4x4_translate(0, -1 + h * scale, 0),
-			m4x4_scale(scale, h * scale, scale));
+		f32 scale = 0.5;
+		f32 hotbar_width = scale;
+		f32 hotbar_height = hotbar_width * screen_aspect_ratio / hotbar_aspect_ratio;
+		f32 hotbar_x = 0;
+		f32 hotbar_y = hotbar_height - 1;
 
-		u32 texture = inventory->hotbar_texture.handle;
-		render_textured_quad(cmd_buffer, transform, texture);
+		f32 slot_width = hotbar_height / screen_aspect_ratio;
+		f32 slot_height = hotbar_height;
+		f32 slot_advance = 2 * slot_width / 20. * 18.;
+		f32 active_slot_x = hotbar_x - hotbar_width + slot_width +
+			slot_advance * (inventory->active_item);
+		f32 active_slot_y = hotbar_y;
+
+		{
+			u32 texture = inventory->active_slot_texture.handle;
+			m4x4 transform = m4x4_mul(m4x4_translate(active_slot_x, active_slot_y, 0),
+				m4x4_scale(slot_width, slot_height, 1));
+
+			render_textured_quad(cmd_buffer, transform, texture);
+		}
+
+		{
+			u32 texture = inventory->hotbar_texture.handle;
+			m4x4 transform = m4x4_mul(m4x4_translate(hotbar_x, hotbar_y, 0),
+				m4x4_scale(hotbar_width, hotbar_height, 1));
+
+			render_textured_quad(cmd_buffer, transform, texture);
+		}
 	}
 }
 
