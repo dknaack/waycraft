@@ -557,7 +557,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 					wm->active_window = window;
 				} else if (selected_item.type == ITEM_WINDOW) {
 					hot_window = &wm->windows[selected_item.count];
-				} else if (!box_contains_point(block_bounds, player_pos)) {
+				} else if (has_selected_block &&
+						!box_contains_point(block_bounds, player_pos)) {
 					world_place_block(world, new_block_pos.x, new_block_pos.y,
 						new_block_pos.z, selected_block);
 				}
