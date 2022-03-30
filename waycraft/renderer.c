@@ -1,13 +1,16 @@
 #include <waycraft/gl.h>
 #include <waycraft/renderer.h>
 
-#define VERTEX_BUFFER_SIZE MB(4)
-#define INDEX_BUFFER_SIZE MB(6)
+#define VERTEX_BUFFER_SIZE MB(1)
+#define INDEX_BUFFER_SIZE MB(2)
+#define MESH_SIZE KB(16)
+#define PUSH_BUFFER_SIZE MB(8)
 
 static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
 	[RENDER_TEXTURED_QUAD] = sizeof(struct render_command_textured_quad),
 	[RENDER_QUADS] = sizeof(struct render_command_quads),
+	[RENDER_MESH] = sizeof(struct render_command_mesh),
 };
 
 static void
@@ -32,10 +35,15 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
 	renderer->shader.program = program;
 
+	renderer->command_buffer.push_buffer =
+		arena_alloc(arena, PUSH_BUFFER_SIZE, u8);
 	renderer->command_buffer.vertex_buffer =
 		arena_alloc(arena, VERTEX_BUFFER_SIZE, struct vertex);
 	renderer->command_buffer.index_buffer =
 		arena_alloc(arena, VERTEX_BUFFER_SIZE, u32);
+	renderer->command_buffer.meshes =
+		arena_alloc(arena, MESH_SIZE, struct mesh);
+	renderer->command_buffer.mesh_count = 0;
 
 	gl.GenVertexArrays(1, &renderer->vertex_array);
 	gl.GenBuffers(1, &renderer->vertex_buffer);
@@ -58,6 +66,16 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 static void
 renderer_finish(struct renderer *renderer)
 {
+	u32 mesh_count = renderer->command_buffer.mesh_count;
+	struct mesh *mesh = renderer->command_buffer.meshes;
+	while (mesh_count-- > 0) {
+		gl.DeleteVertexArrays(1, &mesh->vertex_array);
+		gl.DeleteBuffers(1, &mesh->vertex_buffer);
+		gl.DeleteBuffers(1, &mesh->index_buffer);
+
+		mesh++;
+	}
+
 	gl.DeleteProgram(renderer->shader.program);
 }
 
@@ -125,9 +143,28 @@ renderer_end_frame(struct renderer *renderer,
 
 				usize index_offset = sizeof(u32) * command->index_offset;
 
+				gl.BindVertexArray(renderer->vertex_array);
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
 					GL_UNSIGNED_INT, (void *)index_offset);
+
+				push_buffer += sizeof(*command);
+			}
+			break;
+
+		case RENDER_MESH:
+			{
+				struct render_command_mesh *command = CONTAINER_OF(
+					base_command, struct render_command_mesh, base);
+
+				struct mesh *mesh = &cmd_buffer->meshes[command->mesh];
+
+				gl.BindVertexArray(mesh->vertex_array);
+				gl.BindTexture(GL_TEXTURE_2D, command->texture);
+				gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE,
+					command->transform.e);
+				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
+					GL_UNSIGNED_INT, 0);
 
 				push_buffer += sizeof(*command);
 			}
@@ -154,7 +191,7 @@ push_command(struct render_command_buffer *cmd_buffer, u32 type)
 	cmd_buffer->push_buffer_size += command_size;
 	cmd_buffer->command_count++;
 
-	assert(cmd_buffer->push_buffer_size < sizeof(cmd_buffer->push_buffer));
+	assert(cmd_buffer->push_buffer_size < PUSH_BUFFER_SIZE);
 	return command;
 }
 
@@ -233,4 +270,53 @@ render_textured_quad(struct render_command_buffer *cmd_buffer,
 	v2 uv3 = V2(0, 1);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
+}
+
+static void
+render_mesh(struct render_command_buffer *cmd_buffer, u32 mesh, m4x4 transform,
+	u32 texture)
+{
+	struct render_command_mesh *command = push_command(cmd_buffer, RENDER_MESH);
+
+	command->mesh = mesh;
+	command->texture = texture;
+	command->transform = transform;
+}
+
+static u32
+mesh_create(struct render_command_buffer *cmd_buffer, struct mesh_data *data)
+{
+	u32 vertex_array, vertex_buffer, index_buffer;
+	u32 index_count = data->index_count;
+
+	gl.GenVertexArrays(1, &vertex_array);
+	gl.GenBuffers(1, &vertex_buffer);
+	gl.GenBuffers(1, &index_buffer);
+
+	gl.BindVertexArray(vertex_array);
+	gl.BindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	gl.BufferData(GL_ARRAY_BUFFER, data->vertex_count * sizeof(struct vertex),
+		data->vertices, GL_STATIC_DRAW);
+	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(u32),
+		data->indices, GL_STATIC_DRAW);
+
+	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+		(const void *)offsetof(struct vertex, position));
+	gl.EnableVertexAttribArray(0);
+	gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
+		(const void *)offsetof(struct vertex, texcoord));
+	gl.EnableVertexAttribArray(1);
+
+	gl.BindVertexArray(0);
+
+	u32 mesh_index = cmd_buffer->mesh_count++;
+	struct mesh *mesh = &cmd_buffer->meshes[mesh_index];
+
+	mesh->vertex_array = vertex_array;
+	mesh->vertex_buffer = vertex_buffer;
+	mesh->index_buffer = index_buffer;
+	mesh->index_count = index_count;
+
+	return mesh_index;
 }
