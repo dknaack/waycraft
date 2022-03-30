@@ -141,8 +141,10 @@ static v3
 player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 speed)
 {
 	v3 direction = V3(0, 0, 0);
-	f32 haxis = input->controller.move_right - input->controller.move_left;
-	f32 vaxis = input->controller.move_up - input->controller.move_down;
+	f32 haxis = button_is_down(input->controller.move_right) -
+		button_is_down(input->controller.move_left);
+	f32 vaxis = button_is_down(input->controller.move_up) -
+		button_is_down(input->controller.move_down);
 
 	if (haxis || vaxis) {
 		front = v3_mulf(front, vaxis);
@@ -213,7 +215,7 @@ player_move(struct game_state *game, struct game_input *input)
 	acceleration = v3_sub(acceleration, v3_mulf(velocity, 15.f));
 	acceleration.y = -100.f;
 
-	if (input->controller.jump && player->frames_since_jump < 5) {
+	if (button_is_down(input->controller.jump) && player->frames_since_jump < 5) {
 		acceleration.y = 300.f;
 		player->frames_since_jump++;
 		player->is_jumping = 1;
@@ -565,10 +567,16 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			}
 		}
 
+		if (button_was_pressed(input->controller.toggle_inventory)) {
+			player->inventory.is_active = 1;
+		}
+
 		wm->hot_window = hot_window;
 	} else if (inventory_is_active) {
-		// TODO: render the inventory
-		inventory_render(&player->inventory);
+
+		if (button_was_pressed(input->controller.toggle_inventory)) {
+			player->inventory.is_active = 0;
+		}
 	} else {
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);

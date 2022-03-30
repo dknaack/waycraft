@@ -237,12 +237,11 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 
 	struct xkb_state *xkb_state = window->xkb_state;
 
+	memset(&input->mouse.buttons, 0, sizeof(input->mouse.buttons));
 	input->dt = 0.01;
 	input->width = window->width;
 	input->height = window->height;
 	input->mouse.dx = input->mouse.dy = 0;
-	memset(&input->controller, 0, sizeof(input->controller));
-	memset(&input->mouse.buttons, 0, sizeof(input->mouse.buttons));
 
 	while ((event.generic = xcb_poll_for_event(connection))) {
 		switch (event.generic->response_type & ~0x80) {
@@ -323,11 +322,12 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			xkb_keycode_t keycode;
 			u8 *pressed;
 		} keys_to_check[] = {
-			{ 65, &input->controller.jump       },
-			{ 25, &input->controller.move_up    },
-			{ 38, &input->controller.move_left  },
-			{ 39, &input->controller.move_down  },
-			{ 40, &input->controller.move_right },
+			{ 65, &input->controller.jump             },
+			{ 25, &input->controller.move_up          },
+			{ 26, &input->controller.toggle_inventory },
+			{ 38, &input->controller.move_left        },
+			{ 39, &input->controller.move_down        },
+			{ 40, &input->controller.move_right       },
 		};
 
 		xcb_query_keymap_cookie_t cookie = xcb_query_keymap(connection);
@@ -339,9 +339,9 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			for (u32 i = 0; i < LENGTH(keys_to_check); i++) {
 				u32 keycode = keys_to_check[i].keycode;
 				u8 *pressed = keys_to_check[i].pressed;
-				if (x11_get_key_state(keys, keycode)) {
-					*pressed = 1;
-				}
+				u32 prev_state = *pressed & 1;
+				u32 curr_state = x11_get_key_state(keys, keycode) != 0;
+				*pressed = (prev_state << 1) | curr_state;
 			}
 
 			free(reply);

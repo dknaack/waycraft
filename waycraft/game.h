@@ -58,6 +58,7 @@ struct game_input {
 		u8 move_right;
 		u8 jump;
 		u8 modifiers;
+		u8 toggle_inventory;
 	} controller;
 
 	f32 dt;
@@ -93,6 +94,24 @@ struct game_state {
 
 struct backend_memory;
 struct compositor;
+
+static inline i32
+button_was_pressed(u8 button)
+{
+	return (button & 0x3) == 0x1;
+}
+
+static inline i32
+button_was_released(u8 button)
+{
+	return (button & 0x3) == 0x2;
+}
+
+static inline i32
+button_is_down(u8 button)
+{
+	return button & 0x1;
+}
 
 void game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);
