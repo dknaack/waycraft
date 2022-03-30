@@ -602,10 +602,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	}
 
 	world_update(&game->world, game->camera.position, render_commands);
-
-	window_render(windows, window_count, render_commands);
 	world_render(&game->world, render_commands);
-
+	window_render(windows, window_count, render_commands);
 	renderer_end_frame(&game->renderer, render_commands);
 
 	gl.UseProgram(game->renderer.shader.program);
