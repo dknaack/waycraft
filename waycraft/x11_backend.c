@@ -455,6 +455,15 @@ egl_finish(struct egl *egl)
 	eglTerminate(egl->display);
 }
 
+static f64
+get_time_nsec(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
 int
 x11_main(void)
 {
@@ -493,9 +502,10 @@ x11_main(void)
 		return 1;
 	}
 
-	// TODO: fix timestep
-	struct timespec wait_time = { 0, 1000000 };
+	f64 target_frame_time = 1. / 60.;
 	while (window.is_open) {
+		f64 start_time = get_time_nsec();
+
 		x11_window_poll_events(&window, &input, &compositor_memory);
 		compositor_update(&compositor_memory, &window_manager);
 
@@ -503,7 +513,17 @@ x11_main(void)
 		game_update(&game_memory, &input, &window_manager);
 
 		eglSwapBuffers(egl.display, egl.surface);
-		nanosleep(&wait_time, 0);
+		f64 end_time = get_time_nsec();
+		f64 elapsed_time = end_time - start_time;
+		if (elapsed_time < target_frame_time) {
+			u64 remaining_time = target_frame_time - elapsed_time;
+
+			struct timespec sleep_time;
+			sleep_time.tv_sec = remaining_time;
+			sleep_time.tv_nsec = (remaining_time - sleep_time.tv_sec) * 1e9;
+
+			nanosleep(&sleep_time, 0);
+		}
 	}
 
 	compositor_finish(&compositor_memory);
