@@ -18,7 +18,6 @@ struct mesh_data {
 
 enum render_command_type {
 	RENDER_CLEAR,
-	RENDER_TEXTURED_QUAD,
 	RENDER_QUADS,
 	RENDER_MESH,
 	RENDER_COMMAND_COUNT
@@ -32,13 +31,6 @@ struct render_command_clear {
 	struct render_command base;
 
 	v4 color;
-};
-
-struct render_command_textured_quad {
-	struct render_command base;
-
-	m4x4 transform;
-	u32 texture;
 };
 
 struct render_command_quads {

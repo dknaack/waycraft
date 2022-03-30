@@ -8,7 +8,6 @@
 
 static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
-	[RENDER_TEXTURED_QUAD] = sizeof(struct render_command_textured_quad),
 	[RENDER_QUADS] = sizeof(struct render_command_quads),
 	[RENDER_MESH] = sizeof(struct render_command_mesh),
 };
