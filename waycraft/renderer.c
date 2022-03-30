@@ -13,6 +13,12 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 };
 
 static void
+gl_uniform_m4x4(u32 uniform, m4x4 value)
+{
+	gl.UniformMatrix4fv(uniform, 1, GL_FALSE, value.e);
+}
+
+static void
 renderer_init(struct renderer *renderer, struct memory_arena *arena)
 {
 	gl.Enable(GL_DEPTH_TEST);
@@ -104,9 +110,9 @@ renderer_end_frame(struct renderer *renderer,
 	m4x4 projection = cmd_buffer->transform.projection;
 
 	gl.UseProgram(renderer->shader.program);
-	gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE, model.e);
-	gl.UniformMatrix4fv(renderer->shader.projection, 1, GL_FALSE, projection.e);
-	gl.UniformMatrix4fv(renderer->shader.view, 1, GL_FALSE, view.e);
+	gl_uniform_m4x4(renderer->shader.model, model);
+	gl_uniform_m4x4(renderer->shader.projection, projection);
+	gl_uniform_m4x4(renderer->shader.view, view);
 
 	gl.BindVertexArray(renderer->vertex_array);
 	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
@@ -118,7 +124,7 @@ renderer_end_frame(struct renderer *renderer,
 		cmd_buffer->index_count * sizeof(*cmd_buffer->index_buffer),
 		cmd_buffer->index_buffer, GL_STREAM_DRAW);
 
-	while (command_count-- > 0){
+	while (command_count-- > 0) {
 		struct render_command *base_command = (struct render_command *)push_buffer;
 
 		switch (base_command->type) {
@@ -141,6 +147,9 @@ renderer_end_frame(struct renderer *renderer,
 					base_command, struct render_command_quads, base);
 
 				usize index_offset = sizeof(u32) * command->index_offset;
+
+				gl_uniform_m4x4(renderer->shader.projection, m4x4_id(1));
+				gl_uniform_m4x4(renderer->shader.view, m4x4_id(1));
 
 				gl.BindVertexArray(renderer->vertex_array);
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
