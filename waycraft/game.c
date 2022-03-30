@@ -15,21 +15,26 @@ static const u8 *vert_shader_source = (u8 *)
 	"layout (location = 0) in vec3 pos;"
 	"layout (location = 1) in vec2 in_coords;"
 	"out vec2 coords;"
+	"out vec3 frag_pos;"
 	"uniform mat4 model;"
 	"uniform mat4 view;"
 	"uniform mat4 projection;"
 	"void main() {"
 	"    gl_Position = projection * view * model * vec4(pos, 1.);"
+	"    frag_pos = pos;"
 	"    coords = in_coords;"
 	"}";
 
 static const u8 *frag_shader_source = (u8 *)
 	"#version 330 core\n"
 	"in vec2 coords;"
+	"in vec3 frag_pos;"
 	"out vec4 frag_color;"
 	"uniform sampler2D tex;"
+	"uniform vec3 camera_pos;"
 	"void main() {"
-	"    frag_color = texture(tex, coords);"
+	"	frag_color = texture(tex, coords);"
+	"	frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, clamp(16-0.1*distance(camera_pos, frag_pos), 0, 1));"
 	"}";
 
 static void
@@ -391,11 +396,12 @@ window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 }
 
 static void
-window_render(struct game_window *window, u32 window_count,
-	struct render_command_buffer *cmd_buffer)
+window_render(struct game_window *window, u32 window_count, m4x4 view,
+	m4x4 projection, struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		m4x4 transform = window_transform(window);
+		m4x4 transform = m4x4_mul(m4x4_mul(projection, view),
+			window_transform(window));
 
 		render_textured_quad(cmd_buffer, transform, window->texture);
 		window++;
@@ -540,7 +546,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 					// TODO: resize window
 				}
 			} else {
-				u32 hotbar_selection = player->hotbar_selection;
+				u32 hotbar_selection = player->inventory.active_item;
 				struct inventory_item selected_item =
 					player->inventory.items[hotbar_selection];
 
@@ -612,11 +618,12 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	world_update(&game->world, game->camera.position, render_commands);
 
 	world_render(&game->world, render_commands);
-	window_render(windows, window_count, render_commands);
+	window_render(windows, window_count, view, projection, render_commands);
 	inventory_render(&player->inventory, input->width, input->height, render_commands);
 	renderer_end_frame(&game->renderer, render_commands);
 
 	gl.UseProgram(game->renderer.shader.program);
+	gl.Uniform3f(gl.GetUniformLocation(game->renderer.shader.program, "camera_pos"), camera_pos.x, camera_pos.y, camera_pos.z);
 	gl.UniformMatrix4fv(game->renderer.shader.model, 1, GL_FALSE, m4x4_id(1).e);
 	gl.UniformMatrix4fv(game->renderer.shader.view, 1, GL_FALSE, view.e);
 	gl.UniformMatrix4fv(game->renderer.shader.projection, 1, GL_FALSE, projection.e);
