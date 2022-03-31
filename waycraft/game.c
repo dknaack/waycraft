@@ -373,8 +373,7 @@ window_render(struct game_window *window, u32 window_count, m4x4 view,
 	m4x4 projection, struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		m4x4 transform = m4x4_mul(m4x4_mul(projection, view),
-			window_transform(window));
+		m4x4 transform = window_transform(window);
 
 		render_textured_quad(cmd_buffer, transform, window->texture);
 		window++;
@@ -451,10 +450,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	struct render_command_buffer *render_commands =
 		renderer_begin_frame(&game->renderer);
-	render_commands->transform.camera_pos = camera_pos;
-	render_commands->transform.view = view;
-	render_commands->transform.projection = projection;
 	render_clear(render_commands, V4(0.45, 0.65, 0.85, 1.0));
+	render_set_transform(render_commands, view, projection, camera_pos);
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;

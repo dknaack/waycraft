@@ -102,6 +102,12 @@ inventory_render(struct inventory *inventory,
 	f32 screen_width, f32 screen_height,
 	struct render_command_buffer *cmd_buffer)
 {
+	m4x4 view = m4x4_id(1);
+	m4x4 projection = m4x4_id(1);
+	v3 camera_pos = V3(0, 0, 0);
+
+	render_set_transform(cmd_buffer, view, projection, camera_pos);
+
 	if (inventory->is_active) {
 		m4x4 transform = m4x4_id(0.75);
 		u32 texture = inventory->inventory_texture.handle;
