@@ -7,13 +7,18 @@
 #include <waycraft/inventory.h>
 #include <waycraft/renderer.h>
 
+enum game_window_flags {
+	WINDOW_INITIALIZED = 1 << 0,
+	WINDOW_VISIBLE     = 1 << 1,
+};
+
 struct game_window {
 	v3 position;
 	v3 x_axis;
 	v3 y_axis;
 	v3 z_axis;
 	u32 texture;
-	u32 is_initialized;
+	u32 flags;
 };
 
 struct game_window_manager {

@@ -373,10 +373,12 @@ window_render(struct game_window *window, u32 window_count, m4x4 view,
 	m4x4 projection, struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		m4x4 transform = window_transform(window);
+		if (window->flags & WINDOW_VISIBLE) {
+			m4x4 transform = window_transform(window);
 
-		render_textured_quad(cmd_buffer, transform, window->texture);
-		window++;
+			render_textured_quad(cmd_buffer, transform, window->texture);
+			window++;
+		}
 	}
 }
 
@@ -461,9 +463,9 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	u32 inventory_is_active = player->inventory.is_active;
 
 	for (u32 i = 0; i < window_count; i++) {
-		if (!windows[i].is_initialized) {
+		if (!(windows[i].flags & WINDOW_INITIALIZED)) {
 			inventory_add_item(&player->inventory, ITEM_WINDOW, i);
-			windows[i].is_initialized = 1;
+			windows[i].flags |= WINDOW_INITIALIZED;
 		}
 	}
 
@@ -476,19 +478,24 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			&block_pos, &block_normal, &t);
 
 		struct game_window *hot_window = wm->hot_window;
-		if (hot_window && has_selected_block) {
-			v3 relative_up = V3(0, 1, 0);
-			if (block_normal.y > 0.5) {
-				if (fabsf(camera_front.x) < fabsf(camera_front.z)) {
-					relative_up = V3(0, 0, SIGN(camera_front.z));
-				} else {
-					relative_up = V3(SIGN(camera_front.x), 0, 0);
+		if (hot_window) {
+			if (has_selected_block) {
+				v3 relative_up = V3(0, 1, 0);
+				if (block_normal.y > 0.5) {
+					if (fabsf(camera_front.x) < fabsf(camera_front.z)) {
+						relative_up = V3(0, 0, SIGN(camera_front.z));
+					} else {
+						relative_up = V3(SIGN(camera_front.x), 0, 0);
+					}
 				}
-			}
 
-			v3 offset = v3_mulf(camera_front, t - 0.001f);
-			v3 window_pos = v3_add(camera_pos, offset);
-			window_move(hot_window, window_pos, block_normal, relative_up);
+				v3 offset = v3_mulf(camera_front, t - 0.001f);
+				v3 window_pos = v3_add(camera_pos, offset);
+				hot_window->flags |= WINDOW_VISIBLE;
+				window_move(hot_window, window_pos, block_normal, relative_up);
+			} else {
+				hot_window->flags &= ~WINDOW_VISIBLE;
+			}
 		}
 
 		if (input->mouse.buttons[1]) {
