@@ -44,6 +44,7 @@ struct inventory {
 	struct texture inventory_texture;
 	struct texture hotbar_texture;
 	struct texture active_slot_texture;
+	struct texture block_atlas_texture;
 };
 
 // NOTE: the direction determines the direction that the block faces after

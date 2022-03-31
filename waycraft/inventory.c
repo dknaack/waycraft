@@ -34,77 +34,7 @@ inventory_init(struct inventory *inventory)
 	texture_init(&inventory->inventory_texture, "res/inventory.png");
 	texture_init(&inventory->hotbar_texture, "res/hotbar.png");
 	texture_init(&inventory->active_slot_texture, "res/active_slot.png");
-}
-
-static void
-item_render(struct inventory_item *item, u32 y, u32 x)
-{
-	// TODO: render the item
-}
-
-void
-inventory_render(struct inventory *inventory,
-	f32 screen_width, f32 screen_height,
-	struct render_command_buffer *cmd_buffer)
-{
-	if (inventory->is_active) {
-		m4x4 transform = m4x4_id(0.75);
-		u32 texture = inventory->inventory_texture.handle;
-		render_textured_quad(cmd_buffer, transform, texture);
-
-		struct inventory_item *item = inventory->items;
-		u32 y = LENGTH(inventory->items) / 9;
-		while (y-- > 0) {
-			for (u32 x = 0; x < 9; x++) {
-				item_render(item++, x, y);
-			}
-		}
-	} else {
-		f32 width = inventory->hotbar_texture.width;
-		f32 height = inventory->hotbar_texture.height;
-		f32 hotbar_aspect_ratio = width / height;
-		f32 screen_aspect_ratio = screen_width / screen_height;
-
-		f32 scale = 0.5;
-		f32 hotbar_width = scale;
-		f32 hotbar_height = hotbar_width * screen_aspect_ratio / hotbar_aspect_ratio;
-		f32 hotbar_x = 0;
-		f32 hotbar_y = hotbar_height - 1;
-
-		f32 slot_width = hotbar_height / screen_aspect_ratio;
-		f32 slot_height = hotbar_height;
-		f32 slot_advance = 2 * slot_width / 20. * 18.;
-		f32 active_slot_x = hotbar_x - hotbar_width + slot_width +
-			slot_advance * (inventory->active_item);
-		f32 active_slot_y = hotbar_y;
-
-		{
-			u32 texture = inventory->active_slot_texture.handle;
-			m4x4 transform = m4x4_mul(m4x4_translate(active_slot_x, active_slot_y, 0),
-				m4x4_scale(slot_width, slot_height, 1));
-
-			render_textured_quad(cmd_buffer, transform, texture);
-		}
-
-		{
-			u32 texture = inventory->hotbar_texture.handle;
-			m4x4 transform = m4x4_mul(m4x4_translate(hotbar_x, hotbar_y, 0),
-				m4x4_scale(hotbar_width, hotbar_height, 1));
-
-			render_textured_quad(cmd_buffer, transform, texture);
-		}
-	}
-}
-
-static u32
-item_stack_size(enum item_type item)
-{
-	switch (item) {
-	case ITEM_WINDOW:
-		return 0;
-	default:
-		return 64;
-	}
+	texture_init(&inventory->block_atlas_texture, "res/textures.png");
 }
 
 // NOTE: direction determines the block faces after placement
@@ -140,6 +70,106 @@ item_to_block(enum item_type item, v3 direction)
 		return block;
 	} else {
 		return 0;
+	}
+}
+
+static void
+item_render(struct inventory_item *item, f32 x, f32 y, f32 width, f32 height,
+	u32 texture, struct render_command_buffer *cmd_buffer)
+{
+	if (item->type == ITEM_WINDOW) {
+		// TODO: render an icon of a window
+	} else {
+		enum block_type block = item_to_block(item->type, V3(1, 0, 0));
+		if (block != BLOCK_AIR) {
+			v3 pos[8];
+			v2 uv[4];
+
+			pos[0] = V3(x + width, y + height, 0);
+			pos[1] = V3(x - width, y + height, 0);
+			pos[2] = V3(x + width, y - height, 0);
+			pos[3] = V3(x - width, y - height, 0);
+
+			block_texcoords_right(block, uv);
+			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
+				uv[0], uv[1], uv[2], uv[3], texture);
+		}
+	}
+}
+
+void
+inventory_render(struct inventory *inventory,
+	f32 screen_width, f32 screen_height,
+	struct render_command_buffer *cmd_buffer)
+{
+	if (inventory->is_active) {
+		m4x4 transform = m4x4_id(0.75);
+		u32 texture = inventory->inventory_texture.handle;
+		render_textured_quad(cmd_buffer, transform, texture);
+
+		//struct inventory_item *item = inventory->items;
+		u32 y = LENGTH(inventory->items) / 9;
+		while (y-- > 0) {
+			for (u32 x = 0; x < 9; x++) {
+				//item_render(item++, x, y, cmd_buffer);
+			}
+		}
+	} else {
+		f32 width = inventory->hotbar_texture.width;
+		f32 height = inventory->hotbar_texture.height;
+		f32 hotbar_aspect_ratio = width / height;
+		f32 screen_aspect_ratio = screen_width / screen_height;
+
+		f32 scale = 0.4;
+		f32 hotbar_width = scale;
+		f32 hotbar_height = hotbar_width * screen_aspect_ratio / hotbar_aspect_ratio;
+		f32 hotbar_x = 0;
+		f32 hotbar_y = hotbar_height - 1;
+
+		f32 slot_width = hotbar_height / screen_aspect_ratio;
+		f32 slot_height = hotbar_height;
+		f32 slot_advance = 2 * slot_width / 20. * 18.;
+		f32 active_slot_x = hotbar_x - hotbar_width + slot_width +
+			slot_advance * (inventory->active_item);
+		f32 active_slot_y = hotbar_y;
+
+		struct inventory_item *item = inventory->items;
+		for (u32 i = 0; i < 9; i++) {
+			u32 texture = inventory->block_atlas_texture.handle;
+			f32 item_x = hotbar_x - hotbar_width + slot_width + slot_advance * i;
+			f32 item_y = hotbar_y;
+			f32 item_width = slot_width / 20 * 14;
+			f32 item_height = slot_height / 20 * 14;
+			item_render(item++, item_x, item_y, item_width, item_height,
+				texture, cmd_buffer);
+		}
+
+		{
+			u32 texture = inventory->active_slot_texture.handle;
+			m4x4 transform = m4x4_mul(m4x4_translate(active_slot_x, active_slot_y, 0),
+				m4x4_scale(slot_width, slot_height, 1));
+
+			render_textured_quad(cmd_buffer, transform, texture);
+		}
+
+		{
+			u32 texture = inventory->hotbar_texture.handle;
+			m4x4 transform = m4x4_mul(m4x4_translate(hotbar_x, hotbar_y, 0),
+				m4x4_scale(hotbar_width, hotbar_height, 1));
+
+			render_textured_quad(cmd_buffer, transform, texture);
+		}
+	}
+}
+
+static u32
+item_stack_size(enum item_type item)
+{
+	switch (item) {
+	case ITEM_WINDOW:
+		return 0;
+	default:
+		return 64;
 	}
 }
 
