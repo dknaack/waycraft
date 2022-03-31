@@ -1,7 +1,7 @@
 #ifndef WAYCRAFT_INVENTORY_H
 #define WAYCRAFT_INVENTORY_H
 
-#include <waycraft/world.h>
+#include <waycraft/block.h>
 
 struct texture {
 	u32 handle;

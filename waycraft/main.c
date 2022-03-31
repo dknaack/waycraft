@@ -1,3 +1,4 @@
+#include "block.c"
 #include "compositor.c"
 #include "debug.c"
 #include "game.c"

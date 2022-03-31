@@ -2,6 +2,7 @@
 #define WORLD_H
 
 #include <waycraft/renderer.h>
+#include <waycraft/block.h>
 
 #define WORLD_WIDTH 32
 #define WORLD_DEPTH 32
@@ -9,35 +10,6 @@
 #define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
 #define CHUNK_SIZE 16
 #define CHUNK_BLOCK_COUNT (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
-
-// NOTE: block with different directions should have the block facing to the
-// right first, then the block facing left next, and then the block facing up
-// and then down. The last two block should be the blocks facing forward and
-// backward.
-enum block_type {
-    BLOCK_AIR,
-    BLOCK_STONE,
-    BLOCK_DIRT,
-    BLOCK_GRASS,
-    BLOCK_GRASS_TOP,
-    BLOCK_PLANKS,
-    BLOCK_OAK_LOG,
-    BLOCK_OAK_LEAVES,
-    BLOCK_SAND,
-    BLOCK_WATER,
-    BLOCK_MONITOR_RIGHT,
-    BLOCK_MONITOR_LEFT,
-    BLOCK_MONITOR_UP,
-    BLOCK_MONITOR_DOWN,
-    BLOCK_MONITOR_FORWARD,
-    BLOCK_MONITOR_BACKWARD,
-    BLOCK_WINDOW,
-
-    BLOCK_MONITOR      = BLOCK_MONITOR_RIGHT,
-    BLOCK_MONITOR_SIDE = BLOCK_MONITOR_RIGHT,
-    BLOCK_MONITOR_BACK,
-    BLOCK_MONITOR_FRONT,
-};
 
 enum chunk_state {
     CHUNK_INITIALIZED = 0x1,
@@ -80,7 +52,5 @@ void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
 void world_place_block(struct world *world, f32 x, f32 y, f32 z,
                        enum block_type block);
-
-u32 block_is_empty(enum block_type block);
 
 #endif /* WORLD_H */

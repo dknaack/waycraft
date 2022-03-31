@@ -1,12 +1,13 @@
 #include <math.h>
 
-#include "stb_image.h"
-#include "types.h"
-#include "memory.h"
-#include "world.h"
-#include "gl.h"
-#include "debug.h"
-#include "timer.h"
+#include <waycraft/block.h>
+#include <waycraft/debug.h>
+#include <waycraft/gl.h>
+#include <waycraft/memory.h>
+#include <waycraft/stb_image.h>
+#include <waycraft/timer.h>
+#include <waycraft/types.h>
+#include <waycraft/world.h>
 
 // TODO: fix bug for top faces
 
@@ -44,18 +45,6 @@ mesh_push_quad(struct mesh_data *mesh,
 
 	mesh->index_count += 6;
 	mesh->vertex_count += 4;
-}
-
-inline u32
-block_is_empty(enum block_type block)
-{
-	return block == BLOCK_AIR || block == BLOCK_WATER;
-}
-
-static inline u32
-block_is_not_water(enum block_type block)
-{
-	return block != BLOCK_WATER;
 }
 
 static inline f32
@@ -248,153 +237,6 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 	}
 
 	return result;
-}
-
-static void
-block_texcoords(enum block_type block, v2 *uv)
-{
-	uv[0] = v2_mulf(v2_add(V2(block, 0), V2(0, 0)), 1 / 16.f);
-	uv[1] = v2_mulf(v2_add(V2(block, 0), V2(1, 0)), 1 / 16.f);
-	uv[2] = v2_mulf(v2_add(V2(block, 0), V2(0, 1)), 1 / 16.f);
-	uv[3] = v2_mulf(v2_add(V2(block, 0), V2(1, 1)), 1 / 16.f);
-}
-
-static void
-block_texcoords_top(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_GRASS:
-		block_texcoords(BLOCK_GRASS_TOP, uv);
-		break;
-	case BLOCK_MONITOR_UP:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_DOWN:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_RIGHT:
-	case BLOCK_MONITOR_LEFT:
-	case BLOCK_MONITOR_FORWARD:
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
-}
-
-static void
-block_texcoords_bottom(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_GRASS:
-		block_texcoords(BLOCK_DIRT, uv);
-		break;
-	case BLOCK_MONITOR_UP:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_DOWN:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_RIGHT:
-	case BLOCK_MONITOR_LEFT:
-	case BLOCK_MONITOR_FORWARD:
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
-}
-
-static void
-block_texcoords_right(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_MONITOR_LEFT:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_RIGHT:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_UP:
-	case BLOCK_MONITOR_DOWN:
-	case BLOCK_MONITOR_FORWARD:
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
-}
-
-static void
-block_texcoords_left(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_MONITOR_RIGHT:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_LEFT:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_UP:
-	case BLOCK_MONITOR_DOWN:
-	case BLOCK_MONITOR_FORWARD:
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
-}
-
-static void
-block_texcoords_front(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_FORWARD:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_UP:
-	case BLOCK_MONITOR_DOWN:
-	case BLOCK_MONITOR_RIGHT:
-	case BLOCK_MONITOR_LEFT:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
-}
-
-static void
-block_texcoords_back(enum block_type block, v2 *uv)
-{
-	switch (block) {
-	case BLOCK_MONITOR_FORWARD:
-		block_texcoords(BLOCK_MONITOR_BACK, uv);
-		break;
-	case BLOCK_MONITOR_BACKWARD:
-		block_texcoords(BLOCK_MONITOR_FRONT, uv);
-		break;
-	case BLOCK_MONITOR_RIGHT:
-	case BLOCK_MONITOR_LEFT:
-	case BLOCK_MONITOR_UP:
-	case BLOCK_MONITOR_DOWN:
-		block_texcoords(BLOCK_MONITOR_SIDE, uv);
-		break;
-	default:
-		block_texcoords(block, uv);
-		break;
-	}
 }
 
 static void
