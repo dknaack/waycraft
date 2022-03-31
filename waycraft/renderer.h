@@ -55,6 +55,7 @@ struct render_command_buffer {
 	struct {
 		m4x4 view;
 		m4x4 projection;
+		v3 camera_pos;
 	} transform;
 
 	u8 *push_buffer;
@@ -91,6 +92,7 @@ struct renderer {
 		i32 model;
 		i32 view;
 		i32 projection;
+		i32 camera_pos;
 	} shader;
 };
 

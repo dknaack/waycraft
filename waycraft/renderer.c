@@ -46,6 +46,12 @@ gl_uniform_m4x4(u32 uniform, m4x4 value)
 }
 
 static void
+gl_uniform_v3(u32 uniform, v3 value)
+{
+	gl.Uniform3f(uniform, value.x, value.y, value.z);
+}
+
+static void
 renderer_init(struct renderer *renderer, struct memory_arena *arena)
 {
 	gl.Enable(GL_DEPTH_TEST);
@@ -65,6 +71,7 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	renderer->shader.model = gl.GetUniformLocation(program, "model");
 	renderer->shader.view = gl.GetUniformLocation(program, "view");
 	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
+	renderer->shader.camera_pos = gl.GetUniformLocation(program, "camera_pos");
 	renderer->shader.program = program;
 
 	renderer->command_buffer.push_buffer =
@@ -135,8 +142,10 @@ renderer_end_frame(struct renderer *renderer,
 	m4x4 model = m4x4_id(1);
 	m4x4 view = cmd_buffer->transform.view;
 	m4x4 projection = cmd_buffer->transform.projection;
+	v3 camera_pos = cmd_buffer->transform.camera_pos;
 
 	gl.UseProgram(renderer->shader.program);
+	gl_uniform_v3(renderer->shader.camera_pos, camera_pos);
 	gl_uniform_m4x4(renderer->shader.model, model);
 	gl_uniform_m4x4(renderer->shader.projection, projection);
 	gl_uniform_m4x4(renderer->shader.view, view);
@@ -175,6 +184,7 @@ renderer_end_frame(struct renderer *renderer,
 
 				usize index_offset = sizeof(u32) * command->index_offset;
 
+				gl_uniform_v3(renderer->shader.camera_pos, V3(0, 0, 0));
 				gl_uniform_m4x4(renderer->shader.projection, m4x4_id(1));
 				gl_uniform_m4x4(renderer->shader.view, m4x4_id(1));
 
@@ -196,8 +206,7 @@ renderer_end_frame(struct renderer *renderer,
 
 				gl.BindVertexArray(mesh->vertex_array);
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
-				gl.UniformMatrix4fv(renderer->shader.model, 1, GL_FALSE,
-					command->transform.e);
+				gl_uniform_m4x4(renderer->shader.model, command->transform);
 				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
 					GL_UNSIGNED_INT, 0);
 

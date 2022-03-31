@@ -451,6 +451,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	struct render_command_buffer *render_commands =
 		renderer_begin_frame(&game->renderer);
+	render_commands->transform.camera_pos = camera_pos;
 	render_commands->transform.view = view;
 	render_commands->transform.projection = projection;
 	render_clear(render_commands, V4(0.45, 0.65, 0.85, 1.0));
