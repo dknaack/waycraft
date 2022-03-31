@@ -39,6 +39,7 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
 	[RENDER_QUADS] = sizeof(struct render_command_quads),
 	[RENDER_MESH] = sizeof(struct render_command_mesh),
+	[RENDER_TRANSFORM] = sizeof(struct render_command_transform),
 };
 
 static void
@@ -186,10 +187,6 @@ renderer_end_frame(struct renderer *renderer,
 
 				usize index_offset = sizeof(u32) * command->index_offset;
 
-				gl_uniform_v3(renderer->shader.camera_pos, V3(0, 0, 0));
-				gl_uniform_m4x4(renderer->shader.projection, m4x4_id(1));
-				gl_uniform_m4x4(renderer->shader.view, m4x4_id(1));
-
 				gl.BindVertexArray(renderer->vertex_array);
 				gl.BindTexture(GL_TEXTURE_2D, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
@@ -211,6 +208,23 @@ renderer_end_frame(struct renderer *renderer,
 				gl_uniform_m4x4(renderer->shader.model, command->transform);
 				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
 					GL_UNSIGNED_INT, 0);
+
+				push_buffer += sizeof(*command);
+			}
+			break;
+
+		case RENDER_TRANSFORM:
+			{
+				struct render_command_transform *command = CONTAINER_OF(
+					base_command, struct render_command_transform, base);
+
+				m4x4 view = command->view;
+				m4x4 projection = command->projection;
+				v3 camera_pos = command->camera_pos;
+
+				gl_uniform_v3(renderer->shader.camera_pos, camera_pos);
+				gl_uniform_m4x4(renderer->shader.projection, projection);
+				gl_uniform_m4x4(renderer->shader.view, view);
 
 				push_buffer += sizeof(*command);
 			}
@@ -365,4 +379,16 @@ mesh_create(struct render_command_buffer *cmd_buffer, struct mesh_data *data)
 	mesh->index_count = index_count;
 
 	return mesh_index;
+}
+
+static void
+render_set_transform(struct render_command_buffer *cmd_buffer, m4x4 view,
+	m4x4 projection, v3 camera_pos)
+{
+	struct render_command_transform *command = push_command(cmd_buffer,
+		RENDER_TRANSFORM);
+
+	command->view = view;
+	command->projection = projection;
+	command->camera_pos = camera_pos;
 }

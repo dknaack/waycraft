@@ -20,6 +20,7 @@ enum render_command_type {
 	RENDER_CLEAR,
 	RENDER_QUADS,
 	RENDER_MESH,
+	RENDER_TRANSFORM,
 	RENDER_COMMAND_COUNT
 };
 
@@ -47,6 +48,14 @@ struct render_command_mesh {
 	u32 mesh;
 	u32 texture;
 	m4x4 transform;
+};
+
+struct render_command_transform {
+	struct render_command base;
+
+	m4x4 view;
+	m4x4 projection;
+	v3 camera_pos;
 };
 
 struct render_command_buffer {
@@ -112,6 +121,8 @@ static void render_textured_quad(struct render_command_buffer *commands,
 	m4x4 transform, u32 texture);
 static void render_quad(struct render_command_buffer *cmd_buffer,
 	v3 pos0, v3 pos1, v3 pos2, v3 pos3, v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture);
+static void render_set_transform(struct render_command_buffer *cmd_buffer,
+	m4x4 view, m4x4 projection, v3 camera_pos);
 
 static u32 mesh_create(struct render_command_buffer *cmd_buffer,
 	struct mesh_data *data);
