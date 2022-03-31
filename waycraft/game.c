@@ -596,22 +596,12 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	inventory_render(&player->inventory, input->width, input->height, render_commands);
 	renderer_end_frame(&game->renderer, render_commands);
 
-	gl.UseProgram(game->renderer.shader.program);
-	gl.Uniform3f(gl.GetUniformLocation(game->renderer.shader.program, "camera_pos"), camera_pos.x, camera_pos.y, camera_pos.z);
-	gl.UniformMatrix4fv(game->renderer.shader.model, 1, GL_FALSE, m4x4_id(1).e);
-	gl.UniformMatrix4fv(game->renderer.shader.view, 1, GL_FALSE, view.e);
-	gl.UniformMatrix4fv(game->renderer.shader.projection, 1, GL_FALSE, projection.e);
-
 	debug_render(view, projection);
 }
 
 void
 game_finish(struct game_state *game)
 {
-	gl.DeleteVertexArrays(1, &game->window_vertex_array);
-	gl.DeleteBuffers(1, &game->window_vertex_buffer);
-	gl.DeleteBuffers(1, &game->window_index_buffer);
-
 	renderer_finish(&game->renderer);
 	world_finish(&game->world);
 }
