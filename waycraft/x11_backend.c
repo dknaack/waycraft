@@ -347,6 +347,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			free(reply);
 		}
 
+		input->controller.modifiers = 0;
+
 		u32 state = XKB_STATE_MODS_DEPRESSED;
 		if (xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_SHIFT, state)) {
 			input->controller.modifiers |= MOD_SHIFT;
