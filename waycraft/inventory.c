@@ -78,7 +78,17 @@ item_render(struct inventory_item *item, f32 x, f32 y, f32 width, f32 height,
 	u32 texture, struct render_command_buffer *cmd_buffer)
 {
 	if (item->type == ITEM_WINDOW) {
-		// TODO: render an icon of a window
+		v3 pos[8];
+		v2 uv[4];
+
+		pos[0] = V3(x + width, y + height, 0);
+		pos[1] = V3(x - width, y + height, 0);
+		pos[2] = V3(x + width, y - height, 0);
+		pos[3] = V3(x - width, y - height, 0);
+
+		block_texcoords_right(BLOCK_AIR, uv);
+		render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
+			uv[0], uv[1], uv[2], uv[3], texture);
 	} else {
 		enum block_type block = item_to_block(item->type, V3(1, 0, 0));
 		if (block != BLOCK_AIR) {
