@@ -30,7 +30,9 @@ static const u8 *frag_shader_source = (u8 *)
 	"uniform vec3 camera_pos;"
 	"void main() {"
 	"	frag_color = texture(tex, coords);"
-	"	frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, clamp(16-0.1*distance(camera_pos, frag_pos), 0, 1));"
+	"	float dist = distance(camera_pos, frag_pos);"
+	"	float alpha = clamp(0.1 * (256 - dist), 0, 1);"
+	"	frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, alpha);"
 	"}";
 
 static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
