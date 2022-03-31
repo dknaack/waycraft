@@ -525,10 +525,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				}
 			} else {
 				u32 hotbar_selection = player->inventory.active_item;
-				struct inventory_item selected_item =
-					player->inventory.items[hotbar_selection];
+				struct inventory_item *selected_item =
+					&player->inventory.items[hotbar_selection];
 
-				u32 selected_block = item_to_block(selected_item.type, camera_front);
+				u32 selected_block = item_to_block(selected_item->type, camera_front);
 				v3 new_block_pos = v3_add(block_pos, block_normal);
 				v3 player_size = V3(0.25, 0.99f, 0.25f);
 				v3 player_pos = player->position;
@@ -541,8 +541,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				if (window) {
 					wm->is_active = 1;
 					wm->active_window = window;
-				} else if (selected_item.type == ITEM_WINDOW) {
-					hot_window = &wm->windows[selected_item.count];
+				} else if (selected_item->type == ITEM_WINDOW) {
+					hot_window = &wm->windows[selected_item->count];
+					selected_item->type = ITEM_NONE;
+					selected_item->count = 0;
 				} else if (has_selected_block &&
 						!box_contains_point(block_bounds, player_pos)) {
 					world_place_block(world, new_block_pos.x, new_block_pos.y,
