@@ -355,8 +355,14 @@ player_select_block(struct game_state *game, struct game_input *input,
 static m4x4
 window_transform(struct game_window *window)
 {
-	return m4x4_to_coords(window->position,
+	m4x4 result = m4x4_to_coords(window->position,
 		window->x_axis, window->y_axis, window->z_axis);
+
+	if (window->parent_window) {
+		result = m4x4_mul(window_transform(window->parent_window), result);
+	}
+
+	return result;
 }
 
 static void
@@ -593,6 +599,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 		game->mouse_pos = mouse_pos;
 		wm->cursor_pos = cursor_pos;
+
+		if (active_window->flags & WINDOW_DESTROYED) {
+			wm->active_window = 0;
+		}
 	}
 
 	world_update(&game->world, game->camera.position, render_commands);

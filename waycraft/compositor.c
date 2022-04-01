@@ -66,6 +66,7 @@ struct surface {
 	u32 texture;
 
 	struct compositor *compositor;
+	struct game_window *game_window;
 	struct surface *parent;
 	struct client *client;
 	struct wl_list link;
@@ -105,7 +106,6 @@ compositor_create_surface(struct compositor *compositor)
 	struct surface *surface = 0;
 	if (wl_list_empty(free_surfaces)) {
 		surface = arena_alloc(&compositor->arena, 1, struct surface);
-		surface->compositor = compositor;
 		wl_list_insert(surfaces, &surface->link);
 		wl_list_init(&surface->subsurfaces);
 	} else {
@@ -113,6 +113,10 @@ compositor_create_surface(struct compositor *compositor)
 			free_surfaces->next, surface, link);
 		wl_list_remove(&surface->link);
 	}
+
+	struct game_window_manager *wm = compositor->wm;
+	surface->game_window = wm->windows + wm->window_count++;
+	surface->compositor = compositor;
 
 	return surface;
 }
@@ -258,6 +262,7 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 		gl.EGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
 		gl.BindTexture(GL_TEXTURE_2D, 0);
 		surface->texture = texture;
+		surface->game_window->texture = texture;
 
 		wl_buffer_send_release(surface->wl_buffer);
 	} else {
@@ -281,6 +286,7 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 			GL_BGRA, GL_UNSIGNED_BYTE, data);
 		gl.BindTexture(GL_TEXTURE_2D, 0);
 		surface->texture = texture;
+		surface->game_window->texture = texture;
 
 		wl_buffer_send_release(surface->wl_buffer);
 	}
@@ -310,6 +316,7 @@ wl_surface_resource_destroy(struct wl_resource *resource)
 
 	surface->texture = 0;
 	surface->wl_frame_callback = 0;
+	surface->game_window->flags |= WINDOW_DESTROYED;
 	wl_list_remove(&surface->link);
 	//wl_list_insert(&compositor->free_surfaces, &surface->link);
 
@@ -400,8 +407,8 @@ xdg_surface_get_toplevel(struct wl_client *client,
 	struct surface *surface = wl_resource_get_user_data(resource);
 	struct wl_resource *xdg_toplevel = wl_resource_create(
 		client, &xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
-	wl_resource_set_implementation(
-		xdg_toplevel, &xdg_toplevel_implementation, surface, 0);
+	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_implementation,
+		surface, 0);
 
 	surface->xdg_toplevel = xdg_toplevel;
 }
@@ -474,8 +481,8 @@ wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
 	u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
-	struct wl_resource *pointer = wl_resource_create(
-		wl_client, &wl_pointer_interface, WL_POINTER_VERSION, id);
+	struct wl_resource *pointer = wl_resource_create(wl_client,
+		&wl_pointer_interface, WL_POINTER_VERSION, id);
 
 	wl_resource_set_implementation(pointer, &wl_pointer_implementation, 0, 0);
 	struct client *client = compositor_get_client(compositor, wl_client);
@@ -545,6 +552,7 @@ wl_subcompositor_get_subsurface(
 
 	subsurface->surface = surface;
 	subsurface->parent = parent;
+	subsurface->surface->game_window->parent_window = parent->game_window;
 	subsurface->wl_subsurface = wl_subsurface;
 }
 
@@ -607,8 +615,6 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 	struct game_window *window = wm->windows;
 
 	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
-		window->texture = surface->texture;
-
 		if (surface->wl_frame_callback) {
 			wl_callback_send_done(surface->wl_frame_callback,
 				compositor_time_msec());
@@ -719,6 +725,13 @@ compositor_finish(struct backend_memory *memory)
 {
 	struct compositor *compositor = memory->data;
 
+	struct surface *surface;
+	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
+		if (surface->xdg_toplevel) {
+			xdg_toplevel_send_close(surface->xdg_toplevel);
+		}
+	}
+
 #if ENABLE_WAYLAND
 	xwayland_finish(&compositor->xwayland);
 #endif
@@ -784,6 +797,7 @@ compositor_init(struct backend_memory *memory, struct egl *egl, struct
 	}
 #endif
 
+	compositor->wm = wm;
 	wm->windows = arena_alloc(&compositor->arena, MAX_WINDOW_COUNT,
 		struct game_window);
 

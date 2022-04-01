@@ -10,6 +10,7 @@
 enum game_window_flags {
 	WINDOW_INITIALIZED = 1 << 0,
 	WINDOW_VISIBLE     = 1 << 1,
+	WINDOW_DESTROYED   = 1 << 2,
 };
 
 struct game_window {
@@ -19,6 +20,8 @@ struct game_window {
 	v3 z_axis;
 	u32 texture;
 	u32 flags;
+
+	struct game_window *parent_window;
 };
 
 struct game_window_manager {
@@ -44,9 +47,9 @@ struct camera {
 };
 
 enum game_input_modifiers {
-	MOD_SHIFT = 0x1,
-	MOD_CTRL  = 0x2,
-	MOD_ALT   = 0x4,
+	MOD_SHIFT = 1 << 0,
+	MOD_CTRL  = 1 << 1,
+	MOD_ALT   = 1 << 2,
 };
 
 struct game_input {
