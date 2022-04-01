@@ -88,7 +88,7 @@ struct compositor {
 	struct wl_list free_surfaces;
 	struct wl_list free_clients;
 
-	struct surface *active_surface;
+	struct surface *focused_surface;
 
 	i32 keymap;
 	i32 keymap_size;
@@ -99,6 +99,15 @@ struct compositor {
 		u32 group;
 	} modifiers;
 };
+
+static u32
+compositor_time_msec(void)
+{
+	struct timespec ts = {0};
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
 
 static struct surface *
 compositor_create_surface(struct compositor *compositor)
@@ -330,8 +339,8 @@ wl_surface_resource_destroy(struct wl_resource *resource)
 	surface->game_window->flags |= WINDOW_DESTROYED;
 	wl_list_remove(&surface->link);
 
-	if (surface == compositor->active_surface) {
-		compositor->active_surface = 0;
+	if (surface == compositor->focused_surface) {
+		compositor->focused_surface = 0;
 	}
 }
 
@@ -597,156 +606,6 @@ wl_data_device_manager_bind(struct wl_client *client, void *data,
 		&wl_data_device_manager_implementation, data, 0);
 }
 
-static u32
-compositor_time_msec(void)
-{
-	struct timespec ts = {0};
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-
-static void
-compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
-{
-	struct compositor *compositor = memory->data;
-	compositor->wm = wm;
-
-	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
-	wl_display_flush_clients(compositor->wl_display);
-
-	u32 active_surface_index = wm->active_window - wm->windows;
-	u32 surface_index = 0;
-	u32 window_count = 0;
-
-	struct surface *active_surface = compositor->active_surface;
-	struct surface *surface;
-	struct game_window *window = wm->windows;
-
-	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
-		if (surface->wl_frame_callback) {
-			wl_callback_send_done(surface->wl_frame_callback,
-				compositor_time_msec());
-			wl_resource_destroy(surface->wl_frame_callback);
-			surface->wl_frame_callback = 0;
-		}
-
-		u32 is_active_surface = surface_index == active_surface_index;
-		if (is_active_surface && surface != active_surface) {
-			surface_deactivate(active_surface);
-			surface_activate(surface);
-
-			compositor->active_surface = surface;
-		}
-
-		window++;
-		window_count++;
-		surface_index++;
-	}
-
-	if (wm->active_window == 0 && active_surface) {
-		surface_deactivate(active_surface);
-		compositor->active_surface = 0;
-	}
-
-	wm->window_count = window_count;
-}
-
-static void
-compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
-{
-	struct compositor *compositor = memory->data;
-
-	struct surface *active_surface = compositor->active_surface;
-	if (active_surface) {
-		struct wl_resource *keyboard = active_surface->client->wl_keyboard;
-		if (keyboard) {
-			u32 time = compositor_time_msec();
-			wl_keyboard_send_key(keyboard, 0, time, key, state);
-		}
-	}
-}
-
-static void
-compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
-{
-	struct compositor *compositor = memory->data;
-	struct surface *active_surface = compositor->active_surface;
-	if (active_surface) {
-		struct wl_resource *pointer = active_surface->client->wl_pointer;
-		if (pointer) {
-			u32 time = compositor_time_msec();
-			wl_pointer_send_button(pointer, 0, time, button, state);
-		}
-	}
-}
-
-static void
-compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
-{
-	struct compositor *compositor = memory->data;
-	struct surface *active_surface = compositor->active_surface;
-	if (active_surface) {
-		struct wl_resource *pointer = active_surface->client->wl_pointer;
-		if (pointer) {
-			v2 cursor_pos = compositor->wm->cursor_pos;
-			f32 surface_width = active_surface->width;
-			f32 surface_height = active_surface->height;
-			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
-			f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
-			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
-			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
-			u32 time = compositor_time_msec();
-			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
-		}
-	}
-}
-
-static void
-compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
-	u32 latched, u32 locked, u32 group)
-{
-	struct compositor *compositor = memory->data;
-
-	if (depressed == compositor->modifiers.depressed &&
-			latched == compositor->modifiers.latched &&
-			locked == compositor->modifiers.locked &&
-			group == compositor->modifiers.group) {
-		return;
-	}
-
-	compositor->modifiers.depressed = depressed;
-	compositor->modifiers.latched = latched;
-	compositor->modifiers.locked = locked;
-	compositor->modifiers.group = group;
-
-	struct surface *active_surface = compositor->active_surface;
-	if (active_surface) {
-		struct wl_resource *keyboard = active_surface->client->wl_keyboard;
-		if (keyboard) {
-			wl_keyboard_send_modifiers(keyboard, 0, depressed, latched, locked, group);
-		}
-	}
-}
-
-static void
-compositor_finish(struct backend_memory *memory)
-{
-	struct compositor *compositor = memory->data;
-
-	struct surface *surface;
-	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
-		if (surface->xdg_toplevel) {
-			xdg_toplevel_send_close(surface->xdg_toplevel);
-		}
-	}
-
-#if ENABLE_WAYLAND
-	xwayland_finish(&compositor->xwayland);
-#endif
-	wl_display_destroy(compositor->wl_display);
-}
-
 static void
 wl_output_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
@@ -829,4 +688,145 @@ compositor_init(struct backend_memory *memory, struct egl *egl, struct
 		struct game_window);
 
 	return 0;
+}
+
+static void
+compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
+{
+	struct compositor *compositor = memory->data;
+	compositor->wm = wm;
+
+	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
+	wl_display_flush_clients(compositor->wl_display);
+
+	u32 focused_surface_index = wm->active_window - wm->windows;
+	u32 surface_index = 0;
+	u32 window_count = 0;
+
+	struct surface *focused_surface = compositor->focused_surface;
+	struct surface *surface;
+	struct game_window *window = wm->windows;
+
+	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
+		if (surface->wl_frame_callback) {
+			wl_callback_send_done(surface->wl_frame_callback,
+				compositor_time_msec());
+			wl_resource_destroy(surface->wl_frame_callback);
+			surface->wl_frame_callback = 0;
+		}
+
+		u32 is_focused_surface = surface_index == focused_surface_index;
+		if (is_focused_surface && surface != focused_surface) {
+			surface_deactivate(focused_surface);
+			surface_activate(surface);
+
+			compositor->focused_surface = surface;
+		}
+
+		window++;
+		window_count++;
+		surface_index++;
+	}
+
+	if (wm->active_window == 0 && focused_surface) {
+		surface_deactivate(focused_surface);
+		compositor->focused_surface = 0;
+	}
+
+	wm->window_count = window_count;
+}
+
+static void
+compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
+{
+	struct compositor *compositor = memory->data;
+
+	struct surface *focused_surface = compositor->focused_surface;
+	if (focused_surface) {
+		struct wl_resource *keyboard = focused_surface->client->wl_keyboard;
+		if (keyboard) {
+			u32 time = compositor_time_msec();
+			wl_keyboard_send_key(keyboard, 0, time, key, state);
+		}
+	}
+}
+
+static void
+compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
+{
+	struct compositor *compositor = memory->data;
+	struct surface *focused_surface = compositor->focused_surface;
+	if (focused_surface) {
+		struct wl_resource *pointer = focused_surface->client->wl_pointer;
+		if (pointer) {
+			u32 time = compositor_time_msec();
+			wl_pointer_send_button(pointer, 0, time, button, state);
+		}
+	}
+}
+
+static void
+compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
+{
+	struct compositor *compositor = memory->data;
+	struct surface *focused_surface = compositor->focused_surface;
+	if (focused_surface) {
+		struct wl_resource *pointer = focused_surface->client->wl_pointer;
+		if (pointer) {
+			v2 cursor_pos = compositor->wm->cursor_pos;
+			f32 surface_width = focused_surface->width;
+			f32 surface_height = focused_surface->height;
+			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
+			f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
+			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
+			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
+			u32 time = compositor_time_msec();
+			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
+		}
+	}
+}
+
+static void
+compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
+	u32 latched, u32 locked, u32 group)
+{
+	struct compositor *compositor = memory->data;
+
+	if (depressed == compositor->keyboard.modifiers.depressed &&
+			latched == compositor->keyboard.modifiers.latched &&
+			locked == compositor->keyboard.modifiers.locked &&
+			group == compositor->keyboard.modifiers.group) {
+		return;
+	}
+
+	compositor->keyboard.modifiers.depressed = depressed;
+	compositor->keyboard.modifiers.latched = latched;
+	compositor->keyboard.modifiers.locked = locked;
+	compositor->keyboard.modifiers.group = group;
+
+	struct surface *focused_surface = compositor->focused_surface;
+	if (focused_surface) {
+		struct wl_resource *keyboard = focused_surface->client->wl_keyboard;
+		if (keyboard) {
+			wl_keyboard_send_modifiers(keyboard, 0, depressed, latched, locked, group);
+		}
+	}
+}
+
+static void
+compositor_finish(struct backend_memory *memory)
+{
+	struct compositor *compositor = memory->data;
+
+	struct surface *surface;
+	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
+		if (surface->xdg_toplevel) {
+			xdg_toplevel_send_close(surface->xdg_toplevel);
+		}
+	}
+
+#if ENABLE_WAYLAND
+	xwayland_finish(&compositor->xwayland);
+#endif
+	wl_display_destroy(compositor->wl_display);
 }
