@@ -74,6 +74,25 @@ struct surface {
 	struct wl_list subsurfaces;
 };
 
+struct pointer {
+	struct wl_list pointers;
+
+	struct surface *focused_surface;
+};
+
+struct keyboard {
+	struct wl_list keyboards;
+
+	struct {
+		u32 depressed;
+		u32 latched;
+		u32 locked;
+		u32 group;
+	} modifiers;
+
+	struct surface *focused_surface;
+};
+
 struct compositor {
 	struct game_window_manager *wm;
 	struct xwayland xwayland;
@@ -90,14 +109,11 @@ struct compositor {
 
 	struct surface *focused_surface;
 
+	struct keyboard keyboard;
+	struct pointer pointer;
+
 	i32 keymap;
 	i32 keymap_size;
-	struct {
-		u32 depressed;
-		u32 latched;
-		u32 locked;
-		u32 group;
-	} modifiers;
 };
 
 static u32
