@@ -194,6 +194,12 @@ do_nothing()
 
 }
 
+static void
+resource_remove(struct wl_resource *resource)
+{
+	wl_list_remove(wl_resource_get_link(resource));
+}
+
 static const struct wl_region_interface wl_region_implementation = {
 	.destroy  = do_nothing,
 	.add      = do_nothing,
@@ -468,7 +474,7 @@ wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
 		&wl_pointer_interface, WL_POINTER_VERSION, id);
 
 	wl_resource_set_implementation(pointer, &wl_pointer_implementation,
-		compositor, 0);
+		compositor, resource_remove);
 	wl_list_insert(&compositor->pointers, wl_resource_get_link(pointer));
 }
 
@@ -479,7 +485,8 @@ wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(
 		wl_client, &wl_keyboard_interface, WL_KEYBOARD_VERSION, id);
-	wl_resource_set_implementation(keyboard, &wl_keyboard_implementation, 0, 0);
+	wl_resource_set_implementation(keyboard, &wl_keyboard_implementation, 0,
+		resource_remove);
 
 	wl_list_insert(&compositor->keyboards, wl_resource_get_link(keyboard));
 
