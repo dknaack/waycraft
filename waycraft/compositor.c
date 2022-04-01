@@ -25,6 +25,7 @@
 #define WL_SURFACE_VERSION 5
 #define WL_SUBSURFACE_VERSION 1
 #define WL_DATA_DEVICE_MANAGER_VERSION 3
+#define WL_OUTPUT_VERSION 4
 #define XDG_WM_BASE_VERSION 4
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
@@ -81,6 +82,7 @@ struct compositor {
 	EGLDisplay *egl_display;
 
 	struct memory_arena arena;
+	struct wl_list outputs;
 	struct wl_list surfaces;
 	struct wl_list clients;
 	struct wl_list free_surfaces;
@@ -153,6 +155,12 @@ surface_activate(struct surface *surface)
 	struct wl_array array;
 	wl_array_init(&array);
 
+	struct compositor *compositor = surface->compositor;
+	struct wl_client *client = wl_resource_get_client(surface->wl_surface);
+	struct wl_resource *output = wl_resource_find_for_client(&compositor->outputs, client);
+	wl_surface_send_enter(surface->wl_surface, output);
+	assert(surface->wl_surface);
+
 	struct wl_resource *keyboard = surface->client->wl_keyboard;
 	if (keyboard) {
 		wl_keyboard_send_enter(keyboard, 0, surface->wl_surface, &array);
@@ -161,7 +169,11 @@ surface_activate(struct surface *surface)
 
 	struct wl_resource *pointer = surface->client->wl_pointer;
 	if (pointer) {
-		wl_pointer_send_enter(pointer, 0, surface->wl_surface, 0, 0);
+		u32 serial = wl_display_next_serial(compositor->wl_display);
+		wl_fixed_t surface_x = wl_fixed_from_double(0.f);
+		wl_fixed_t surface_y = wl_fixed_from_double(0.f);
+		wl_pointer_send_enter(pointer, serial, surface->wl_surface,
+			surface_x, surface_y);
 	}
 
 	struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
@@ -312,16 +324,11 @@ wl_surface_resource_destroy(struct wl_resource *resource)
 	// TODO: fix the order of windows
 	struct surface *surface = wl_resource_get_user_data(resource);
 	struct compositor *compositor = surface->compositor;
-	//struct client *client = surface->client;
 
 	surface->texture = 0;
 	surface->wl_frame_callback = 0;
 	surface->game_window->flags |= WINDOW_DESTROYED;
 	wl_list_remove(&surface->link);
-	//wl_list_insert(&compositor->free_surfaces, &surface->link);
-
-	//wl_list_remove(&client->link);
-	//wl_list_insert(&compositor->free_clients, &client->link);
 
 	if (surface == compositor->active_surface) {
 		compositor->active_surface = 0;
@@ -515,12 +522,14 @@ static const struct wl_seat_interface wl_seat_implementation = {
 static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
+	puts("wl_seat_bind");
 	struct wl_resource *seat =
 		wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
 	wl_resource_set_implementation(seat, &wl_seat_implementation, data, 0);
 
 	u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
 	wl_seat_send_capabilities(seat, caps);
+	wl_seat_send_name(seat, "seat0");
 }
 
 // TODO: fill out the subsurface functions
@@ -738,6 +747,21 @@ compositor_finish(struct backend_memory *memory)
 	wl_display_destroy(compositor->wl_display);
 }
 
+static void
+wl_output_bind(struct wl_client *client, void *data, u32 version, u32 id)
+{
+	puts("output_bind");
+	struct compositor *compositor = data;
+	struct wl_resource *wl_output = wl_resource_create(client,
+		&wl_output_interface, WL_OUTPUT_VERSION, id);
+	wl_list_insert(&compositor->outputs, wl_resource_get_link(wl_output));
+
+	wl_resource_set_implementation(wl_output, 0, compositor, 0);
+	wl_output_send_geometry(wl_output, 0, 0, 0, 0, WL_OUTPUT_SUBPIXEL_NONE,
+		"waycraft", "waycraft", WL_OUTPUT_TRANSFORM_NORMAL);
+	wl_output_send_done(wl_output);
+}
+
 i32
 compositor_init(struct backend_memory *memory, struct egl *egl, struct
 	game_window_manager *wm, i32 keymap, i32 keymap_size)
@@ -764,6 +788,17 @@ compositor_init(struct backend_memory *memory, struct egl *egl, struct
 		return 0;
 	}
 
+	compositor->wl_display = display;
+	compositor->wl_event_loop = wl_display_get_event_loop(display);
+	compositor->egl_display = egl->display;
+
+	arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
+	wl_list_init(&compositor->outputs);
+	wl_list_init(&compositor->surfaces);
+	wl_list_init(&compositor->clients);
+	wl_list_init(&compositor->free_surfaces);
+	wl_list_init(&compositor->free_clients);
+
 	wl_global_create(display, &wl_compositor_interface, WL_COMPOSITOR_VERSION,
 		compositor, wl_compositor_bind);
 	wl_global_create(display, &xdg_wm_base_interface, XDG_WM_BASE_VERSION,
@@ -775,17 +810,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl, struct
 	wl_global_create(display, &wl_data_device_manager_interface,
 		WL_DATA_DEVICE_MANAGER_VERSION, compositor,
 		&wl_data_device_manager_bind);
+	wl_global_create(display, &wl_output_interface, WL_OUTPUT_VERSION,
+		compositor, &wl_output_bind);
 	wl_display_init_shm(display);
-
-	compositor->wl_display = display;
-	compositor->wl_event_loop = wl_display_get_event_loop(display);
-	compositor->egl_display = egl->display;
-
-	arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
-	wl_list_init(&compositor->surfaces);
-	wl_list_init(&compositor->clients);
-	wl_list_init(&compositor->free_surfaces);
-	wl_list_init(&compositor->free_clients);
 
 	compositor->keymap = keymap;
 	compositor->keymap_size = keymap_size;
