@@ -32,7 +32,6 @@
 
 #define MAX_WINDOW_COUNT  256
 #define MAX_SURFACE_COUNT 256
-#define MAX_CLIENT_COUNT  256
 
 static PFNEGLQUERYWAYLANDBUFFERWLPROC eglQueryWaylandBufferWL = 0;
 static PFNEGLBINDWAYLANDDISPLAYWLPROC eglBindWaylandDisplayWL = 0;
@@ -78,7 +77,6 @@ struct compositor {
 	struct wl_list pointers;
 	struct wl_list keyboards;
 	struct wl_list free_surfaces;
-	struct wl_list free_clients;
 
 	struct surface *focused_surface;
 
@@ -113,14 +111,17 @@ compositor_create_surface(struct compositor *compositor)
 		wl_list_insert(surfaces, &surface->link);
 		wl_list_init(&surface->subsurfaces);
 	} else {
-		struct surface *surface = wl_container_of(
-			free_surfaces->next, surface, link);
+		wl_list_for_each(surface, &compositor->free_surfaces, link) {
+			break;
+		}
+
 		wl_list_remove(&surface->link);
 	}
 
 	struct game_window_manager *wm = compositor->wm;
-	surface->game_window = wm->windows + wm->window_count++;
 	surface->compositor = compositor;
+
+	assert(wm->window_count < MAX_WINDOW_COUNT);
 
 	return surface;
 }
@@ -235,55 +236,54 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 
 	if (!surface->wl_buffer) {
 		xdg_surface_send_configure(surface->xdg_surface, 0);
-	} else if (eglQueryWaylandBufferWL(egl_display, surface->wl_buffer,
-				EGL_TEXTURE_FORMAT, &texture_format)) {
-		puts("egl texture");
-		i32 width, height;
-		eglQueryWaylandBufferWL(egl_display, surface->wl_buffer, EGL_WIDTH, &width);
-		eglQueryWaylandBufferWL(egl_display, surface->wl_buffer, EGL_HEIGHT, &height);
-
-		i64 attributes[] = { EGL_NONE };
-		EGLImage image = eglCreateImage(
-			egl_display, EGL_NO_CONTEXT, EGL_WAYLAND_BUFFER_WL,
-			surface->wl_buffer, attributes);
-
-		if (surface->texture) {
-			gl.DeleteTextures(1, &surface->texture);
-		}
-
-		u32 texture = 0;
-		gl.GenTextures(1, &texture);
-		gl.BindTexture(GL_TEXTURE_2D, texture);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		gl.EGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
-		gl.BindTexture(GL_TEXTURE_2D, 0);
-		surface->texture = texture;
-		surface->game_window->texture = texture;
-
-		wl_buffer_send_release(surface->wl_buffer);
 	} else {
-		struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->wl_buffer);
-		u32 width = wl_shm_buffer_get_width(shm_buffer);
-		u32 height = wl_shm_buffer_get_height(shm_buffer);
-		u32 format = wl_shm_buffer_get_format(shm_buffer);
-		void *data = wl_shm_buffer_get_data(shm_buffer);
-		assert(format == 0 || format == 1);
+		u32 texture = 0;
 
-		if (surface->texture) {
-			gl.DeleteTextures(1, &surface->texture);
+		if (eglQueryWaylandBufferWL(egl_display, surface->wl_buffer,
+					EGL_TEXTURE_FORMAT, &texture_format)) {
+			i32 width, height;
+			eglQueryWaylandBufferWL(egl_display, surface->wl_buffer,
+				EGL_WIDTH, &width);
+			eglQueryWaylandBufferWL(egl_display, surface->wl_buffer,
+				EGL_HEIGHT, &height);
+
+			i64 attributes[] = { EGL_NONE };
+			EGLImage image = eglCreateImage(
+				egl_display, EGL_NO_CONTEXT, EGL_WAYLAND_BUFFER_WL,
+				surface->wl_buffer, attributes);
+
+			if (surface->texture) {
+				gl.DeleteTextures(1, &surface->texture);
+			}
+
+			gl.GenTextures(1, &texture);
+			gl.BindTexture(GL_TEXTURE_2D, texture);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			gl.EGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+			gl.BindTexture(GL_TEXTURE_2D, 0);
+		} else {
+			struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->wl_buffer);
+			u32 width = wl_shm_buffer_get_width(shm_buffer);
+			u32 height = wl_shm_buffer_get_height(shm_buffer);
+			u32 format = wl_shm_buffer_get_format(shm_buffer);
+			void *data = wl_shm_buffer_get_data(shm_buffer);
+			assert(format == 0 || format == 1);
+
+			if (surface->texture) {
+				gl.DeleteTextures(1, &surface->texture);
+			}
+
+			gl.GenTextures(1, &texture);
+			gl.BindTexture(GL_TEXTURE_2D, texture);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+				GL_BGRA, GL_UNSIGNED_BYTE, data);
+			gl.BindTexture(GL_TEXTURE_2D, 0);
 		}
 
-		u32 texture = 0;
-		gl.GenTextures(1, &texture);
-		gl.BindTexture(GL_TEXTURE_2D, texture);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-			GL_BGRA, GL_UNSIGNED_BYTE, data);
-		gl.BindTexture(GL_TEXTURE_2D, 0);
 		surface->texture = texture;
-		surface->game_window->texture = texture;
 
 		wl_buffer_send_release(surface->wl_buffer);
 	}
@@ -304,19 +304,21 @@ static const struct wl_surface_interface wl_surface_implementation = {
 };
 
 static void
-wl_surface_resource_destroy(struct wl_resource *resource)
+wl_surface_unbind(struct wl_resource *resource)
 {
+	puts(__func__);
+
 	// TODO: fix the order of windows
 	struct surface *surface = wl_resource_get_user_data(resource);
 	struct compositor *compositor = surface->compositor;
 
 	surface->texture = 0;
 	surface->wl_frame_callback = 0;
-	surface->game_window->flags |= WINDOW_DESTROYED;
 	wl_list_remove(&surface->link);
 
 	if (surface == compositor->focused_surface) {
 		compositor->focused_surface = 0;
+		compositor->wm->active_window = 0;
 	}
 }
 
@@ -330,7 +332,7 @@ wl_compositor_create_surface(struct wl_client *wl_client,
 	struct wl_resource *wl_surface = wl_resource_create(
 		wl_client, &wl_surface_interface, WL_SURFACE_VERSION, id);
 	wl_resource_set_implementation(wl_surface, &wl_surface_implementation,
-		surface, &wl_surface_resource_destroy);
+		surface, wl_surface_unbind);
 
 	surface->wl_surface = wl_surface;
 }
@@ -359,14 +361,8 @@ wl_compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 /* xdg toplevel functions */
-static void
-xdg_toplevel_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-	puts("xdg_toplevel::destroy");
-}
-
 static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
-	.destroy          = xdg_toplevel_destroy,
+	.destroy          = do_nothing,
 	.set_parent       = do_nothing,
 	.set_title        = do_nothing,
 	.set_app_id       = do_nothing,
@@ -382,22 +378,48 @@ static const struct xdg_toplevel_interface xdg_toplevel_implementation = {
 	.set_minimized    = do_nothing,
 };
 
-/* xdg surface functions */
 static void
-xdg_surface_destroy(struct wl_client *client, struct wl_resource *resource)
+xdg_toplevel_unbind(struct wl_resource *resource)
 {
-	puts("xdg_surface::destroy");
+	struct surface *surface = wl_resource_get_user_data(resource);
+	struct compositor *compositor = surface->compositor;
+	struct game_window_manager *wm = compositor->wm;
+
+	assert(surface->game_window);
+	surface->game_window->flags |= WINDOW_DESTROYED;
+	surface->game_window->flags &= ~WINDOW_VISIBLE;
+
+	if (wm->hot_window == surface->game_window) {
+		wm->hot_window = 0;
+	}
+
+	if (wm->active_window == surface->game_window) {
+		wm->active_window = 0;
+	}
+
+	// TODO: remove the window from the window manager
 }
 
+/* xdg surface functions */
 static void
 xdg_surface_get_toplevel(struct wl_client *client,
 	struct wl_resource *resource, u32 id)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
+	struct compositor *compositor = surface->compositor;
+	struct game_window_manager *wm = compositor->wm;
+
 	struct wl_resource *xdg_toplevel = wl_resource_create(
 		client, &xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
 	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_implementation,
-		surface, 0);
+		surface, xdg_toplevel_unbind);
+
+	struct game_window *window = surface->game_window;
+	if (!window) {
+		surface->game_window = wm->windows + wm->window_count++;
+	} else {
+		window->flags = 0;
+	}
 
 	surface->xdg_toplevel = xdg_toplevel;
 }
@@ -415,7 +437,7 @@ xdg_surface_set_window_geometry(struct wl_client *client,
 }
 
 static const struct xdg_surface_interface xdg_surface_implementation = {
-	.destroy             = xdg_surface_destroy,
+	.destroy             = do_nothing,
 	.get_toplevel        = xdg_surface_get_toplevel,
 	.get_popup           = do_nothing,
 	.set_window_geometry = xdg_surface_set_window_geometry,
@@ -543,7 +565,6 @@ wl_subcompositor_get_subsurface(
 
 	subsurface->surface = surface;
 	subsurface->parent = parent;
-	subsurface->surface->game_window->parent_window = parent->game_window;
 	subsurface->wl_subsurface = wl_subsurface;
 }
 
@@ -628,7 +649,6 @@ compositor_init(struct backend_memory *memory, struct egl *egl, struct
 	wl_list_init(&compositor->outputs);
 	wl_list_init(&compositor->surfaces);
 	wl_list_init(&compositor->free_surfaces);
-	wl_list_init(&compositor->free_clients);
 	wl_list_init(&compositor->pointers);
 	wl_list_init(&compositor->keyboards);
 
@@ -673,14 +693,13 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 	wl_event_loop_dispatch(compositor->wl_event_loop, 0);
 	wl_display_flush_clients(compositor->wl_display);
 
-	u32 focused_surface_index = wm->active_window - wm->windows;
-	u32 surface_index = 0;
-	u32 window_count = 0;
-
 	struct surface *focused_surface = compositor->focused_surface;
-	struct surface *surface;
-	struct game_window *window = wm->windows;
+	if (focused_surface && focused_surface->game_window != wm->active_window) {
+		surface_deactivate(focused_surface);
+		compositor->focused_surface = 0;
+	}
 
+	struct surface *surface;
 	wl_list_for_each_reverse(surface, &compositor->surfaces, link) {
 		if (surface->wl_frame_callback) {
 			wl_callback_send_done(surface->wl_frame_callback,
@@ -689,25 +708,16 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 			surface->wl_frame_callback = 0;
 		}
 
-		u32 is_focused_surface = surface_index == focused_surface_index;
-		if (is_focused_surface && surface != focused_surface) {
-			surface_deactivate(focused_surface);
-			surface_activate(surface);
+		struct game_window *game_window = surface->game_window;
+		if (game_window) {
+			if (game_window == wm->active_window) {
+				surface_activate(surface);
+				compositor->focused_surface = surface;
+			}
 
-			compositor->focused_surface = surface;
+			game_window->texture = surface->texture;
 		}
-
-		window++;
-		window_count++;
-		surface_index++;
 	}
-
-	if (wm->active_window == 0 && focused_surface) {
-		surface_deactivate(focused_surface);
-		compositor->focused_surface = 0;
-	}
-
-	wm->window_count = window_count;
 }
 
 static void
@@ -777,10 +787,13 @@ compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
 	compositor->modifiers.locked = locked;
 	compositor->modifiers.group = group;
 
+	u32 serial = wl_display_next_serial(compositor->wl_display);
+
 	// TODO: only send event to the focused window
 	struct wl_resource *keyboard;
 	wl_resource_for_each(keyboard, &compositor->keyboards) {
-		wl_keyboard_send_modifiers(keyboard, 0, depressed, latched, locked, group);
+		wl_keyboard_send_modifiers(keyboard, serial, depressed, latched,
+			locked, group);
 	}
 }
 
