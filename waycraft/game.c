@@ -321,7 +321,8 @@ player_select_block(struct game_state *game, struct game_input *input,
 			break;
 		}
 
-		if (block_is_empty(world_at(world, block_pos.x, block_pos.y, block_pos.z))) {
+		u32 block = world_at(world, block_pos.x, block_pos.y, block_pos.z);
+		if (block_is_empty(block)) {
 			block_pos = v3_add(block_pos, normal_max);
 			selected_block.min = v3_add(selected_block.min, normal_max);
 			selected_block.max = v3_add(selected_block.max, normal_max);
@@ -379,7 +380,9 @@ window_render(struct game_window *window, u32 window_count, m4x4 view,
 	m4x4 projection, struct render_command_buffer *cmd_buffer)
 {
 	while (window_count-- > 0) {
-		if (window->flags & WINDOW_VISIBLE) {
+		u32 is_window_visible = window->flags & WINDOW_VISIBLE;
+		u32 is_window_destroyed = window->flags & WINDOW_DESTROYED;
+		if (is_window_visible && !is_window_destroyed) {
 			m4x4 transform = window_transform(window);
 
 			render_textured_quad(cmd_buffer, transform, window->texture);
@@ -565,7 +568,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 		wm->hot_window = hot_window;
 	} else if (inventory_is_active) {
-
 		if (button_was_pressed(input->controller.toggle_inventory)) {
 			player->inventory.is_active = 0;
 		}
