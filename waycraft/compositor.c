@@ -813,7 +813,7 @@ compositor_finish(struct backend_memory *memory)
 		}
 	}
 
-#if ENABLE_WAYLAND
+#if ENABLE_XWAYLAND
 	xwayland_finish(&compositor->xwayland);
 #endif
 	wl_display_destroy(compositor->wl_display);
