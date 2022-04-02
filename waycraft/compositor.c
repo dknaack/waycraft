@@ -307,7 +307,7 @@ wl_surface_unbind(struct wl_resource *resource)
 
 	if (surface == compositor->focused_surface) {
 		compositor->focused_surface = 0;
-		compositor->wm->active_window = 0;
+		compositor->wm->focused_window = 0;
 	}
 }
 
@@ -382,8 +382,8 @@ xdg_toplevel_unbind(struct wl_resource *resource)
 		wm->hot_window = 0;
 	}
 
-	if (wm->active_window == surface->game_window) {
-		wm->active_window = 0;
+	if (wm->focused_window == surface->game_window) {
+		wm->focused_window = 0;
 	}
 
 	// TODO: remove the window from the window manager
@@ -692,7 +692,7 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 	wl_display_flush_clients(compositor->wl_display);
 
 	struct surface *focused_surface = compositor->focused_surface;
-	if (focused_surface && focused_surface->game_window != wm->active_window) {
+	if (focused_surface && focused_surface->game_window != wm->focused_window) {
 		surface_deactivate(focused_surface);
 		compositor->focused_surface = 0;
 	}
@@ -708,7 +708,7 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 
 		struct game_window *game_window = surface->game_window;
 		if (game_window) {
-			if (game_window == wm->active_window) {
+			if (game_window == wm->focused_window) {
 				surface_activate(surface);
 				compositor->focused_surface = surface;
 			}

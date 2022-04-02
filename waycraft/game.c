@@ -466,7 +466,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
-	struct game_window *active_window = wm->active_window;
+	struct game_window *focused_window = wm->focused_window;
 
 	struct player *player = &game->player;
 	u32 inventory_is_active = player->inventory.is_active;
@@ -478,7 +478,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	if (!active_window && !inventory_is_active) {
+	if (!focused_window && !inventory_is_active) {
 		player_move(game, input);
 		v3 block_pos = {0};
 		v3 block_normal = {0};
@@ -549,7 +549,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 					camera_pos, camera_front);
 				if (window) {
 					wm->is_active = 1;
-					wm->active_window = window;
+					wm->focused_window = window;
 				} else if (selected_item->type == ITEM_WINDOW) {
 					hot_window = &wm->windows[selected_item->count];
 					selected_item->type = ITEM_NONE;
@@ -577,33 +577,33 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
 		v3 camera_pos = v3_add(camera->position, mouse_pos);
 		v3 camera_front = camera->front;
-		v3 window_pos = active_window->position;
+		v3 window_pos = focused_window->position;
 
 		v2 cursor_pos = {0};
-		u32 is_inside_window = window_ray_intersection_point(active_window,
+		u32 is_inside_window = window_ray_intersection_point(focused_window,
 			camera_pos, camera_front, &cursor_pos);
 		if (is_inside_window) {
-			v3 x = v3_mulf(active_window->x_axis, cursor_pos.x);
-			v3 y = v3_mulf(active_window->y_axis, cursor_pos.y);
+			v3 x = v3_mulf(focused_window->x_axis, cursor_pos.x);
+			v3 y = v3_mulf(focused_window->y_axis, cursor_pos.y);
 			debug_line(window_pos, v3_add(v3_add(window_pos, y), x));
 		}
 
 		debug_set_color(0, 1, 0);
-		debug_line(window_pos, v3_add(window_pos, active_window->x_axis));
+		debug_line(window_pos, v3_add(window_pos, focused_window->x_axis));
 
 		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
 			// TODO: change this to resizing the window, choose a different
 			// keybind for deselecting the active window.
-			wm->active_window = 0;
+			wm->focused_window = 0;
 			wm->is_active = 0;
 		}
 
 		game->mouse_pos = mouse_pos;
 		wm->cursor_pos = cursor_pos;
 
-		if (active_window->flags & WINDOW_DESTROYED) {
-			wm->active_window = 0;
+		if (focused_window->flags & WINDOW_DESTROYED) {
+			wm->focused_window = 0;
 		}
 	}
 

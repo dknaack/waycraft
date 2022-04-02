@@ -27,7 +27,7 @@ struct game_window {
 struct game_window_manager {
 	struct game_window *windows;
 	struct game_window *hot_window;
-	struct game_window *active_window;
+	struct game_window *focused_window;
 
 	u32 window_count;
 	u32 is_active;
