@@ -708,7 +708,8 @@ compositor_update(struct backend_memory *memory, struct game_window_manager *wm)
 
 		struct game_window *game_window = surface->game_window;
 		if (game_window) {
-			if (game_window == wm->focused_window) {
+			if (game_window == wm->focused_window &&
+					compositor->focused_surface != surface) {
 				surface_activate(surface);
 				compositor->focused_surface = surface;
 			}
