@@ -427,7 +427,7 @@ window_find(struct game_window *window, u32 window_count,
 	for (u32 i = 0; i < window_count; i++) {
 		u32 intersects_window = window_ray_intersection_point(
 			window, ray_start, ray_direction, 0);
-		if (intersects_window) {
+		if (intersects_window && window->flags & WINDOW_VISIBLE) {
 			return window;
 		}
 
