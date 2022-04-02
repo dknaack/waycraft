@@ -526,7 +526,6 @@ static const struct wl_seat_interface wl_seat_impl = {
 static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-	puts("wl_seat_bind");
 	struct wl_resource *seat = wl_resource_create(client, &wl_seat_interface,
 		WL_SEAT_VERSION, id);
 	wl_resource_set_implementation(seat, &wl_seat_impl, data, 0);
@@ -603,7 +602,6 @@ wl_data_device_manager_bind(struct wl_client *client, void *data,
 static void
 wl_output_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-	puts("output_bind");
 	struct compositor *compositor = data;
 	struct wl_resource *wl_output = wl_resource_create(client,
 		&wl_output_interface, WL_OUTPUT_VERSION, id);
