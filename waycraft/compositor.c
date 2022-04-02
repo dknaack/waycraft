@@ -223,7 +223,9 @@ wl_surface_commit(struct wl_client *client, struct wl_resource *resource)
 	i32 texture_format;
 
 	if (!surface->wl_buffer) {
-		xdg_surface_send_configure(surface->xdg_surface, 0);
+		if (surface->xdg_surface) {
+			xdg_surface_send_configure(surface->xdg_surface, 0);
+		}
 	} else {
 		u32 texture = 0;
 
