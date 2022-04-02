@@ -103,25 +103,13 @@ compositor_time_msec(void)
 static struct surface *
 compositor_create_surface(struct compositor *compositor)
 {
-	struct wl_list *free_surfaces = &compositor->free_surfaces;
 	struct wl_list *surfaces = &compositor->surfaces;
 	struct surface *surface = 0;
-	if (wl_list_empty(free_surfaces)) {
-		surface = arena_alloc(&compositor->arena, 1, struct surface);
-		wl_list_insert(surfaces, &surface->link);
-		wl_list_init(&surface->subsurfaces);
-	} else {
-		wl_list_for_each(surface, &compositor->free_surfaces, link) {
-			break;
-		}
 
-		wl_list_remove(&surface->link);
-	}
-
-	struct game_window_manager *wm = compositor->wm;
+	surface = arena_alloc(&compositor->arena, 1, struct surface);
 	surface->compositor = compositor;
-
-	assert(wm->window_count < MAX_WINDOW_COUNT);
+	wl_list_init(&surface->subsurfaces);
+	wl_list_insert(surfaces, &surface->link);
 
 	return surface;
 }
@@ -306,15 +294,16 @@ static const struct wl_surface_interface wl_surface_implementation = {
 static void
 wl_surface_unbind(struct wl_resource *resource)
 {
-	puts(__func__);
-
 	// TODO: fix the order of windows
 	struct surface *surface = wl_resource_get_user_data(resource);
 	struct compositor *compositor = surface->compositor;
 
 	surface->texture = 0;
 	surface->wl_frame_callback = 0;
+	surface->wl_buffer = 0;
+
 	wl_list_remove(&surface->link);
+	wl_list_insert(&compositor->free_surfaces, &surface->link);
 
 	if (surface == compositor->focused_surface) {
 		compositor->focused_surface = 0;
@@ -414,13 +403,26 @@ xdg_surface_get_toplevel(struct wl_client *client,
 	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_implementation,
 		surface, xdg_toplevel_unbind);
 
-	struct game_window *window = surface->game_window;
-	if (!window) {
-		surface->game_window = wm->windows + wm->window_count++;
-	} else {
-		window->flags = 0;
+	if (!surface->game_window) {
+		u32 window_count = wm->window_count;
+		struct game_window *window = wm->windows;
+		while (window_count-- > 0) {
+			if (window->flags & WINDOW_DESTROYED) {
+				surface->game_window = window;
+				break;
+			}
+
+			window++;
+		}
+
+		if (!surface->game_window) {
+			surface->game_window = wm->windows + wm->window_count++;
+		}
+
+		assert(wm->window_count < MAX_WINDOW_COUNT);
 	}
 
+	surface->game_window->flags = 0;
 	surface->xdg_toplevel = xdg_toplevel;
 }
 
@@ -787,7 +789,7 @@ compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
 	compositor->modifiers.locked = locked;
 	compositor->modifiers.group = group;
 
-	u32 serial = wl_display_next_serial(compositor->wl_display);
+	u32 serial = 0;
 
 	// TODO: only send event to the focused window
 	struct wl_resource *keyboard;
