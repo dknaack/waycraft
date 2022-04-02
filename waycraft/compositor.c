@@ -198,7 +198,7 @@ static const struct wl_region_interface wl_region_impl = {
 /* wl_surface functions */
 static void
 wl_surface_attach(struct wl_client *client, struct wl_resource *resource,
-	struct wl_resource *buffer, i32 x, i32 y)
+		struct wl_resource *buffer, i32 x, i32 y)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 	surface->wl_buffer = buffer;
@@ -206,7 +206,7 @@ wl_surface_attach(struct wl_client *client, struct wl_resource *resource,
 
 static void
 wl_surface_frame(struct wl_client *client, struct wl_resource *resource,
-	u32 callback)
+		u32 callback)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
@@ -314,7 +314,7 @@ wl_surface_unbind(struct wl_resource *resource)
 /* wl_compositor functions */
 static void
 wl_compositor_create_surface(struct wl_client *wl_client,
-	struct wl_resource *resource, u32 id)
+		struct wl_resource *resource, u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct surface *surface = compositor_create_surface(compositor);
@@ -328,7 +328,7 @@ wl_compositor_create_surface(struct wl_client *wl_client,
 
 static void
 wl_compositor_create_region(struct wl_client *client,
-	struct wl_resource *resource, u32 id)
+		struct wl_resource *resource, u32 id)
 {
 	struct wl_resource *region = wl_resource_create(
 		client, &wl_region_interface, WL_REGION_VERSION, id);
@@ -392,16 +392,16 @@ xdg_toplevel_unbind(struct wl_resource *resource)
 /* xdg surface functions */
 static void
 xdg_surface_get_toplevel(struct wl_client *client,
-	struct wl_resource *resource, u32 id)
+		struct wl_resource *resource, u32 id)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 	struct compositor *compositor = surface->compositor;
 	struct game_window_manager *wm = compositor->wm;
 
-	struct wl_resource *xdg_toplevel = wl_resource_create(
-		client, &xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
-	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_impl,
-		surface, xdg_toplevel_unbind);
+	struct wl_resource *xdg_toplevel = wl_resource_create(client,
+		&xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
+	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_impl, surface,
+		xdg_toplevel_unbind);
 
 	if (!surface->game_window) {
 		u32 window_count = wm->window_count;
@@ -428,8 +428,7 @@ xdg_surface_get_toplevel(struct wl_client *client,
 
 static void
 xdg_surface_set_window_geometry(struct wl_client *client,
-	struct wl_resource *resource,
-	i32 x, i32 y, i32 width, i32 height)
+		struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 	surface->width = width;
@@ -449,14 +448,12 @@ static const struct xdg_surface_interface xdg_surface_impl = {
 /* xdg_wm_base functions */
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
-	struct wl_resource *resource,
-	u32 id, struct wl_resource *wl_surface)
+		struct wl_resource *resource, u32 id, struct wl_resource *wl_surface)
 {
 	struct surface *surface = wl_resource_get_user_data(wl_surface);
-	struct wl_resource *xdg_surface = wl_resource_create(
-		client, &xdg_surface_interface, XDG_SURFACE_VERSION, id);
-	wl_resource_set_implementation(
-		xdg_surface, &xdg_surface_impl, surface, 0);
+	struct wl_resource *xdg_surface = wl_resource_create(client,
+		&xdg_surface_interface, XDG_SURFACE_VERSION, id);
+	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, surface, 0);
 
 	surface->xdg_surface = xdg_surface;
 }
@@ -471,10 +468,9 @@ static const struct xdg_wm_base_interface xdg_wm_base_impl = {
 static void
 xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
-	struct wl_resource *resource = wl_resource_create(
-		client, &xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
-	wl_resource_set_implementation(
-		resource, &xdg_wm_base_impl, data, 0);
+	struct wl_resource *resource = wl_resource_create(client,
+		&xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
+	wl_resource_set_implementation(resource, &xdg_wm_base_impl, data, 0);
 }
 
 /* TODO: wl_pointer functions */
@@ -491,20 +487,20 @@ static const struct wl_keyboard_interface wl_keyboard_impl = {
 /* wl seat functions */
 static void
 wl_seat_get_pointer(struct wl_client *wl_client, struct wl_resource *resource,
-	u32 id)
+		u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *pointer = wl_resource_create(wl_client,
 		&wl_pointer_interface, WL_POINTER_VERSION, id);
+	wl_resource_set_implementation(pointer, &wl_pointer_impl, compositor,
+		resource_remove);
 
-	wl_resource_set_implementation(pointer, &wl_pointer_impl,
-		compositor, resource_remove);
 	wl_list_insert(&compositor->pointers, wl_resource_get_link(pointer));
 }
 
 static void
 wl_seat_get_keyboard(struct wl_client *wl_client, struct wl_resource *resource,
-	u32 id)
+		u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(
@@ -529,8 +525,8 @@ static void
 wl_seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
 	puts("wl_seat_bind");
-	struct wl_resource *seat =
-		wl_resource_create(client, &wl_seat_interface, WL_SEAT_VERSION, id);
+	struct wl_resource *seat = wl_resource_create(client, &wl_seat_interface,
+		WL_SEAT_VERSION, id);
 	wl_resource_set_implementation(seat, &wl_seat_impl, data, 0);
 
 	u32 caps = WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD;
@@ -549,9 +545,9 @@ static const struct wl_subsurface_interface wl_subsurface_imeplementation = {
 };
 
 static void
-wl_subcompositor_get_subsurface(
-	struct wl_client *client, struct wl_resource *resource, u32 id,
-	struct wl_resource *wl_surface, struct wl_resource *wl_parent)
+wl_subcompositor_get_subsurface(struct wl_client *client,
+		struct wl_resource *resource, u32 id, struct wl_resource *wl_surface,
+		struct wl_resource *wl_parent)
 {
 	struct surface *surface = wl_resource_get_user_data(wl_surface);
 	struct surface *parent = wl_resource_get_user_data(wl_parent);
@@ -594,7 +590,7 @@ wl_data_device_manager_impl = {
 
 static void
 wl_data_device_manager_bind(struct wl_client *client, void *data,
-	u32 version, u32 id)
+		u32 version, u32 id)
 {
 	struct wl_resource *data_device_manager = wl_resource_create(client,
 		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, id);
@@ -618,8 +614,8 @@ wl_output_bind(struct wl_client *client, void *data, u32 version, u32 id)
 }
 
 i32
-compositor_init(struct backend_memory *memory, struct egl *egl, struct
-	game_window_manager *wm, i32 keymap, i32 keymap_size)
+compositor_init(struct backend_memory *memory, struct egl *egl,
+		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
 {
 	struct compositor *compositor = memory->data;
 	struct memory_arena *arena = &compositor->arena;
@@ -773,7 +769,7 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 
 static void
 compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
-	u32 latched, u32 locked, u32 group)
+		u32 latched, u32 locked, u32 group)
 {
 	struct compositor *compositor = memory->data;
 
