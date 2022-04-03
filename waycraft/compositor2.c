@@ -33,6 +33,7 @@
 #define XDG_WM_BASE_VERSION 4
 
 #define MAX_SURFACE_COUNT 256
+#define MAX_WINDOW_COUNT 256
 
 enum surface_role {
 	SURFACE_TOPLEVEL,
@@ -428,7 +429,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->display = display;
 	compositor->egl_display = egl->display;
 	compositor->surfaces = arena_alloc(arena, MAX_SURFACE_COUNT, struct surface);
-	assert(compositor->surfaces);
+	compositor->window_manager.windows = arena_alloc(arena, MAX_WINDOW_COUNT,
+		struct game_window);
+	compositor->surface_count = 1;
 
 	wl_list_init(&compositor->keyboards);
 	wl_list_init(&compositor->pointers);
