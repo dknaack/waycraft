@@ -570,8 +570,10 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 error_xwayland:
 	wl_global_destroy(compositor->compositor);
 	wl_global_destroy(compositor->output);
-	wl_global_destroy(compositor->seat);
 	wl_global_destroy(compositor->xdg_wm_base);
+	wl_global_destroy(compositor->subcompositor);
+	wl_global_destroy(compositor->data_device_manager);
+	wl_global_destroy(compositor->seat);
 error_socket:
 	wl_display_destroy(display);
 error_display:
@@ -587,8 +589,10 @@ compositor_finish(struct backend_memory *memory)
 
 	wl_global_destroy(compositor->compositor);
 	wl_global_destroy(compositor->output);
-	wl_global_destroy(compositor->seat);
 	wl_global_destroy(compositor->xdg_wm_base);
+	wl_global_destroy(compositor->subcompositor);
+	wl_global_destroy(compositor->data_device_manager);
+	wl_global_destroy(compositor->seat);
 	wl_display_destroy(compositor->display);
 }
 
