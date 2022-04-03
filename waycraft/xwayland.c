@@ -37,9 +37,8 @@ set_cloexec(i32 fd, i32 value)
 }
 
 static void
-xwm_handle_create_notify(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_create_notify(struct xwm *xwm, xcb_create_notify_event_t *event)
 {
-	xcb_create_notify_event_t *event = (xcb_create_notify_event_t *)data;
 	xcb_window_t window = event->window;
 	u32 values[1];
 
@@ -54,40 +53,34 @@ xwm_handle_create_notify(struct xwm *xwm, xcb_generic_event_t *data)
 }
 
 static void
-xwm_handle_destroy_notify(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_destroy_notify(struct xwm *xwm, xcb_destroy_notify_event_t *event)
 {
-	xcb_destroy_notify_event_t *event = (xcb_destroy_notify_event_t *)data;
 	(void)event;
 }
 
 static void
-xwm_handle_property_notify(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_property_notify(struct xwm *xwm, xcb_property_notify_event_t *event)
 {
-	xcb_property_notify_event_t *event = (xcb_property_notify_event_t *)data;
 	(void)event;
 }
 
 static void
-xwm_handle_client_message(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_client_message(struct xwm *xwm, xcb_client_message_event_t *event)
 {
-	xcb_client_message_event_t *event = (xcb_client_message_event_t *)data;
 	if (event->type == xwm->atoms[XWM_WL_SURFACE_ID]) {
 		log_info("wl_surface_id");
 	}
 }
 
 static void
-xwm_handle_configure_request(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_configure_request(struct xwm *xwm, xcb_configure_request_event_t *event)
 {
-	xcb_configure_request_event_t *event = (xcb_configure_request_event_t *)data;
 	(void)event;
 }
 
 static void
-xwm_handle_map_request(struct xwm *xwm, xcb_generic_event_t *data)
+xwm_handle_map_request(struct xwm *xwm, xcb_map_request_event_t *event)
 {
-	xcb_map_request_event_t *event = (xcb_map_request_event_t *)data;
-
 	xcb_map_window(xwm->connection, event->window);
 }
 
@@ -120,22 +113,22 @@ xwm_handle_event(i32 fd, u32 mask, void *data)
 
 		switch (event->response_type & ~0x80) {
 		case XCB_CREATE_NOTIFY:
-			xwm_handle_create_notify(xwm, event);
+			xwm_handle_create_notify(xwm, (xcb_create_notify_event_t *)event);
 			break;
 		case XCB_DESTROY_NOTIFY:
-			xwm_handle_destroy_notify(xwm, event);
+			xwm_handle_destroy_notify(xwm, (xcb_destroy_notify_event_t *)event);
 			break;
 		case XCB_PROPERTY_NOTIFY:
-			xwm_handle_property_notify(xwm, event);
+			xwm_handle_property_notify(xwm, (xcb_property_notify_event_t *)event);
 			break;
 		case XCB_CLIENT_MESSAGE:
-			xwm_handle_client_message(xwm, event);
+			xwm_handle_client_message(xwm, (xcb_client_message_event_t *)event);
 			break;
 		case XCB_CONFIGURE_REQUEST:
-			xwm_handle_configure_request(xwm, event);
+			xwm_handle_configure_request(xwm, (xcb_configure_request_event_t *)event);
 			break;
 		case XCB_MAP_REQUEST:
-			xwm_handle_map_request(xwm, event);
+			xwm_handle_map_request(xwm, (xcb_map_request_event_t *)event);
 			break;
 		}
 
