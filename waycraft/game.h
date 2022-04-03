@@ -14,19 +14,18 @@ enum game_window_flags {
 };
 
 struct game_window {
+	u32 id; // NOTE: must not be zero
+	u32 flags;
 	v3 position;
 	v3 x_axis;
 	v3 y_axis;
 	v3 z_axis;
 	u32 texture;
-	u32 flags;
-
 	struct game_window *parent_window;
 };
 
 struct game_window_manager {
 	struct game_window *windows;
-	struct game_window *hot_window;
 	struct game_window *focused_window;
 
 	u32 window_count;
@@ -79,6 +78,7 @@ struct game_state {
 	struct camera camera;
 	struct memory_arena arena;
 	struct renderer renderer;
+	struct game_window *hot_window;
 
 	struct player {
 		f32 speed;

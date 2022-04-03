@@ -486,7 +486,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		u32 has_selected_block = player_select_block(game, input,
 			&block_pos, &block_normal, &t);
 
-		struct game_window *hot_window = wm->hot_window;
+		struct game_window *hot_window = game->hot_window;
 		if (hot_window) {
 			if (has_selected_block) {
 				v3 relative_up = V3(0, 1, 0);
@@ -566,7 +566,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			player->inventory.is_active = 1;
 		}
 
-		wm->hot_window = hot_window;
+		game->hot_window = hot_window;
 	} else if (inventory_is_active) {
 		if (button_was_pressed(input->controller.toggle_inventory)) {
 			player->inventory.is_active = 0;
