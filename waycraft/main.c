@@ -4,6 +4,7 @@
 #include "game.c"
 #include "gl.c"
 #include "inventory.c"
+#include "log.c"
 #include "math.c"
 #include "memory.c"
 #include "noise.c"
