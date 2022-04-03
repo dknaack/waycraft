@@ -11,6 +11,7 @@
 #include <waycraft/backend.h>
 #include <waycraft/compositor.h>
 #include <waycraft/game.h>
+#include <waycraft/gl.h>
 #include <waycraft/log.h>
 #include <waycraft/xdg-shell-protocol.h>
 #include <waycraft/xwayland.h>
@@ -29,6 +30,23 @@
 #define XDG_SURFACE_VERSION 4
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_WM_BASE_VERSION 4
+
+enum surface_flags {
+	SURFACE_NEW_BUFFER,
+};
+
+struct surface_state {
+	u32 flags;
+
+	struct wl_resource *buffer;
+	struct wl_resource *frame_callback;
+};
+
+struct surface {
+	u32 texture;
+	struct surface_state pending;
+	struct surface_state current;
+};
 
 struct compositor {
 	struct game_window_manager window_manager;
@@ -72,7 +90,9 @@ surface_attach(struct wl_client *client, struct wl_resource *resource,
 		return;
 	}
 
-	// TODO: attach the buffer to the pending state
+	struct surface *surface = wl_resource_get_user_data(resource);
+	surface->pending.flags |= SURFACE_NEW_BUFFER;
+	surface->pending.buffer = buffer;
 }
 
 static void
@@ -85,7 +105,35 @@ surface_frame(struct wl_client *client, struct wl_resource *resource,
 static void
 surface_commit(struct wl_client *client, struct wl_resource *resource)
 {
-	// TODO: change the current state to the pending state
+	struct surface *surface = wl_resource_get_user_data(resource);
+
+	if (surface->pending.flags & SURFACE_NEW_BUFFER) {
+		struct wl_shm_buffer *shm_buffer =
+			wl_shm_buffer_get(surface->pending.buffer);
+		u32 width = wl_shm_buffer_get_width(shm_buffer);
+		u32 height = wl_shm_buffer_get_height(shm_buffer);
+		u32 format = wl_shm_buffer_get_format(shm_buffer);
+		void *data = wl_shm_buffer_get_data(shm_buffer);
+		assert(format == 0 || format == 1);
+
+		if (surface->texture) {
+			gl.DeleteTextures(1, &surface->texture);
+		}
+
+		u32 texture;
+		gl.GenTextures(1, &texture);
+		gl.BindTexture(GL_TEXTURE_2D, texture);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+			GL_BGRA, GL_UNSIGNED_BYTE, data);
+		gl.BindTexture(GL_TEXTURE_2D, 0);
+
+		wl_buffer_send_release(surface->pending.buffer);
+	}
+
+	surface->current = surface->pending;
+	surface->pending.flags = 0;
 }
 
 static const struct wl_surface_interface surface_impl = {
@@ -110,11 +158,13 @@ static const struct wl_region_interface region_impl = {
 
 static void
 compositor_create_surface(struct wl_client *client,
-		struct wl_resource *_resource, u32 id)
+		struct wl_resource *resource, u32 id)
 {
-	struct wl_resource *resource = wl_resource_create(client,
+	struct compositor *compositor = wl_resource_get_user_data(resource);
+	struct surface *surface = arena_alloc(&compositor->arena, 1, struct surface);
+	struct wl_resource *wl_surface = wl_resource_create(client,
 		&wl_surface_interface, WL_SURFACE_VERSION, id);
-	wl_resource_set_implementation(resource, &surface_impl, 0, 0);
+	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
 }
 
 static void
@@ -268,11 +318,12 @@ static const struct xdg_surface_interface xdg_surface_impl = {
 static void
 xdg_wm_base_get_xdg_surface(struct wl_client *client,
 		struct wl_resource *resource, u32 id,
-		struct wl_resource *surface)
+		struct wl_resource *wl_surface)
 {
+	struct surface *surface = wl_resource_get_user_data(wl_surface);
 	struct wl_resource *xdg_surface = wl_resource_create(client,
 		&xdg_surface_interface, XDG_SURFACE_VERSION, id);
-	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, 0, 0);
+	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, surface, 0);
 }
 
 static const struct xdg_wm_base_interface xdg_wm_base_impl = {
