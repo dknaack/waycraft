@@ -23,10 +23,12 @@
 #define WL_POINTER_VERSION 7
 #define WL_REGION_VERSION 1
 #define WL_SEAT_VERSION 7
+#define WL_SUBCOMPOSITOR_VERSION 1
+#define WL_SUBSURFACE_VERSION 1
 #define WL_SURFACE_VERSION 5
-#define XDG_WM_BASE_VERSION 4
-#define XDG_TOPLEVEL_VERSION 4
 #define XDG_SURFACE_VERSION 4
+#define XDG_TOPLEVEL_VERSION 4
+#define XDG_WM_BASE_VERSION 4
 
 struct compositor {
 	struct game_window_manager window_manager;
