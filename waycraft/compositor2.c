@@ -16,6 +16,7 @@
 #include <waycraft/xdg-shell-protocol.h>
 #include <waycraft/xwayland.h>
 
+#define WL_CALLBACK_VERSION 1
 #define WL_COMPOSITOR_VERSION 5
 #define WL_DATA_DEVICE_MANAGER_VERSION 3
 #define WL_DATA_SOURCE_VERSION 3
@@ -39,6 +40,7 @@ enum surface_role {
 enum surface_flags {
 	SURFACE_NEW_BUFFER = 1 << 0,
 	SURFACE_NEW_ROLE   = 1 << 1,
+	SURFACE_NEW_FRAME  = 1 << 2,
 };
 
 struct surface_state {
@@ -106,7 +108,12 @@ static void
 surface_frame(struct wl_client *client, struct wl_resource *resource,
 		u32 callback)
 {
-	// TODO: create a frame callback resource
+	struct wl_resource *frame_callback = wl_resource_create(client,
+		&wl_callback_interface, WL_CALLBACK_VERSION, callback);
+
+	struct surface *surface = wl_resource_get_user_data(resource);
+	surface->pending.flags |= SURFACE_NEW_FRAME;
+	surface->pending.frame_callback = frame_callback;
 }
 
 static void
@@ -457,7 +464,7 @@ compositor_update(struct backend_memory *memory)
 	struct surface *surface = compositor->surfaces;
 	while (surface_count-- > 0) {
 		struct wl_resource *frame_callback = surface->current.frame_callback;
-		if (frame_callback) {
+		if ((surface->current.flags & SURFACE_NEW_FRAME) && frame_callback) {
 			wl_callback_send_done(frame_callback, 0);
 		}
 
