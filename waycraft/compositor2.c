@@ -77,6 +77,7 @@ struct compositor {
 	struct wl_list pointers;
 	struct surface *surfaces;
 	u32 surface_count;
+	u32 focused_surface;
 };
 
 static void
@@ -482,6 +483,71 @@ compositor_update(struct backend_memory *memory)
 		}
 
 		surface++;
+	}
+
+	u32 focused_surface = compositor->focused_surface;
+	u32 focused_window = compositor->window_manager.focused_window;
+	if (focused_surface != focused_window) {
+		if (focused_surface) {
+			assert(focused_surface < compositor->surface_count);
+			struct surface *surface =
+				&compositor->surfaces[focused_surface];
+			assert(surface->current.role == SURFACE_TOPLEVEL);
+
+			struct wl_resource *keyboard;
+			wl_resource_for_each(keyboard, &compositor->keyboards) {
+				wl_keyboard_send_leave(keyboard, 0, surface->resource);
+			}
+
+			struct wl_resource *pointer;
+			wl_resource_for_each(pointer, &compositor->pointers) {
+				wl_pointer_send_leave(pointer, 0, surface->resource);
+			}
+
+			struct wl_array array;
+			struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+			assert(xdg_toplevel);
+
+			wl_array_init(&array);
+			xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+		}
+
+		if (focused_window) {
+			assert(focused_window < compositor->surface_count);
+			struct surface *surface =
+				&compositor->surfaces[focused_window];
+
+			assert(surface->current.role == SURFACE_TOPLEVEL);
+
+			struct wl_array array;
+			wl_array_init(&array);
+
+			struct wl_resource *keyboard;
+			wl_resource_for_each(keyboard, &compositor->keyboards) {
+				wl_keyboard_send_enter(keyboard, 0, surface->resource, &array);
+				wl_keyboard_send_modifiers(keyboard, 0, 0, 0, 0, 0);
+			}
+
+			struct wl_resource *pointer;
+			wl_resource_for_each(pointer, &compositor->pointers) {
+				// TODO: compute the current position of the cursor on the
+				// window itself.
+				wl_fixed_t surface_x = wl_fixed_from_double(0.f);
+				wl_fixed_t surface_y = wl_fixed_from_double(0.f);
+				// TODO: generate a serial for the event
+				wl_pointer_send_enter(pointer, 0, surface->resource,
+					surface_x, surface_y);
+			}
+
+			struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+			assert(xdg_toplevel);
+
+			i32 *state = wl_array_add(&array, sizeof(*state));
+			*state = XDG_TOPLEVEL_STATE_ACTIVATED;
+			xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+		}
+
+		compositor->focused_surface = focused_window;
 	}
 
 	return &compositor->window_manager;
