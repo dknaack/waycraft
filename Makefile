@@ -1,17 +1,17 @@
 WAYLAND_PROTOCOLS = $(shell pkg-config --variable=pkgdatadir wayland-protocols)
-WAYLAND_SCANNER   = $(shell pkg-config --variable=wayland_scanner wayland-scanner)
+WAYLAND_SCANNER = $(shell pkg-config --variable=wayland_scanner wayland-scanner)
 
 WAYCRAFT_LIBS = \
-	 $(shell pkg-config --cflags --libs xcb xcb-xfixes) \
-	 $(shell pkg-config --cflags --libs wayland-server) \
-	 $(shell pkg-config --cflags --libs xkbcommon-x11) \
-	 $(shell pkg-config --cflags --libs egl gl) \
-	 -lm
+	$(shell pkg-config --cflags --libs xcb xcb-xfixes xcb-composite) \
+	$(shell pkg-config --cflags --libs wayland-server) \
+	$(shell pkg-config --cflags --libs xkbcommon-x11) \
+	$(shell pkg-config --cflags --libs egl gl) \
+	-lm
 
-WCDB_LIBS = \
-	$(shell pkg-config --cflags --libs wayland-client)
+WCDB_LIBS = $(shell pkg-config --cflags --libs wayland-client)
 
-CFLAGS  = -g -std=c11 -pedantic -Wall -Wno-unused-function -D_POSIX_C_SOURCE=200809L -I.
+CFLAGS  = -g -std=c11 -pedantic -Wall -Wno-unused-function \
+		  -D_POSIX_C_SOURCE=200809L -I. -DENABLE_XWAYLAND=1
 CC      = cc
 
 all: options build/waycraft build/wcdb
