@@ -14,7 +14,7 @@ enum game_window_flags {
 };
 
 struct game_window {
-	u32 id; // NOTE: must not be zero
+	u32 id;
 	u32 flags;
 	v3 position;
 	v3 x_axis;
@@ -26,7 +26,7 @@ struct game_window {
 
 struct game_window_manager {
 	struct game_window *windows;
-	struct game_window *focused_window;
+	u32 focused_window;
 
 	u32 window_count;
 	u32 is_active;

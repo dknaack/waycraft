@@ -466,7 +466,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
-	struct game_window *focused_window = wm->focused_window;
+	struct game_window *focused_window = 0;
 
 	struct player *player = &game->player;
 	u32 inventory_is_active = player->inventory.is_active;
@@ -475,6 +475,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		if (!(windows[i].flags & WINDOW_INITIALIZED)) {
 			inventory_add_item(&player->inventory, ITEM_WINDOW, i);
 			windows[i].flags |= WINDOW_INITIALIZED;
+		}
+
+		if (windows[i].id == wm->focused_window) {
+			focused_window = &windows[i];
 		}
 	}
 
@@ -549,7 +553,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 					camera_pos, camera_front);
 				if (window) {
 					wm->is_active = 1;
-					wm->focused_window = window;
+					wm->focused_window = window->id;
 				} else if (selected_item->type == ITEM_WINDOW) {
 					hot_window = &wm->windows[selected_item->count];
 					selected_item->type = ITEM_NONE;
