@@ -61,6 +61,7 @@ struct surface {
 	struct wl_resource *xdg_toplevel;
 	struct wl_resource *xdg_surface;
 
+	struct game_window *window;
 	struct compositor *compositor;
 	struct surface_state pending;
 	struct surface_state current;
@@ -181,9 +182,13 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		window->id = surface - compositor->surfaces;
 		window->flags = 0;
 		window->texture = surface->texture;
+		surface->window = window;
 	}
 
-	surface->current = surface->pending;
+	if (surface->pending.flags & SURFACE_NEW_FRAME) {
+		surface->current.frame_callback = surface->pending.frame_callback;
+	}
+
 	surface->pending.flags = 0;
 }
 
@@ -506,6 +511,16 @@ compositor_finish(struct backend_memory *memory)
 	wl_display_destroy(compositor->display);
 }
 
+static u32
+get_time_msec(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
 static struct game_window_manager *
 compositor_update(struct backend_memory *memory)
 {
@@ -520,8 +535,10 @@ compositor_update(struct backend_memory *memory)
 	struct surface *surface = compositor->surfaces;
 	while (surface_count-- > 0) {
 		struct wl_resource *frame_callback = surface->current.frame_callback;
-		if ((surface->current.flags & SURFACE_NEW_FRAME) && frame_callback) {
-			wl_callback_send_done(frame_callback, 0);
+		if (frame_callback) {
+			wl_callback_send_done(frame_callback, get_time_msec());
+			wl_resource_destroy(frame_callback);
+			surface->current.frame_callback = 0;
 		}
 
 		surface++;
@@ -556,9 +573,7 @@ compositor_update(struct backend_memory *memory)
 
 		if (focused_window) {
 			assert(focused_window < compositor->surface_count);
-			struct surface *surface =
-				&compositor->surfaces[focused_window];
-
+			struct surface *surface = &compositor->surfaces[focused_window];
 			assert(surface->current.role == SURFACE_TOPLEVEL);
 
 			struct wl_array array;
