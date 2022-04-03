@@ -22,6 +22,9 @@
 #define WL_REGION_VERSION 1
 #define WL_SEAT_VERSION 7
 #define WL_SURFACE_VERSION 5
+#define XDG_WM_BASE_VERSION 4
+#define XDG_TOPLEVEL_VERSION 4
+#define XDG_SURFACE_VERSION 4
 
 struct compositor {
 	struct game_window_manager window_manager;
@@ -32,6 +35,7 @@ struct compositor {
 
 	struct wl_global *compositor;
 	struct wl_global *output;
+	struct wl_global *xdg_wm_base;
 	struct seat {
 		struct wl_global *global;
 		struct wl_list keyboards;
@@ -209,6 +213,77 @@ output_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_output_send_done(resource);
 }
 
+static const struct xdg_toplevel_interface xdg_toplevel_impl = {
+	.destroy          = do_nothing,
+	.set_parent       = do_nothing,
+	.set_title        = do_nothing,
+	.set_app_id       = do_nothing,
+	.show_window_menu = do_nothing,
+	.move             = do_nothing,
+	.resize           = do_nothing,
+	.set_max_size     = do_nothing,
+	.set_min_size     = do_nothing,
+	.set_maximized    = do_nothing,
+	.unset_maximized  = do_nothing,
+	.set_fullscreen   = do_nothing,
+	.unset_fullscreen = do_nothing,
+	.set_minimized    = do_nothing,
+};
+
+static void
+xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
+		u32 id)
+{
+	struct wl_resource *xdg_toplevel = wl_resource_create(client,
+		&xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
+	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_impl, 0, 0);
+
+	/*
+	 * TODO: assign the role to the underlying surface, post error if the
+	 * surface already has a role.
+	 */
+}
+
+static void
+xdg_surface_set_window_geometry(struct wl_client *client,
+		struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
+{
+	// TODO
+}
+
+static const struct xdg_surface_interface xdg_surface_impl = {
+	.destroy             = do_nothing,
+	.get_toplevel        = xdg_surface_get_toplevel,
+	.get_popup           = do_nothing,
+	.set_window_geometry = xdg_surface_set_window_geometry,
+	.ack_configure       = do_nothing,
+};
+
+static void
+xdg_wm_base_get_xdg_surface(struct wl_client *client,
+		struct wl_resource *resource, u32 id,
+		struct wl_resource *surface)
+{
+	struct wl_resource *xdg_surface = wl_resource_create(client,
+		&xdg_surface_interface, XDG_SURFACE_VERSION, id);
+	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, 0, 0);
+}
+
+static const struct xdg_wm_base_interface xdg_wm_base_impl = {
+	.destroy           = do_nothing,
+	.create_positioner = do_nothing,
+	.get_xdg_surface   = xdg_wm_base_get_xdg_surface,
+	.pong              = do_nothing,
+};
+
+static void
+xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
+{
+	struct wl_resource *resource = wl_resource_create(client,
+		&xdg_wm_base_interface, XDG_WM_BASE_VERSION, id);
+	wl_resource_set_implementation(resource, &xdg_wm_base_impl, data, 0);
+}
+
 static i32
 compositor_init(struct backend_memory *memory, struct egl *egl,
 		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
@@ -231,6 +306,8 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		&wl_compositor_interface, WL_COMPOSITOR_VERSION, 0, compositor_bind);
 	compositor->output = wl_global_create(display,
 		&wl_output_interface, WL_OUTPUT_VERSION, 0, output_bind);
+	compositor->xdg_wm_base = wl_global_create(display,
+		&xdg_wm_base_interface, XDG_WM_BASE_VERSION, 0, xdg_wm_base_bind);
 	seat_init(&compositor->seat, display);
 	wl_display_init_shm(display);
 
@@ -247,6 +324,7 @@ compositor_finish(struct backend_memory *memory)
 	wl_global_destroy(compositor->compositor);
 	wl_global_destroy(compositor->output);
 	wl_global_destroy(compositor->seat.global);
+	wl_global_destroy(compositor->xdg_wm_base);
 	wl_display_destroy(compositor->display);
 }
 
