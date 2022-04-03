@@ -38,6 +38,7 @@
 enum surface_role {
 	SURFACE_ROLE_NONE,
 	SURFACE_ROLE_TOPLEVEL,
+	SURFACE_ROLE_SUBSURFACE,
 	SURFACE_ROLE_COUNT
 };
 
@@ -59,8 +60,14 @@ struct surface {
 	u32 texture;
 
 	struct wl_resource *resource;
-	struct wl_resource *xdg_toplevel;
-	struct wl_resource *xdg_surface;
+	union {
+		struct {
+			struct wl_resource *xdg_surface;
+			struct wl_resource *xdg_toplevel;
+		};
+
+		struct wl_resource *parent_surface;
+	};
 
 	struct game_window *window;
 	struct compositor *compositor;
@@ -437,12 +444,28 @@ xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_resource_set_implementation(resource, &xdg_wm_base_impl, data, 0);
 }
 
+static const struct wl_subsurface_interface subsurface_impl = {
+	.destroy      = do_nothing,
+	.set_position = do_nothing,
+	.place_above  = do_nothing,
+	.place_below  = do_nothing,
+	.set_sync     = do_nothing,
+	.set_desync   = do_nothing,
+};
+
 static void
 subcompositor_get_subsurface(struct wl_client *client,
-		struct wl_resource *resource, u32 id, struct wl_resource *surface,
+		struct wl_resource *resource, u32 id, struct wl_resource *_surface,
 		struct wl_resource *parent)
 {
-	// TODO: set the parent of the surface in the pending state
+	struct surface *surface = wl_resource_get_user_data(_surface);
+	struct wl_resource *subsurface = wl_resource_create(client,
+		&wl_subsurface_interface, WL_SUBSURFACE_VERSION, id);
+	wl_resource_set_implementation(subsurface, &subsurface_impl, surface, 0);
+
+	surface->pending.flags |= SURFACE_NEW_ROLE;
+	surface->pending.role = SURFACE_ROLE_SUBSURFACE;
+	surface->parent_surface = wl_resource_get_user_data(parent);
 }
 
 static const struct wl_subcompositor_interface subcompositor_impl = {
