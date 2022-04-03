@@ -201,7 +201,7 @@ compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 {
 	struct wl_resource *resource = wl_resource_create(client,
 		&wl_compositor_interface, version, id);
-	wl_resource_set_implementation(resource, &compositor_impl, 0, 0);
+	wl_resource_set_implementation(resource, &compositor_impl, data, 0);
 }
 
 static const struct wl_pointer_interface pointer_impl = {
@@ -424,17 +424,18 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	wl_list_init(&compositor->pointers);
 
 	compositor->compositor = wl_global_create(display,
-		&wl_compositor_interface, WL_COMPOSITOR_VERSION, 0, compositor_bind);
-	compositor->output = wl_global_create(display,
-		&wl_output_interface, WL_OUTPUT_VERSION, 0, output_bind);
-	compositor->xdg_wm_base = wl_global_create(display,
-		&xdg_wm_base_interface, XDG_WM_BASE_VERSION, 0, xdg_wm_base_bind);
+		&wl_compositor_interface, WL_COMPOSITOR_VERSION, compositor,
+		compositor_bind);
+	compositor->output = wl_global_create(display, &wl_output_interface,
+		WL_OUTPUT_VERSION, compositor, output_bind);
+	compositor->xdg_wm_base = wl_global_create(display, &xdg_wm_base_interface,
+		XDG_WM_BASE_VERSION, compositor, xdg_wm_base_bind);
 	compositor->subcompositor = wl_global_create(display,
-		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, 0,
+		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, compositor,
 		subcompositor_bind);
 	compositor->data_device_manager = wl_global_create(display,
-		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, 0,
-		&data_device_manager_bind);
+		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION,
+		compositor, &data_device_manager_bind);
 	compositor->seat = wl_global_create(display,
 		&wl_seat_interface, WL_SEAT_VERSION, compositor, seat_bind);
 	wl_display_init_shm(display);
