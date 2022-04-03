@@ -32,6 +32,8 @@
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_WM_BASE_VERSION 4
 
+#define MAX_SURFACE_COUNT 256
+
 enum surface_role {
 	SURFACE_TOPLEVEL,
 	SURFACE_ROLE_COUNT
@@ -419,6 +421,8 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 
 	compositor->display = display;
 	compositor->egl_display = egl->display;
+	compositor->surfaces = arena_alloc(arena, MAX_SURFACE_COUNT, struct surface);
+	assert(compositor->surfaces);
 
 	wl_list_init(&compositor->keyboards);
 	wl_list_init(&compositor->pointers);
