@@ -561,7 +561,17 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->keymap = keymap;
 	compositor->keymap_size = keymap_size;
 
+	if (xwayland_init(&compositor->xwayland, display) != 0) {
+		log_err("Failed to initialize xwayland");
+		goto error_xwayland;
+	}
+
 	return 0;
+error_xwayland:
+	wl_global_destroy(compositor->compositor);
+	wl_global_destroy(compositor->output);
+	wl_global_destroy(compositor->seat);
+	wl_global_destroy(compositor->xdg_wm_base);
 error_socket:
 	wl_display_destroy(display);
 error_display:
@@ -572,6 +582,8 @@ static void
 compositor_finish(struct backend_memory *memory)
 {
 	struct compositor *compositor = memory->data;
+
+	xwayland_finish(&compositor->xwayland);
 
 	wl_global_destroy(compositor->compositor);
 	wl_global_destroy(compositor->output);
