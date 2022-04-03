@@ -55,6 +55,8 @@ struct surface_state {
 
 struct surface {
 	u32 texture;
+	struct wl_resource *resource;
+	struct wl_resource *xdg_toplevel;
 	struct surface_state pending;
 	struct surface_state current;
 };
@@ -183,6 +185,8 @@ compositor_create_surface(struct wl_client *client,
 	struct wl_resource *wl_surface = wl_resource_create(client,
 		&wl_surface_interface, WL_SURFACE_VERSION, id);
 	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
+
+	surface->resource = resource;
 }
 
 static void
@@ -305,6 +309,7 @@ xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
 
 	surface->pending.flags |= SURFACE_NEW_ROLE;
 	surface->pending.role = SURFACE_TOPLEVEL;
+	surface->xdg_toplevel = xdg_toplevel;
 }
 
 
