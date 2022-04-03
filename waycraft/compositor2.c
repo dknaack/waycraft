@@ -16,6 +16,8 @@
 #include <waycraft/xwayland.h>
 
 #define WL_COMPOSITOR_VERSION 5
+#define WL_DATA_DEVICE_MANAGER_VERSION 3
+#define WL_DATA_SOURCE_VERSION 3
 #define WL_KEYBOARD_VERSION 7
 #define WL_OUTPUT_VERSION 4
 #define WL_POINTER_VERSION 7
@@ -37,6 +39,7 @@ struct compositor {
 	struct wl_global *output;
 	struct wl_global *xdg_wm_base;
 	struct wl_global *subcompositor;
+	struct wl_global *data_device_manager;
 	struct seat {
 		struct wl_global *global;
 		struct wl_list keyboards;
@@ -306,6 +309,35 @@ subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_resource_set_implementation(resource, &subcompositor_impl, data, 0);
 }
 
+static const struct wl_data_source_interface data_source_impl = {
+	.offer       = do_nothing,
+	.destroy     = do_nothing,
+	.set_actions = do_nothing,
+};
+
+static void
+data_device_manager_create_data_source(struct wl_client *client,
+		struct wl_resource *resource, u32 id)
+{
+	struct wl_resource *data_source = wl_resource_create(client,
+		&wl_data_source_interface, WL_DATA_SOURCE_VERSION, id);
+	wl_resource_set_implementation(data_source, &data_source_impl, 0, 0);
+}
+
+static const struct wl_data_device_manager_interface data_device_manager_impl = {
+	.create_data_source = data_device_manager_create_data_source,
+	.get_data_device = do_nothing,
+};
+
+static void
+data_device_manager_bind(struct wl_client *client, void *data, u32 version,
+		u32 id)
+{
+	struct wl_resource *resource = wl_resource_create(client,
+		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, id);
+	wl_resource_set_implementation(resource, &data_device_manager_impl, data, 0);
+}
+
 static i32
 compositor_init(struct backend_memory *memory, struct egl *egl,
 		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
@@ -333,6 +365,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->subcompositor = wl_global_create(display,
 		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, 0,
 		subcompositor_bind);
+	compositor->data_device_manager = wl_global_create(display,
+		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, 0,
+		&data_device_manager_bind);
 	seat_init(&compositor->seat, display);
 	wl_display_init_shm(display);
 
