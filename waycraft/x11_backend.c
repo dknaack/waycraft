@@ -509,10 +509,10 @@ x11_main(void)
 		f64 start_time = get_time_nsec();
 
 		x11_window_poll_events(&window, &input, &compositor_memory);
-		compositor_update(&compositor_memory, &window_manager);
+		struct game_window_manager *wm = compositor_update(&compositor_memory);
 
 		gl.Viewport(0, 0, window.width, window.height);
-		game_update(&game_memory, &input, &window_manager);
+		game_update(&game_memory, &input, wm);
 
 		eglSwapBuffers(egl.display, egl.surface);
 		f64 end_time = get_time_nsec();
