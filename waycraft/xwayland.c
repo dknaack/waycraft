@@ -61,13 +61,6 @@ xwm_handle_destroy_notify(struct xwm *xwm, xcb_generic_event_t *data)
 }
 
 static void
-xwm_handle_map_notify(struct xwm *xwm, xcb_generic_event_t *data)
-{
-	xcb_map_notify_event_t *event = (xcb_map_notify_event_t *)data;
-	(void)event;
-}
-
-static void
 xwm_handle_property_notify(struct xwm *xwm, xcb_generic_event_t *data)
 {
 	xcb_property_notify_event_t *event = (xcb_property_notify_event_t *)data;
@@ -88,6 +81,14 @@ xwm_handle_configure_request(struct xwm *xwm, xcb_generic_event_t *data)
 {
 	xcb_configure_request_event_t *event = (xcb_configure_request_event_t *)data;
 	(void)event;
+}
+
+static void
+xwm_handle_map_request(struct xwm *xwm, xcb_generic_event_t *data)
+{
+	xcb_map_request_event_t *event = (xcb_map_request_event_t *)data;
+
+	xcb_map_window(xwm->connection, event->window);
 }
 
 static i32
@@ -124,9 +125,6 @@ xwm_handle_event(i32 fd, u32 mask, void *data)
 		case XCB_DESTROY_NOTIFY:
 			xwm_handle_destroy_notify(xwm, event);
 			break;
-		case XCB_MAP_NOTIFY:
-			xwm_handle_map_notify(xwm, event);
-			break;
 		case XCB_PROPERTY_NOTIFY:
 			xwm_handle_property_notify(xwm, event);
 			break;
@@ -135,6 +133,9 @@ xwm_handle_event(i32 fd, u32 mask, void *data)
 			break;
 		case XCB_CONFIGURE_REQUEST:
 			xwm_handle_configure_request(xwm, event);
+			break;
+		case XCB_MAP_REQUEST:
+			xwm_handle_map_request(xwm, event);
 			break;
 		}
 
