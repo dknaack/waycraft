@@ -188,19 +188,30 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		}
 	}
 
-	if (surface->pending.flags & SURFACE_NEW_ROLE &&
-			surface->pending.role == SURFACE_ROLE_TOPLEVEL) {
-		surface->current.role = surface->pending.role;
-
+	if (surface->pending.flags & SURFACE_NEW_ROLE) {
 		struct compositor *compositor = surface->compositor;
 		struct game_window_manager *wm = &compositor->window_manager;
 
-		// TODO: reuse destroyed windows instead of allocating a new one each time.
-		struct game_window *window = wm->windows + wm->window_count++;
-		window->id = surface - compositor->surfaces;
-		window->flags = 0;
-		window->texture = surface->texture;
-		surface->window = window;
+		if (surface->pending.role == SURFACE_ROLE_TOPLEVEL) {
+			// TODO: reuse destroyed windows instead of allocating a new one each time.
+			struct game_window *window = wm->windows + wm->window_count++;
+			window->id = surface - compositor->surfaces;
+			window->flags = 0;
+			window->texture = surface->texture;
+			surface->window = window;
+
+			surface->current.role = surface->pending.role;
+		} else if (surface->pending.role == SURFACE_ROLE_SUBSURFACE) {
+			if (surface->current.role == SURFACE_ROLE_SUBSURFACE) {
+				wl_resource_post_error(resource, WL_SUBSURFACE_ERROR_BAD_SURFACE,
+					"surface is already a subsurface");
+			} else if (surface->current.role != SURFACE_ROLE_NONE) {
+				wl_resource_post_error(resource, WL_SUBSURFACE_ERROR_BAD_SURFACE,
+					"surface already has a role assigned");
+			} else {
+				surface->current.role = surface->pending.role;
+			}
+		}
 	}
 
 	if (surface->pending.flags & SURFACE_NEW_FRAME) {
