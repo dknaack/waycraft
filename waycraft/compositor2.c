@@ -87,6 +87,16 @@ struct compositor {
 	struct surface *surfaces;
 	u32 surface_count;
 	u32 focused_surface;
+
+	struct {
+		u32 depressed;
+		u32 latched;
+		u32 locked;
+		u32 group;
+	} modifiers;
+
+	i32 keymap;
+	i32 keymap_size;
 };
 
 static void
@@ -277,6 +287,8 @@ seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id
 		&wl_keyboard_interface, WL_KEYBOARD_VERSION, id);
 	wl_resource_set_implementation(keyboard, &keyboard_impl, 0, resource_remove);
 	wl_list_insert(&compositor->keyboards, wl_resource_get_link(keyboard));
+	wl_keyboard_send_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
+		compositor->keymap, compositor->keymap_size);
 }
 
 static void
@@ -523,6 +535,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		&wl_seat_interface, WL_SEAT_VERSION, compositor, seat_bind);
 	wl_display_init_shm(display);
 
+	compositor->keymap = keymap;
+	compositor->keymap_size = keymap_size;
+
 	return 0;
 error_socket:
 	wl_display_destroy(display);
@@ -644,20 +659,62 @@ compositor_update(struct backend_memory *memory)
 static void
 compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
 {
-	// TODO
+	struct compositor *compositor = memory->data;
+
+	if (compositor->focused_surface) {
+		u32 time = get_time_msec();
+
+		struct wl_resource *keyboard;
+		wl_resource_for_each(keyboard, &compositor->keyboards) {
+			wl_keyboard_send_key(keyboard, 0, time, key, state);
+		}
+	}
 }
 
 static void
 compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
 		u32 latched, u32 locked, u32 group)
 {
-	// TODO
+	struct compositor *compositor = memory->data;
+
+	if (depressed == compositor->modifiers.depressed &&
+			latched == compositor->modifiers.latched &&
+			locked == compositor->modifiers.locked &&
+			group == compositor->modifiers.group) {
+		return;
+	}
+
+	compositor->modifiers.depressed = depressed;
+	compositor->modifiers.latched = latched;
+	compositor->modifiers.locked = locked;
+	compositor->modifiers.group = group;
+
+	u32 serial = 0;
+
+	// TODO: only send event to the focused window
+	if (compositor->focused_surface) {
+		struct wl_resource *keyboard;
+		wl_resource_for_each(keyboard, &compositor->keyboards) {
+			wl_keyboard_send_modifiers(keyboard, serial, depressed, latched,
+				locked, group);
+		}
+	}
 }
 
 static void
 compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
 {
-	// TODO
+	struct compositor *compositor = memory->data;
+
+	if (compositor->focused_surface) {
+		u32 time = get_time_msec();
+
+		struct wl_resource *pointer;
+		wl_resource_for_each(pointer, &compositor->pointers) {
+			// TODO: generate a serial for the event
+			wl_pointer_send_button(pointer, 0, time, button, state);
+		}
+	}
 }
 
 static void
