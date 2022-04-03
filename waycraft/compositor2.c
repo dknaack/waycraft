@@ -137,32 +137,42 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 	}
 
 	if (surface->pending.flags & SURFACE_NEW_BUFFER) {
-		struct wl_shm_buffer *shm_buffer =
-			wl_shm_buffer_get(surface->pending.buffer);
-		u32 width = wl_shm_buffer_get_width(shm_buffer);
-		u32 height = wl_shm_buffer_get_height(shm_buffer);
-		u32 format = wl_shm_buffer_get_format(shm_buffer);
-		void *data = wl_shm_buffer_get_data(shm_buffer);
-		assert(format == 0 || format == 1);
+		// NOTE: buffer may be null
+		struct wl_resource *buffer = surface->pending.buffer;
+		surface->current.buffer = buffer;
 
 		if (surface->texture) {
 			gl.DeleteTextures(1, &surface->texture);
 		}
 
-		u32 texture;
-		gl.GenTextures(1, &texture);
-		gl.BindTexture(GL_TEXTURE_2D, texture);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-			GL_BGRA, GL_UNSIGNED_BYTE, data);
-		gl.BindTexture(GL_TEXTURE_2D, 0);
+		if (buffer) {
+			struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(buffer);
+			u32 width = wl_shm_buffer_get_width(shm_buffer);
+			u32 height = wl_shm_buffer_get_height(shm_buffer);
+			u32 format = wl_shm_buffer_get_format(shm_buffer);
+			void *data = wl_shm_buffer_get_data(shm_buffer);
+			assert(format == 0 || format == 1);
 
-		wl_buffer_send_release(surface->pending.buffer);
+			gl.GenTextures(1, &surface->texture);
+			gl.BindTexture(GL_TEXTURE_2D, surface->texture);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+				GL_BGRA, GL_UNSIGNED_BYTE, data);
+			gl.BindTexture(GL_TEXTURE_2D, 0);
+
+			wl_buffer_send_release(buffer);
+		}
+
+		if (surface->window) {
+			surface->window->texture = surface->texture;
+		}
 	}
 
 	if (surface->pending.flags & SURFACE_NEW_ROLE &&
 			surface->pending.role == SURFACE_TOPLEVEL) {
+		surface->current.role = surface->pending.role;
+
 		struct compositor *compositor = surface->compositor;
 		struct game_window_manager *wm = &compositor->window_manager;
 
