@@ -56,8 +56,11 @@ struct surface_state {
 
 struct surface {
 	u32 texture;
+
 	struct wl_resource *resource;
 	struct wl_resource *xdg_toplevel;
+	struct wl_resource *xdg_surface;
+
 	struct compositor *compositor;
 	struct surface_state pending;
 	struct surface_state current;
@@ -127,6 +130,11 @@ static void
 surface_commit(struct wl_client *client, struct wl_resource *resource)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
+
+	if (!surface->current.buffer && !surface->pending.buffer &&
+			surface->xdg_surface) {
+		xdg_surface_send_configure(surface->xdg_surface, 0);
+	}
 
 	if (surface->pending.flags & SURFACE_NEW_BUFFER) {
 		struct wl_shm_buffer *shm_buffer =
@@ -200,7 +208,7 @@ compositor_create_surface(struct wl_client *client,
 		&wl_surface_interface, WL_SURFACE_VERSION, id);
 	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
 
-	surface->resource = resource;
+	surface->resource = wl_surface;
 	surface->compositor = compositor;
 }
 
@@ -352,6 +360,8 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
 	struct wl_resource *xdg_surface = wl_resource_create(client,
 		&xdg_surface_interface, XDG_SURFACE_VERSION, id);
 	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, surface, 0);
+
+	surface->xdg_surface = xdg_surface;
 }
 
 static const struct xdg_wm_base_interface xdg_wm_base_impl = {
