@@ -36,6 +36,7 @@ struct compositor {
 	struct wl_global *compositor;
 	struct wl_global *output;
 	struct wl_global *xdg_wm_base;
+	struct wl_global *subcompositor;
 	struct seat {
 		struct wl_global *global;
 		struct wl_list keyboards;
@@ -284,6 +285,27 @@ xdg_wm_base_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_resource_set_implementation(resource, &xdg_wm_base_impl, data, 0);
 }
 
+static void
+subcompositor_get_subsurface(struct wl_client *client,
+		struct wl_resource *resource, u32 id, struct wl_resource *surface,
+		struct wl_resource *parent)
+{
+	// TODO: set the parent of the surface in the pending state
+}
+
+static const struct wl_subcompositor_interface subcompositor_impl = {
+	.destroy        = do_nothing,
+	.get_subsurface = subcompositor_get_subsurface,
+};
+
+static void
+subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
+{
+	struct wl_resource *resource = wl_resource_create(client,
+		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, id);
+	wl_resource_set_implementation(resource, &subcompositor_impl, data, 0);
+}
+
 static i32
 compositor_init(struct backend_memory *memory, struct egl *egl,
 		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
@@ -308,6 +330,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		&wl_output_interface, WL_OUTPUT_VERSION, 0, output_bind);
 	compositor->xdg_wm_base = wl_global_create(display,
 		&xdg_wm_base_interface, XDG_WM_BASE_VERSION, 0, xdg_wm_base_bind);
+	compositor->subcompositor = wl_global_create(display,
+		&wl_subcompositor_interface, WL_SUBCOMPOSITOR_VERSION, 0,
+		subcompositor_bind);
 	seat_init(&compositor->seat, display);
 	wl_display_init_shm(display);
 
