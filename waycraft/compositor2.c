@@ -58,6 +58,7 @@ struct surface {
 	u32 texture;
 	struct wl_resource *resource;
 	struct wl_resource *xdg_toplevel;
+	struct compositor *compositor;
 	struct surface_state pending;
 	struct surface_state current;
 };
@@ -152,6 +153,18 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		wl_buffer_send_release(surface->pending.buffer);
 	}
 
+	if (surface->pending.flags & SURFACE_NEW_ROLE &&
+			surface->pending.role == SURFACE_TOPLEVEL) {
+		struct compositor *compositor = surface->compositor;
+		struct game_window_manager *wm = &compositor->window_manager;
+
+		// TODO: reuse destroyed windows instead of allocating a new one each time.
+		struct game_window *window = wm->windows + wm->window_count++;
+		window->id = surface - compositor->surfaces;
+		window->flags = 0;
+		window->texture = surface->texture;
+	}
+
 	surface->current = surface->pending;
 	surface->pending.flags = 0;
 }
@@ -188,6 +201,7 @@ compositor_create_surface(struct wl_client *client,
 	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
 
 	surface->resource = resource;
+	surface->compositor = compositor;
 }
 
 static void
