@@ -71,6 +71,8 @@ struct compositor {
 
 	struct wl_list keyboards;
 	struct wl_list pointers;
+	struct surface *surfaces;
+	u32 surface_count;
 };
 
 static void
@@ -166,7 +168,8 @@ compositor_create_surface(struct wl_client *client,
 		struct wl_resource *resource, u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
-	struct surface *surface = arena_alloc(&compositor->arena, 1, struct surface);
+	struct surface *surface = compositor->surfaces +
+		compositor->surface_count++;
 	struct wl_resource *wl_surface = wl_resource_create(client,
 		&wl_surface_interface, WL_SURFACE_VERSION, id);
 	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
@@ -449,6 +452,17 @@ compositor_update(struct backend_memory *memory)
 
 	wl_event_loop_dispatch(event_loop, 0);
 	wl_display_flush_clients(display);
+
+	u32 surface_count = compositor->surface_count;
+	struct surface *surface = compositor->surfaces;
+	while (surface_count-- > 0) {
+		struct wl_resource *frame_callback = surface->current.frame_callback;
+		if (frame_callback) {
+			wl_callback_send_done(frame_callback, 0);
+		}
+
+		surface++;
+	}
 
 	return &compositor->window_manager;
 }
