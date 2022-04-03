@@ -60,12 +60,10 @@ struct compositor {
 	struct wl_global *xdg_wm_base;
 	struct wl_global *subcompositor;
 	struct wl_global *data_device_manager;
-	struct seat {
-		struct wl_global *global;
-		struct wl_list keyboards;
-		struct wl_list pointers;
-	} seat;
+	struct wl_global *seat;
 
+	struct wl_list keyboards;
+	struct wl_list pointers;
 };
 
 static void
@@ -201,21 +199,21 @@ static const struct wl_keyboard_interface keyboard_impl = {
 static void
 seat_get_pointer(struct wl_client *client, struct wl_resource *resource, u32 id)
 {
-	struct seat *seat = wl_resource_get_user_data(resource);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *pointer = wl_resource_create(client,
 		&wl_pointer_interface, WL_POINTER_VERSION, id);
 	wl_resource_set_implementation(pointer, &pointer_impl, 0, resource_remove);
-	wl_list_insert(&seat->pointers, wl_resource_get_link(pointer));
+	wl_list_insert(&compositor->pointers, wl_resource_get_link(pointer));
 }
 
 static void
 seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id)
 {
-	struct seat *seat = wl_resource_get_user_data(resource);
+	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(client,
 		&wl_pointer_interface, WL_KEYBOARD_VERSION, id);
 	wl_resource_set_implementation(keyboard, &keyboard_impl, 0, resource_remove);
-	wl_list_insert(&seat->keyboards, wl_resource_get_link(keyboard));
+	wl_list_insert(&compositor->keyboards, wl_resource_get_link(keyboard));
 }
 
 static void
@@ -245,16 +243,6 @@ seat_bind(struct wl_client *client, void *data, u32 version, u32 id)
 
 	wl_seat_send_name(resource, name);
 	wl_seat_send_capabilities(resource, caps);
-}
-
-static void
-seat_init(struct seat *seat, struct wl_display *display)
-{
-	seat->global = wl_global_create(display, &wl_seat_interface,
-		WL_SEAT_VERSION, seat, seat_bind);
-
-	wl_list_init(&seat->keyboards);
-	wl_list_init(&seat->pointers);
 }
 
 static void
@@ -409,6 +397,9 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->display = display;
 	compositor->egl_display = egl->display;
 
+	wl_list_init(&compositor->keyboards);
+	wl_list_init(&compositor->pointers);
+
 	compositor->compositor = wl_global_create(display,
 		&wl_compositor_interface, WL_COMPOSITOR_VERSION, 0, compositor_bind);
 	compositor->output = wl_global_create(display,
@@ -421,7 +412,8 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->data_device_manager = wl_global_create(display,
 		&wl_data_device_manager_interface, WL_DATA_DEVICE_MANAGER_VERSION, 0,
 		&data_device_manager_bind);
-	seat_init(&compositor->seat, display);
+	compositor->seat = wl_global_create(display,
+		&wl_seat_interface, WL_SEAT_VERSION, compositor, seat_bind);
 	wl_display_init_shm(display);
 
 	return 0;
@@ -436,7 +428,7 @@ compositor_finish(struct backend_memory *memory)
 
 	wl_global_destroy(compositor->compositor);
 	wl_global_destroy(compositor->output);
-	wl_global_destroy(compositor->seat.global);
+	wl_global_destroy(compositor->seat);
 	wl_global_destroy(compositor->xdg_wm_base);
 	wl_display_destroy(compositor->display);
 }
