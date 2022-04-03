@@ -273,7 +273,7 @@ seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(client,
-		&wl_pointer_interface, WL_KEYBOARD_VERSION, id);
+		&wl_keyboard_interface, WL_KEYBOARD_VERSION, id);
 	wl_resource_set_implementation(keyboard, &keyboard_impl, 0, resource_remove);
 	wl_list_insert(&compositor->keyboards, wl_resource_get_link(keyboard));
 }
