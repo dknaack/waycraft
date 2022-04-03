@@ -31,12 +31,19 @@
 #define XDG_TOPLEVEL_VERSION 4
 #define XDG_WM_BASE_VERSION 4
 
+enum surface_role {
+	SURFACE_TOPLEVEL,
+	SURFACE_ROLE_COUNT
+};
+
 enum surface_flags {
-	SURFACE_NEW_BUFFER,
+	SURFACE_NEW_BUFFER = 1 << 0,
+	SURFACE_NEW_ROLE   = 1 << 1,
 };
 
 struct surface_state {
 	u32 flags;
+	u32 role;
 
 	struct wl_resource *buffer;
 	struct wl_resource *frame_callback;
@@ -278,15 +285,15 @@ static void
 xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
 		u32 id)
 {
+	struct surface *surface = wl_resource_get_user_data(resource);
 	struct wl_resource *xdg_toplevel = wl_resource_create(client,
 		&xdg_toplevel_interface, XDG_TOPLEVEL_VERSION, id);
 	wl_resource_set_implementation(xdg_toplevel, &xdg_toplevel_impl, 0, 0);
 
-	/*
-	 * TODO: assign the role to the underlying surface, post error if the
-	 * surface already has a role.
-	 */
+	surface->pending.flags |= SURFACE_NEW_ROLE;
+	surface->pending.role = SURFACE_TOPLEVEL;
 }
+
 
 static void
 xdg_surface_set_window_geometry(struct wl_client *client,
