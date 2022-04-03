@@ -409,6 +409,12 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		goto error_display;
 	}
 
+	const char *socket = wl_display_add_socket_auto(display);
+	if (!socket) {
+		log_err("Failed to add socket to the display");
+		goto error_socket;
+	}
+
 	arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
 
 	compositor->display = display;
@@ -434,6 +440,8 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	wl_display_init_shm(display);
 
 	return 0;
+error_socket:
+	wl_display_destroy(display);
 error_display:
 	return -1;
 }
