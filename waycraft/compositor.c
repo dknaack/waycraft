@@ -39,6 +39,7 @@ enum surface_role {
 	SURFACE_ROLE_NONE,
 	SURFACE_ROLE_TOPLEVEL,
 	SURFACE_ROLE_SUBSURFACE,
+	SURFACE_ROLE_XWAYLAND,
 	SURFACE_ROLE_COUNT
 };
 
@@ -211,6 +212,15 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 			} else {
 				surface->current.role = surface->pending.role;
 			}
+		} else if (surface->pending.role == SURFACE_ROLE_XWAYLAND) {
+			log_info("xwayland buffer = %p\n", (void *)surface->current.buffer);
+			struct game_window *window = wm->windows + wm->window_count++;
+			window->id = surface - compositor->surfaces;
+			window->flags = 0;
+			window->texture = surface->texture;
+			surface->window = window;
+
+			surface->current.role = surface->pending.role;
 		}
 	}
 
@@ -647,7 +657,7 @@ compositor_update(struct backend_memory *memory)
 			assert(focused_surface < compositor->surface_count);
 			struct surface *surface =
 				&compositor->surfaces[focused_surface];
-			assert(surface->current.role == SURFACE_ROLE_TOPLEVEL);
+			assert(surface->current.role != SURFACE_ROLE_NONE);
 
 			struct wl_resource *keyboard;
 			wl_resource_for_each(keyboard, &compositor->keyboards) {
@@ -659,18 +669,18 @@ compositor_update(struct backend_memory *memory)
 				wl_pointer_send_leave(pointer, 0, surface->resource);
 			}
 
-			struct wl_array array;
-			struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
-			assert(xdg_toplevel);
-
-			wl_array_init(&array);
-			xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			if (surface->current.role == SURFACE_ROLE_TOPLEVEL) {
+				struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+				struct wl_array array;
+				wl_array_init(&array);
+				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			}
 		}
 
 		if (focused_window) {
 			assert(focused_window < compositor->surface_count);
 			struct surface *surface = &compositor->surfaces[focused_window];
-			assert(surface->current.role == SURFACE_ROLE_TOPLEVEL);
+			assert(surface->current.role != SURFACE_ROLE_NONE);
 
 			struct wl_array array;
 			wl_array_init(&array);
@@ -692,12 +702,12 @@ compositor_update(struct backend_memory *memory)
 					surface_x, surface_y);
 			}
 
-			struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
-			assert(xdg_toplevel);
-
-			i32 *state = wl_array_add(&array, sizeof(*state));
-			*state = XDG_TOPLEVEL_STATE_ACTIVATED;
-			xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			if (surface->current.role == SURFACE_ROLE_TOPLEVEL) {
+				struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+				i32 *state = wl_array_add(&array, sizeof(*state));
+				*state = XDG_TOPLEVEL_STATE_ACTIVATED;
+				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			}
 		}
 
 		compositor->focused_surface = focused_window;
