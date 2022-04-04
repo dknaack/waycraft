@@ -70,6 +70,9 @@ struct surface {
 		struct wl_resource *parent_surface;
 	};
 
+	u32 width;
+	u32 height;
+
 	struct game_window *window;
 	struct compositor *compositor;
 	struct surface_state pending;
@@ -183,6 +186,9 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 			gl.BindTexture(GL_TEXTURE_2D, 0);
 
 			wl_buffer_send_release(buffer);
+
+			surface->width = width;
+			surface->height = height;
 		}
 
 		if (surface->window) {
@@ -784,5 +790,22 @@ compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
 static void
 compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 {
-	// TODO
+	struct compositor *compositor = memory->data;
+	struct surface *focused_surface =
+		&compositor->surfaces[compositor->focused_surface];
+	if (focused_surface) {
+		u32 time = get_time_msec();
+
+		struct wl_resource *pointer;
+		wl_resource_for_each(pointer, &compositor->pointers) {
+			v2 cursor_pos = compositor->window_manager.cursor_pos;
+			f32 surface_width = focused_surface->width;
+			f32 surface_height = focused_surface->height;
+			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
+			f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
+			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
+			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
+			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
+		}
+	}
 }
