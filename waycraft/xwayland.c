@@ -37,6 +37,15 @@ set_cloexec(i32 fd, i32 value)
 }
 
 static void
+xwayland_assign_role(struct wl_resource *resource)
+{
+	struct surface *surface = wl_resource_get_user_data(resource);
+
+	surface->pending.flags |= SURFACE_NEW_ROLE;
+	surface->pending.role = SURFACE_ROLE_XWAYLAND;
+}
+
+static void
 xwm_handle_create_notify(struct xwm *xwm, xcb_create_notify_event_t *event)
 {
 	xcb_window_t window = event->window;
@@ -68,7 +77,21 @@ static void
 xwm_handle_client_message(struct xwm *xwm, xcb_client_message_event_t *event)
 {
 	if (event->type == xwm->atoms[XWM_WL_SURFACE_ID]) {
-		log_info("wl_surface_id");
+		u32 wl_surface_id = event->data.data32[0];
+		struct wl_resource *resource = wl_client_get_object(xwm->client,
+			wl_surface_id);
+
+		// NOTE: surface may not have been created yet.
+		if (resource) {
+			xwayland_assign_role(resource);
+			log_info("assigned xwayland role to surface");
+		} else {
+			log_info("unpaired xwayland surface %d!!!", wl_surface_id);
+			xwm->unpaired_surfaces[xwm->unpaired_surface_count++] =
+				wl_surface_id;
+		}
+	} else {
+		log_info("unpaired window!");
 	}
 }
 
@@ -264,9 +287,32 @@ socket_open(struct sockaddr_un *address, i32 address_length)
 	return fd;
 }
 
-static i32
-xwayland_init(struct xwayland *xwayland, struct wl_display *wl_display)
+static void
+xwayland_new_surface(struct wl_listener *listener, void *data)
 {
+	struct xwm *xwm = wl_container_of(listener, xwm, new_surface);
+	struct wl_resource *resource = data;
+	u32 id = wl_resource_get_id(resource);
+
+	log_info("new_surface");
+
+	for (u32 i = 0; i < xwm->unpaired_surface_count; i++) {
+		u32 unpaired_id = xwm->unpaired_surfaces[i];
+		log_debug("unpaired_id = %d", unpaired_id);
+		if (id == unpaired_id) {
+			log_info("found an unpaired surface!");
+			xwm->unpaired_surfaces[i] =
+				xwm->unpaired_surfaces[--xwm->unpaired_surface_count];
+			xwayland_assign_role(resource);
+			break;
+		}
+	}
+}
+
+static i32
+xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
+{
+	struct wl_display *wl_display = compositor->display;
 	xwayland->display = wl_display;
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, xwayland->wm_fd) != 0) {
@@ -324,8 +370,11 @@ xwayland_init(struct xwayland *xwayland, struct wl_display *wl_display)
 		return -1;
 	}
 
-	xwayland->client = wl_client_create(wl_display, xwayland->wl_fd[0]);
-	if (!xwayland->client) {
+	xwayland->xwm.new_surface.notify = xwayland_new_surface;
+	wl_signal_add(&compositor->new_surface, &xwayland->xwm.new_surface);
+
+	xwayland->xwm.client = wl_client_create(wl_display, xwayland->wl_fd[0]);
+	if (!xwayland->xwm.client) {
 		fprintf(stderr, "Failed to create xwayland client\n");
 		return -1;
 	}
@@ -337,11 +386,11 @@ xwayland_init(struct xwayland *xwayland, struct wl_display *wl_display)
 	xwayland->usr1_source = wl_event_loop_add_signal(event_loop, SIGUSR1,
 		server_ready, xwayland);
 
-	pid_t pid = fork();
-	if (pid == -1) {
+	switch (fork()) {
+	case -1:
 		perror("fork");
 		return -1;
-	} else if (pid == 0) {
+	case 0:
 		set_cloexec(xwayland->x_fd[0], 0);
 		set_cloexec(xwayland->x_fd[1], 0);
 		set_cloexec(xwayland->wl_fd[1], 0);
@@ -389,8 +438,8 @@ xwayland_init(struct xwayland *xwayland, struct wl_display *wl_display)
 void
 xwayland_finish(struct xwayland *xwayland)
 {
+	wl_client_destroy(xwayland->xwm.client);
 	xwm_finish(&xwayland->xwm);
-	wl_client_destroy(xwayland->client);
 	close(xwayland->x_fd[0]);
 	close(xwayland->x_fd[1]);
 

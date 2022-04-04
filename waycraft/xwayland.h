@@ -3,6 +3,14 @@
 
 #include <xcb/xcb.h>
 
+struct xwayland_surface {
+	xcb_window_t window;
+	u32 wl_surface_id;
+
+	struct wl_resourse *wl_surface;
+	struct wl_list link;
+};
+
 enum xwm_atoms {
     XWM_NET_WM_NAME,
 	XWM_NET_SUPPORTING_WM_CHECK,
@@ -20,14 +28,19 @@ struct xwm {
     xcb_window_t window;
     xcb_atom_t atoms[XWM_ATOM_COUNT];
 
+	u32 unpaired_surfaces[256];
+	u32 unpaired_surface_count;
+
+    struct wl_client *client;
     struct wl_event_source *event_source;
+	struct wl_listener destroy_listener;
+	struct wl_listener new_surface;
 };
 
 struct xwayland {
     struct xwm xwm;
 
     struct wl_display *display;
-    struct wl_client *client;
 	struct wl_event_source *usr1_source;
 
     u32 display_number;
@@ -36,7 +49,7 @@ struct xwayland {
     i32 wl_fd[2];
 };
 
-static i32 xwayland_init(struct xwayland *xwayland, struct wl_display *display);
+static i32 xwayland_init(struct xwayland *xwayland, struct compositor *compositor);
 static void xwayland_finish(struct xwayland *xwayland);
 
 #endif /* WAYCRAFT_XWAYLAND_H */

@@ -586,7 +586,7 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 	compositor->keymap = keymap;
 	compositor->keymap_size = keymap_size;
 
-	if (xwayland_init(&compositor->xwayland, display) != 0) {
+	if (xwayland_init(&compositor->xwayland, compositor) != 0) {
 		log_err("Failed to initialize xwayland");
 		goto error_xwayland;
 	}
