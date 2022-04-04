@@ -92,6 +92,7 @@ struct compositor {
 
 	struct wl_list keyboards;
 	struct wl_list pointers;
+	struct wl_signal new_surface;
 	struct surface *surfaces;
 	u32 surface_count;
 	u32 focused_surface;
@@ -264,6 +265,8 @@ compositor_create_surface(struct wl_client *client,
 
 	surface->resource = wl_surface;
 	surface->compositor = compositor;
+
+	wl_signal_emit(&compositor->new_surface, wl_surface);
 }
 
 static void
@@ -561,6 +564,7 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 
 	wl_list_init(&compositor->keyboards);
 	wl_list_init(&compositor->pointers);
+	wl_signal_init(&compositor->new_surface);
 
 	compositor->compositor = wl_global_create(display,
 		&wl_compositor_interface, WL_COMPOSITOR_VERSION, compositor,
