@@ -204,7 +204,6 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		if (surface->pending.role == SURFACE_ROLE_TOPLEVEL) {
 			// TODO: reuse destroyed windows instead of allocating a new one each time.
 			struct game_window *window = wm->windows + wm->window_count++;
-			window->id = surface - compositor->surfaces;
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
@@ -223,7 +222,6 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		} else if (surface->pending.role == SURFACE_ROLE_XWAYLAND) {
 			log_info("xwayland buffer = %p\n", (void *)surface->current.buffer);
 			struct game_window *window = wm->windows + wm->window_count++;
-			window->id = surface - compositor->surfaces;
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
@@ -409,15 +407,9 @@ xdg_toplevel_unbind(struct wl_resource *resource)
 	struct surface *focused_surface = compositor->surfaces +
 		compositor->focused_surface;
 	if (focused_surface == surface) {
-		u32 focused_window = wm->focused_window;
-
-		struct game_window *window = wm->windows;
-		u32 window_count = wm->window_count;
-		while (window_count-- > 0) {
-			if (window->id == focused_window) {
-				window->flags |= WINDOW_DESTROYED;
-			}
-		}
+		struct game_window *focused_window = window_manager_get_window(wm,
+			wm->focused_window);
+		focused_window->flags |= WINDOW_DESTROYED;
 
 		compositor->focused_surface = 0;
 		compositor->window_manager.focused_window = 0;
@@ -671,7 +663,7 @@ compositor_update(struct backend_memory *memory)
 		}
 
 		if (surface->current.role == SURFACE_ROLE_CURSOR) {
-			compositor->window_manager.cursor_texture = surface->texture;
+			compositor->window_manager.cursor.texture = surface->texture;
 		}
 
 		surface++;
@@ -815,7 +807,7 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 
 		struct wl_resource *pointer;
 		wl_resource_for_each(pointer, &compositor->pointers) {
-			v2 cursor_pos = compositor->window_manager.cursor_pos;
+			v2 cursor_pos = compositor->window_manager.cursor.position;
 			f32 surface_width = focused_surface->width;
 			f32 surface_height = focused_surface->height;
 			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;

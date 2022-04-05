@@ -14,24 +14,25 @@ enum game_window_flags {
 };
 
 struct game_window {
-	u32 id;
 	u32 flags;
-	v3 position;
-	v3 x_axis;
-	v3 y_axis;
-	v3 z_axis;
 	u32 texture;
-	struct game_window *parent_window;
+	u32 parent;
+
+	v3 position;
+	v4 rotation;
+	v2 scale;
 };
 
 struct game_window_manager {
 	struct game_window *windows;
 	u32 focused_window;
-
 	u32 window_count;
 	u32 is_active;
-	v2 cursor_pos;
-	u32 cursor_texture;
+
+	struct {
+		v2 position;
+		u32 texture;
+	} cursor;
 };
 
 struct camera {
@@ -120,6 +121,26 @@ static inline i32
 button_is_down(u8 button)
 {
 	return button & 0x1;
+}
+
+static inline struct game_window *
+window_manager_get_window(struct game_window_manager *wm, u32 id)
+{
+	return id ? wm->windows + id - 1 : 0;
+}
+
+static inline struct game_window *
+window_manager_get_focused_window(struct game_window_manager *wm)
+{
+	return window_manager_get_window(wm, wm->focused_window);
+}
+
+static inline u32
+window_manager_get_window_id(struct game_window_manager *wm,
+		struct game_window *window)
+{
+	assert(!window || window - wm->windows < wm->window_count);
+	return window ? window - wm->windows + 1 : 0;
 }
 
 void game_update(struct backend_memory *memory, struct game_input *input,

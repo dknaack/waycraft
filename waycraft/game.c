@@ -354,13 +354,15 @@ player_select_block(struct game_state *game, struct game_input *input,
 }
 
 static m4x4
-window_transform(struct game_window *window)
+window_transform(struct game_window *window, struct game_window_manager *wm)
 {
-	m4x4 result = m4x4_to_coords(window->position,
-		window->x_axis, window->y_axis, window->z_axis);
+	// TODO: convert quaternion to rotation matrix
+	m4x4 result = m4x4_id(1);
 
-	if (window->parent_window) {
-		result = m4x4_mul(window_transform(window->parent_window), result);
+	if (window->parent) {
+		struct game_window *parent_window = window_manager_get_window(wm,
+			window->parent);
+		result = m4x4_mul(window_transform(parent_window, wm), result);
 	}
 
 	return result;
@@ -370,20 +372,20 @@ static void
 window_move(struct game_window *window, v3 window_pos, v3 normal, v3 up)
 {
 	window->position = window_pos;
-	window->z_axis = normal;
-	window->x_axis = v3_cross(up, window->z_axis);
-	window->y_axis = v3_cross(window->z_axis, window->x_axis);
 }
 
 static void
-window_render(struct game_window *window, u32 window_count, m4x4 view,
+window_manager_render(struct game_window_manager *wm, m4x4 view,
 	m4x4 projection, struct render_command_buffer *cmd_buffer)
 {
+	u32 window_count = wm->window_count;
+	struct game_window *window = wm->windows;
+
 	while (window_count-- > 0) {
 		u32 is_window_visible = window->flags & WINDOW_VISIBLE;
 		u32 is_window_destroyed = window->flags & WINDOW_DESTROYED;
 		if (is_window_visible && !is_window_destroyed) {
-			m4x4 transform = window_transform(window);
+			m4x4 transform = window_transform(window, wm);
 
 			render_textured_quad(cmd_buffer, transform, window->texture);
 			window++;
@@ -395,6 +397,8 @@ static u32
 window_ray_intersection_point(struct game_window *window,
 	v3 ray_start, v3 ray_direction, v2 *point_on_window)
 {
+	// TODO
+#if 0
 	u32 hit = 0;
 	v3 normal = window->z_axis;
 	v3 window_pos = window->position;
@@ -421,6 +425,9 @@ window_ray_intersection_point(struct game_window *window,
 	}
 
 	return hit;
+#else
+	return 0;
+#endif
 }
 
 static struct game_window *
@@ -466,7 +473,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
-	struct game_window *focused_window = 0;
+	struct game_window *focused_window = window_manager_get_focused_window(wm);
 
 	struct player *player = &game->player;
 	u32 inventory_is_active = player->inventory.is_active;
@@ -475,10 +482,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		if (!(windows[i].flags & WINDOW_INITIALIZED)) {
 			inventory_add_item(&player->inventory, ITEM_WINDOW, i);
 			windows[i].flags |= WINDOW_INITIALIZED;
-		}
-
-		if (windows[i].id == wm->focused_window) {
-			focused_window = &windows[i];
 		}
 	}
 
@@ -553,7 +556,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 					camera_pos, camera_front);
 				if (window) {
 					wm->is_active = 1;
-					wm->focused_window = window->id;
+					wm->focused_window = window_manager_get_window_id(wm, window);
 				} else if (selected_item->type == ITEM_WINDOW) {
 					hot_window = &wm->windows[selected_item->count];
 					selected_item->type = ITEM_NONE;
@@ -576,6 +579,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			player->inventory.is_active = 0;
 		}
 	} else {
+		// TODO
+#if 0
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
@@ -592,8 +597,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			cursor_rel_x);
 		debug_line(window_pos, cursor_world_pos);
 
-		if (wm->cursor_texture) {
-			u32 cursor_texture = wm->cursor_texture;
+		if (wm->cursor.texture) {
+			u32 cursor_texture = wm->cursor.texture;
 			m4x4 cursor_transform = m4x4_to_coords(cursor_world_pos,
 				focused_window->x_axis, focused_window->y_axis,
 				focused_window->z_axis);
@@ -612,17 +617,18 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 
 		game->mouse_pos = mouse_pos;
-		wm->cursor_pos = cursor_pos;
+		wm->cursor.position = cursor_pos;
 
 		if (focused_window->flags & WINDOW_DESTROYED) {
 			wm->focused_window = 0;
 		}
+#endif
 	}
 
 	world_update(&game->world, game->camera.position, render_commands);
 
 	world_render(&game->world, render_commands);
-	window_render(windows, window_count, view, projection, render_commands);
+	window_manager_render(wm, view, projection, render_commands);
 	inventory_render(&player->inventory, input->width, input->height, render_commands);
 	renderer_end_frame(&game->renderer, render_commands);
 
