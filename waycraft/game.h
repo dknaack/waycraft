@@ -31,6 +31,7 @@ struct game_window_manager {
 	u32 window_count;
 	u32 is_active;
 	v2 cursor_pos;
+	u32 cursor_texture;
 };
 
 struct camera {

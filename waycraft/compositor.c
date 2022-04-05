@@ -40,6 +40,7 @@ enum surface_role {
 	SURFACE_ROLE_TOPLEVEL,
 	SURFACE_ROLE_SUBSURFACE,
 	SURFACE_ROLE_XWAYLAND,
+	SURFACE_ROLE_CURSOR,
 	SURFACE_ROLE_COUNT
 };
 
@@ -297,8 +298,20 @@ compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_resource_set_implementation(resource, &compositor_impl, data, 0);
 }
 
+static void
+pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
+		u32 serial, struct wl_resource *_surface, i32 hotspot_x, i32 hotspot_y)
+{
+	if (_surface) {
+		struct surface *surface = wl_resource_get_user_data(_surface);
+
+		surface->pending.flags |= SURFACE_NEW_ROLE;
+		surface->pending.role = SURFACE_ROLE_CURSOR;
+	}
+}
+
 static const struct wl_pointer_interface pointer_impl = {
-	.set_cursor = do_nothing,
+	.set_cursor = pointer_set_cursor,
 	.release    = do_nothing,
 };
 
@@ -655,6 +668,10 @@ compositor_update(struct backend_memory *memory)
 			wl_callback_send_done(frame_callback, get_time_msec());
 			wl_resource_destroy(frame_callback);
 			surface->current.frame_callback = 0;
+		}
+
+		if (surface->current.role == SURFACE_ROLE_CURSOR) {
+			compositor->window_manager.cursor_texture = surface->texture;
 		}
 
 		surface++;

@@ -584,12 +584,20 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		v3 window_pos = focused_window->position;
 
 		v2 cursor_pos = {0};
-		u32 is_inside_window = window_ray_intersection_point(focused_window,
-			camera_pos, camera_front, &cursor_pos);
-		if (is_inside_window) {
-			v3 x = v3_mulf(focused_window->x_axis, cursor_pos.x);
-			v3 y = v3_mulf(focused_window->y_axis, cursor_pos.y);
-			debug_line(window_pos, v3_add(v3_add(window_pos, y), x));
+		window_ray_intersection_point(focused_window, camera_pos, camera_front,
+			&cursor_pos);
+		v3 cursor_rel_x = v3_mulf(focused_window->x_axis, cursor_pos.x);
+		v3 cursor_rel_y = v3_mulf(focused_window->y_axis, cursor_pos.y);
+		v3 cursor_world_pos = v3_add(v3_add(window_pos, cursor_rel_y),
+			cursor_rel_x);
+		debug_line(window_pos, cursor_world_pos);
+
+		if (wm->cursor_texture) {
+			u32 cursor_texture = wm->cursor_texture;
+			m4x4 cursor_transform = m4x4_to_coords(cursor_world_pos,
+				focused_window->x_axis, focused_window->y_axis,
+				focused_window->z_axis);
+			render_textured_quad(render_commands, cursor_transform, cursor_texture);
 		}
 
 		debug_set_color(0, 1, 0);
