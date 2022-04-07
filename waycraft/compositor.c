@@ -816,12 +816,8 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 		struct wl_resource *pointer;
 		wl_resource_for_each(pointer, &compositor->pointers) {
 			v2 cursor_pos = compositor->window_manager.cursor.position;
-			f32 surface_width = focused_surface->width;
-			f32 surface_height = focused_surface->height;
-			f32 rel_cursor_x = cursor_pos.x * surface_width;
-			f32 rel_cursor_y = (1.f - cursor_pos.y) * surface_height;
-			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
-			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
+			wl_fixed_t surface_x = wl_fixed_from_double(cursor_pos.x);
+			wl_fixed_t surface_y = wl_fixed_from_double(cursor_pos.y);
 			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
 		}
 	}
