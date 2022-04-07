@@ -192,8 +192,11 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 			surface->height = height;
 		}
 
-		if (surface->window) {
-			surface->window->texture = surface->texture;
+		struct game_window *window = surface->window;
+		if (window) {
+			window->texture = surface->texture;
+			window->scale.x = surface->width;
+			window->scale.y = surface->height;
 		}
 	}
 
@@ -819,7 +822,6 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 			f32 rel_cursor_y = (1.f - cursor_pos.y) * surface_height;
 			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
 			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
-			printf("surface = (%g, %g)\n", rel_cursor_x, rel_cursor_y);
 			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
 		}
 	}

@@ -388,8 +388,11 @@ window_axes(struct game_window *window, v3 *x_axis, v3 *y_axis, v3 *z_axis)
 {
 	m3x3 rotation = window->rotation;
 
-	*x_axis = m3x3_mulv(rotation, V3(1, 0, 0));
-	*y_axis = m3x3_mulv(rotation, V3(0, -1, 0));
+	f32 window_width = window->scale.x / 500.f;
+	f32 window_height = window->scale.y / 500.f;
+
+	*x_axis = m3x3_mulv(rotation, V3(window_width, 0, 0));
+	*y_axis = m3x3_mulv(rotation, V3(0, -window_height, 0));
 	*z_axis = m3x3_mulv(rotation, V3(0, 0, -1));
 }
 
