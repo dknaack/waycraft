@@ -44,14 +44,14 @@ typedef union {
 } v4;
 
 typedef struct {
-    f32 e[16];
-    f32 r[4][4];
+	f32 e[16];
+    f32 v[4][4];
 } m4x4;
 
 typedef struct {
-    f32 e[9];
-    f32 r[3][3];
-} mat3;
+	f32 e[9];
+    f32 v[3][3];
+} m3x3;
 
 typedef union {
     struct { i32 x, y, z; };
@@ -74,6 +74,7 @@ typedef union {
     ((type *)((char *)(ptr) - offsetof(type, member)))
 
 #define M4X4(...)      (m4x4){{ __VA_ARGS__ }}
+#define M3X3(...)      (m3x3){{ __VA_ARGS__ }}
 #define V4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define V3(x, y, z)    (v3){{ (x), (y), (z) }}
 #define V2(x, y)       (v2){{ (x), (y) }}

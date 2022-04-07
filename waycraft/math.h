@@ -48,6 +48,10 @@ static m4x4 m4x4_mul(m4x4 a, m4x4 b);
 static m4x4 m4x4_perspective(f32 fov, f32 aspect, f32 near, f32 far);
 static m4x4 m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward);
 static v4 m4x4_mulv(m4x4 m, v4 v);
+static v4 m4x4_to_qt(m4x4 m);
+
+static v4 m3x3_to_qt(m3x3 m);
+static v3 m3x3_mulv(m3x3 m, v3 v);
 
 static v3i v3i_vec3(v3 a);
 

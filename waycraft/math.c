@@ -366,7 +366,7 @@ m4x4_look_at(v3 eye, v3 target, v3 up)
 	return m4x4_mul(result, m4x4_translate(-eye.x, -eye.y, -eye.z));
 }
 
-m4x4
+static m4x4
 m4x4_rotate(v3 axis, float angle)
 {
 	v3 a = v3_norm(axis);
@@ -390,7 +390,7 @@ m4x4_rotate(v3 axis, float angle)
 	return m4x4_add(m1, m4x4_add(m4x4_mulf(m2, 1.f - cos), m4x4_mulf(m3, sin)));
 }
 
-m4x4
+static m4x4
 m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward)
 {
 	return m4x4_mul(
@@ -402,7 +402,7 @@ m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward)
 			0,         0,         0,         1));
 }
 
-v4
+static v4
 m4x4_mulv(m4x4 m, v4 v)
 {
 	return V4(
@@ -412,7 +412,64 @@ m4x4_mulv(m4x4 m, v4 v)
 		m.e[3] * v.x + m.e[7] * v.y + m.e[11] * v.z + m.e[15] * v.w);
 }
 
-v3i
+static inline v4
+m4x4_to_qt(m4x4 m)
+{
+	v4 q;
+
+	q.w = sqrt(1 + m.e[0] + m.e[5] + m.e[10]) / 2;
+	q.x = (m.e[9] - m.e[6]) / (4 * q.w);
+	q.y = (m.e[2] - m.e[8]) / (4 * q.w);
+	q.z = (m.e[4] - m.e[1]) / (4 * q.w);
+
+	return q;
+}
+
+static v4
+m3x3_to_qt(m3x3 m)
+{
+	float t = m.v[0][0] + m.v[1][1] + m.v[2][2];
+	v4 q;
+
+	if (t > 0) {
+		f32 s = sqrt(t + 1) * 2;
+		q.x = (m.v[2][1] - m.v[1][2]) / s;
+		q.y = (m.v[0][2] - m.v[2][0]) / s;
+		q.z = (m.v[1][0] - m.v[0][1]) / s;
+		q.w = 0.25 * s;
+	} else if (m.v[0][0] > m.v[1][1] && m.v[0][0] > m.v[2][2]) {
+		f32 s = sqrt(1.0 + m.v[0][0] - m.v[1][1] - m.v[2][2]) * 2;
+		q.x = 0.25 * s;
+		q.y = (m.v[0][1] + m.v[1][0]) / s;
+		q.z = (m.v[0][2] + m.v[2][0]) / s;
+		q.w = (m.v[2][1] - m.v[1][2]) / s;
+	} else if (m.v[1][1] > m.v[2][2]) {
+		f32 s = sqrt(1.0 + m.v[1][1] - m.v[0][0] - m.v[2][2]) * 2;
+		q.x = (m.v[0][1] + m.v[1][0]) / s;
+		q.y = 0.25 * s;
+		q.z = (m.v[1][2] + m.v[2][1]) / s;
+		q.w = (m.v[0][2] - m.v[2][0]) / s;
+	} else {
+		f32 s = sqrt(1.0 + m.v[2][2] - m.v[0][0] - m.v[1][1]) * 2;
+		q.x = (m.v[0][2] + m.v[2][0]) / s;
+		q.y = (m.v[1][2] + m.v[2][1]) / s;
+		q.z = 0.25 * s;
+		q.w = (m.v[1][0] - m.v[0][1]) / s;
+	}
+
+	return q;
+}
+
+static v3
+m3x3_mulv(m3x3 m, v3 v)
+{
+	return V3(
+		m.e[0] * v.x + m.e[3] * v.y + m.e[6] * v.z,
+		m.e[1] * v.x + m.e[4] * v.y + m.e[7] * v.z,
+		m.e[2] * v.x + m.e[5] * v.y + m.e[8] * v.z);
+}
+
+static v3i
 v3i_vec3(v3 a)
 {
 	v3i result;
