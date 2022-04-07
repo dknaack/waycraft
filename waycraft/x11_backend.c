@@ -34,17 +34,7 @@ struct x11_window {
 	xcb_screen_t *screen;
 	xcb_window_t window;
 
-	union {
-		struct {
-			xcb_atom_t net_wm_name;
-			xcb_atom_t wm_delete_window;
-			xcb_atom_t wm_protocols;
-			xcb_atom_t wm_name;
-			xcb_atom_t utf8_string;
-		};
-
-		xcb_atom_t atoms[X11_ATOM_COUNT];
-	};
+	xcb_atom_t atoms[X11_ATOM_COUNT];
 
 	u32 width;
 	u32 height;
@@ -251,6 +241,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 		BTN_RIGHT,
 	};
 
+	xcb_atom_t wm_delete_window = window->atoms[X11_WM_DELETE_WINDOW];
+
 	while ((event.generic = xcb_poll_for_event(connection))) {
 		switch (event.generic->response_type & ~0x80) {
 		case XCB_CONFIGURE_NOTIFY:
@@ -310,7 +302,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			}
 			break;
 		case XCB_CLIENT_MESSAGE:
-			if (event.client_message->data.data32[0] == window->wm_delete_window) {
+			if (event.client_message->data.data32[0] == wm_delete_window) {
 				window->is_open = 0;
 			}
 			break;
