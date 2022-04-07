@@ -466,7 +466,7 @@ egl_finish(struct egl *egl)
 }
 
 static f64
-get_time_nsec(void)
+get_time_sec(void)
 {
 	struct timespec ts;
 
@@ -514,7 +514,7 @@ x11_main(void)
 
 	f64 target_frame_time = 1. / 60.;
 	while (window.is_open) {
-		f64 start_time = get_time_nsec();
+		f64 start_time = get_time_sec();
 
 		x11_window_poll_events(&window, &input, &compositor_memory);
 		struct game_window_manager *wm = compositor_update(&compositor_memory);
@@ -523,7 +523,7 @@ x11_main(void)
 		game_update(&game_memory, &input, wm);
 
 		eglSwapBuffers(egl.display, egl.surface);
-		f64 end_time = get_time_nsec();
+		f64 end_time = get_time_sec();
 		f64 elapsed_time = end_time - start_time;
 		if (elapsed_time < target_frame_time) {
 			u64 remaining_time = target_frame_time - elapsed_time;
