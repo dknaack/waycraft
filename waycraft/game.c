@@ -448,13 +448,16 @@ window_ray_intersection_point(struct game_window *window,
 			v3 point = v3_add(ray_start, v3_mulf(ray_direction, t));
 			v3 relative_point = v3_sub(point, window_pos);
 
-			f32 tx = v3_dot(window_x, relative_point);
-			f32 ty = v3_dot(window_y, relative_point);
-			u32 is_inside_window = (0 <= tx && tx < 1) && (0 <= ty && ty < 1);
+			f32 tx = v3_dot(window_x, relative_point) / v3_dot(window_x, window_x);
+			f32 ty = v3_dot(window_y, relative_point) / v3_dot(window_y, window_y);
+			u32 is_inside_window = (0 <= tx && tx <= 1) && (0 <= ty && ty <= 1);
+
+			debug_set_color(1, 1, 0);
+			debug_line(window_pos, point);
 
 			if (point_on_window) {
-				point_on_window->x = tx;
-				point_on_window->y = ty;
+				point_on_window->x = tx * window->scale.x;
+				point_on_window->y = ty * window->scale.y;
 			}
 
 			hit = is_inside_window;
@@ -622,9 +625,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
 		v3 camera_pos = v3_add(camera->position, mouse_pos);
 
-		v2 cursor_pos = {0};
 		window_ray_intersection_point(focused_window,
-			camera_pos, camera->front, &cursor_pos);
+			camera_pos, camera->front, &wm->cursor.position);
 		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
 			// TODO: change this to resizing the window, choose a different
@@ -634,7 +636,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 
 		game->mouse_pos = mouse_pos;
-		wm->cursor.position = cursor_pos;
 
 		if (focused_window->flags & WINDOW_DESTROYED) {
 			wm->focused_window = 0;
