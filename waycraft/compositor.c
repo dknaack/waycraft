@@ -658,7 +658,7 @@ compositor_update(struct backend_memory *memory)
 
 	u32 focused_surface = 0;
 	u32 surface_count = compositor->surface_count;
-	struct surface *surface = compositor->surfaces;
+	struct surface *surface = compositor->surfaces + 1;
 	for (u32 i = 1; i < surface_count; i++) {
 		struct wl_resource *frame_callback = surface->current.frame_callback;
 		if (frame_callback) {
