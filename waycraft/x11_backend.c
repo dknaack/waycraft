@@ -5,6 +5,7 @@
 #include <xcb/xcb.h>
 #include <xcb/xfixes.h>
 #include <sys/mman.h>
+#include <linux/input-event-codes.h>
 
 #include <waycraft/game.h>
 
@@ -243,6 +244,13 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 	input->height = window->height;
 	input->mouse.dx = input->mouse.dy = 0;
 
+	static const u32 wl_button[8] = {
+		0,
+		BTN_LEFT,
+		BTN_MIDDLE,
+		BTN_RIGHT,
+	};
+
 	while ((event.generic = xcb_poll_for_event(connection))) {
 		switch (event.generic->response_type & ~0x80) {
 		case XCB_CONFIGURE_NOTIFY:
@@ -291,14 +299,14 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				}
 
 				u32 state = WL_POINTER_BUTTON_STATE_PRESSED;
-				compositor_send_button(compositor, button, state);
+				compositor_send_button(compositor, wl_button[button], state);
 			}
 			break;
 		case XCB_BUTTON_RELEASE:
 			{
 				u32 button = event.button_release->detail;
 				u32 state = WL_POINTER_BUTTON_STATE_RELEASED;
-				compositor_send_button(compositor, button, state);
+				compositor_send_button(compositor, wl_button[button], state);
 			}
 			break;
 		case XCB_CLIENT_MESSAGE:
