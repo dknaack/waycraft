@@ -55,4 +55,11 @@ static v3 m3x3_mulv(m3x3 m, v3 v);
 
 static v3i v3i_vec3(v3 a);
 
+static v3 qt_mul_v3(v4 q, v3 v);
+static v4 qt_mul(v4 a, v4 b);
+static v4 qt_conj(v4 q);
+static v4 qt_inv(v4 q);
+static v4 qt_norm(v4 q);
+static v4 qt_rotate(v3 from, v3 to);
+
 #endif /* MATH_H */

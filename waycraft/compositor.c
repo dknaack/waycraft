@@ -646,15 +646,17 @@ static struct game_window_manager *
 compositor_update(struct backend_memory *memory)
 {
 	struct compositor *compositor = memory->data;
+	struct game_window_manager *wm = &compositor->window_manager;
 	struct wl_display *display = compositor->display;
 	struct wl_event_loop *event_loop = wl_display_get_event_loop(display);
 
 	wl_event_loop_dispatch(event_loop, 0);
 	wl_display_flush_clients(display);
 
+	u32 focused_surface = 0;
 	u32 surface_count = compositor->surface_count;
 	struct surface *surface = compositor->surfaces;
-	while (surface_count-- > 0) {
+	for (u32 i = 1; i < surface_count; i++) {
 		struct wl_resource *frame_callback = surface->current.frame_callback;
 		if (frame_callback) {
 			wl_callback_send_done(frame_callback, get_time_msec());
@@ -666,16 +668,19 @@ compositor_update(struct backend_memory *memory)
 			compositor->window_manager.cursor.texture = surface->texture;
 		}
 
+		u32 window_id = window_manager_get_window_id(wm, surface->window);
+		if (window_id && window_id == wm->focused_window) {
+			focused_surface = i;
+		}
+
 		surface++;
 	}
 
-	u32 focused_surface = compositor->focused_surface;
-	u32 focused_window = compositor->window_manager.focused_window;
-	if (focused_surface != focused_window) {
-		if (focused_surface) {
+	if (focused_surface != compositor->focused_surface) {
+		if (compositor->focused_surface) {
 			assert(focused_surface < compositor->surface_count);
 			struct surface *surface =
-				&compositor->surfaces[focused_surface];
+				&compositor->surfaces[compositor->focused_surface];
 			assert(surface->current.role != SURFACE_ROLE_NONE);
 
 			struct wl_resource *keyboard;
@@ -696,9 +701,9 @@ compositor_update(struct backend_memory *memory)
 			}
 		}
 
-		if (focused_window) {
-			assert(focused_window < compositor->surface_count);
-			struct surface *surface = &compositor->surfaces[focused_window];
+		if (focused_surface) {
+			assert(focused_surface < compositor->surface_count);
+			struct surface *surface = &compositor->surfaces[focused_surface];
 			assert(surface->current.role != SURFACE_ROLE_NONE);
 
 			struct wl_array array;
@@ -729,7 +734,7 @@ compositor_update(struct backend_memory *memory)
 			}
 		}
 
-		compositor->focused_surface = focused_window;
+		compositor->focused_surface = focused_surface;
 	}
 
 	return &compositor->window_manager;
@@ -810,10 +815,11 @@ compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 			v2 cursor_pos = compositor->window_manager.cursor.position;
 			f32 surface_width = focused_surface->width;
 			f32 surface_height = focused_surface->height;
-			f32 rel_cursor_x = 0.5f * (cursor_pos.x + 1.f) * surface_width;
-			f32 rel_cursor_y = (1.f - 0.5f * (cursor_pos.y + 1.f)) * surface_height;
+			f32 rel_cursor_x = cursor_pos.x * surface_width;
+			f32 rel_cursor_y = (1.f - cursor_pos.y) * surface_height;
 			wl_fixed_t surface_x = wl_fixed_from_double(rel_cursor_x);
 			wl_fixed_t surface_y = wl_fixed_from_double(rel_cursor_y);
+			printf("surface = (%g, %g)\n", rel_cursor_x, rel_cursor_y);
 			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
 		}
 	}

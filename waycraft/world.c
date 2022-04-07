@@ -503,7 +503,7 @@ world_update(struct world *world, v3 player_pos,
 	struct mesh_data *mesh = &world->mesh;
 	struct chunk *chunks = world->chunks;
 
-	u32 max_load = 8;
+	u32 max_load = 32;
 	u32 batch_count = MIN(world->unloaded_chunk_count, max_load);
 	u32 *unloaded_chunks = world->unloaded_chunks +
 		world->unloaded_chunk_count;

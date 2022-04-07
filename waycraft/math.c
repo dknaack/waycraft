@@ -480,3 +480,71 @@ v3i_vec3(v3 a)
 
 	return result;
 }
+
+/*
+ * quaternion functions
+ */
+
+static v4
+qt_add(v4 a, v4 b)
+{
+	return v4_add(a, b);
+}
+
+static v4
+qt_mul(v4 a, v4 b)
+{
+	v4 result;
+
+	result.xyz = v3_add(v3_cross(a.xyz, b.xyz),
+		v3_add(v3_mulf(b.xyz, a.w), v3_mulf(a.xyz, b.w)));
+	result.w = a.w * b.w - v3_dot(a.xyz, b.xyz);
+
+	return result;
+}
+
+static v3
+qt_mul_v3(v4 q, v3 v)
+{
+	v3 t = v3_mulf(v3_cross(q.xyz, v), 2);
+	return v3_add(v, v3_add(v3_mulf(t, q.w), v3_cross(q.xyz, t)));
+}
+
+static v4
+qt_conj(v4 a)
+{
+	v4 result;
+
+	result.xyz = v3_neg(a.xyz);
+	result.w = a.w;
+
+	return result;
+}
+
+static f32
+qt_len(v4 a)
+{
+	return v4_dot(a, a);
+}
+
+static v4
+qt_inv(v4 q)
+{
+	return v4_divf(qt_conj(q), qt_len(q));
+}
+
+static v4
+qt_rotate(v3 from, v3 to)
+{
+	v4 q = V4(0, 0, 1, 0);
+	f32 w = v3_dot(from, to);
+
+	if (w != -1) {
+		q.xyz = v3_cross(from, to);
+		q.w = w;
+		q.w += v4_len(q);
+		q = v4_norm(q);
+	}
+
+	return q;
+}

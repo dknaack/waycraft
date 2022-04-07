@@ -13,13 +13,18 @@ enum game_window_flags {
 	WINDOW_DESTROYED   = 1 << 2,
 };
 
+/*
+ * NOTE: if the window has no parent then it is a toplevel surface. A toplevel
+ * surface should be the only one that can be moved by the window manager. The
+ * positions of the other windows are determined by the compositor.
+ */
 struct game_window {
 	u32 flags;
 	u32 texture;
 	u32 parent;
 
 	v3 position;
-	v4 rotation;
+	m3x3 rotation;
 	v2 scale;
 };
 
@@ -140,6 +145,7 @@ window_manager_get_window_id(struct game_window_manager *wm,
 		struct game_window *window)
 {
 	assert(!window || window - wm->windows < wm->window_count);
+
 	return window ? window - wm->windows + 1 : 0;
 }
 

@@ -4,8 +4,8 @@
 #include <waycraft/renderer.h>
 #include <waycraft/block.h>
 
-#define WORLD_WIDTH 32
-#define WORLD_DEPTH 32
+#define WORLD_WIDTH  8
+#define WORLD_DEPTH  8
 #define WORLD_HEIGHT 8
 #define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
 #define CHUNK_SIZE 16
