@@ -10,6 +10,8 @@
 #include <waycraft/timer.h>
 #include <waycraft/backend.h>
 
+#define VIRTUAL_SCREEN_SIZE 500
+
 static void
 camera_init(struct camera *camera, v3 position, f32 fov)
 {
@@ -388,8 +390,8 @@ window_axes(struct game_window *window, v3 *x_axis, v3 *y_axis, v3 *z_axis)
 {
 	m3x3 rotation = window->rotation;
 
-	f32 window_width = window->scale.x / 500.f;
-	f32 window_height = window->scale.y / 500.f;
+	f32 window_width = window->scale.x / VIRTUAL_SCREEN_SIZE;
+	f32 window_height = window->scale.y / VIRTUAL_SCREEN_SIZE;
 
 	*x_axis = m3x3_mulv(rotation, V3(window_width, 0, 0));
 	*y_axis = m3x3_mulv(rotation, V3(0, -window_height, 0));
@@ -452,9 +454,6 @@ window_ray_intersection_point(struct game_window *window,
 			f32 ty = v3_dot(window_y, relative_point) / v3_dot(window_y, window_y);
 			u32 is_inside_window = (0 <= tx && tx <= 1) && (0 <= ty && ty <= 1);
 
-			debug_set_color(1, 1, 0);
-			debug_line(window_pos, point);
-
 			if (point_on_window) {
 				point_on_window->x = tx * window->scale.x;
 				point_on_window->y = ty * window->scale.y;
@@ -469,7 +468,7 @@ window_ray_intersection_point(struct game_window *window,
 
 static struct game_window *
 window_find(struct game_window *window, u32 window_count,
-	v3 ray_start, v3 ray_direction)
+		v3 ray_start, v3 ray_direction)
 {
 	for (u32 i = 0; i < window_count; i++) {
 		u32 intersects_window = window_ray_intersection_point(
@@ -486,7 +485,7 @@ window_find(struct game_window *window, u32 window_count,
 
 void
 game_update(struct backend_memory *memory, struct game_input *input,
-	struct game_window_manager *wm)
+		struct game_window_manager *wm)
 {
 	struct game_state *game = memory->data;
 	struct world *world = &game->world;
@@ -619,14 +618,54 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			player->inventory.is_active = 0;
 		}
 	} else {
-		// TODO
+		log_info("focused_window = %d", wm->focused_window);
+
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
 		v3 camera_pos = v3_add(camera->position, mouse_pos);
 
+		// draw the cursor
+		v3 window_x, window_y, window_z;
+		window_axes(focused_window, &window_x, &window_y, &window_z);
+
+		v2 cursor_pos = {0};
 		window_ray_intersection_point(focused_window,
-			camera_pos, camera->front, &wm->cursor.position);
+			camera_pos, camera->front, &cursor_pos);
+
+		v3 window_pos = focused_window->position;
+		v2 window_scale = focused_window->scale;
+		v3 cursor_world_pos = v3_add(window_pos, v3_add(v3_add(
+			v3_mulf(window_x, cursor_pos.x / window_scale.x),
+			v3_mulf(window_y, cursor_pos.y / window_scale.y)),
+			v3_mulf(window_z, -0.01f)));
+
+		u32 cursor_texture = wm->cursor.texture;
+		debug_line(window_pos, cursor_world_pos);
+		{
+			v2 uv[4];
+			uv[0] = V2(0, 0);
+			uv[1] = V2(0, 1);
+			uv[2] = V2(1, 0);
+			uv[3] = V2(1, 1);
+
+			v2 cursor_scale = v2_mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
+			v3 cursor_x = v3_mulf(v3_norm(window_x), cursor_scale.x);
+			v3 cursor_y = v3_mulf(v3_norm(window_y), cursor_scale.y);
+
+			v3 pos[4];
+			pos[0] = cursor_world_pos;
+			pos[1] = v3_add(cursor_world_pos, cursor_y);
+			pos[2] = v3_add(cursor_world_pos, cursor_x);
+			pos[3] = v3_add(pos[2], cursor_y);
+
+			debug_set_color(1, 0, 0);
+			debug_line(pos[0], pos[1]);
+			debug_line(pos[0], pos[2]);
+			render_quad(render_commands, pos[0], pos[1], pos[2], pos[3],
+				uv[0], uv[1], uv[2], uv[3], cursor_texture);
+		}
+
 		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
 			// TODO: change this to resizing the window, choose a different
@@ -635,6 +674,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			wm->is_active = 0;
 		}
 
+		wm->cursor.position = cursor_pos;
 		game->mouse_pos = mouse_pos;
 
 		if (focused_window->flags & WINDOW_DESTROYED) {

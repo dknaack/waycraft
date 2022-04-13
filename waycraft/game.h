@@ -34,8 +34,9 @@ struct game_window_manager {
 	u32 window_count;
 	u32 is_active;
 
-	struct {
+	struct game_cursor {
 		v2 position;
+		v2 scale;
 		u32 texture;
 	} cursor;
 };
