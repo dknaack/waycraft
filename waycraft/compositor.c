@@ -64,12 +64,17 @@ struct surface {
 	struct wl_resource *resource;
 	union {
 		struct {
-			struct wl_resource *xdg_surface;
-			struct wl_resource *xdg_toplevel;
-		};
+			struct wl_resource *surface;
+			struct wl_resource *toplevel;
+		} xdg;
 
 		struct wl_resource *parent_surface;
 		struct xwayland_surface xwayland_surface;
+
+		struct {
+			f32 hotspot_x;
+			f32 hotspot_y;
+		} cursor;
 	};
 
 	u32 width;
@@ -158,8 +163,8 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 	struct surface *surface = wl_resource_get_user_data(resource);
 
 	if (!surface->current.buffer && !surface->pending.buffer &&
-			surface->xdg_surface) {
-		xdg_surface_send_configure(surface->xdg_surface, 0);
+			surface->xdg.surface) {
+		xdg_surface_send_configure(surface->xdg.surface, 0);
 	}
 
 	if (surface->pending.flags & SURFACE_NEW_BUFFER) {
@@ -329,6 +334,8 @@ pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
 		compositor->window_manager.cursor.texture = surface->texture;
 		compositor->window_manager.cursor.scale.x = surface->width;
 		compositor->window_manager.cursor.scale.y = surface->height;
+		compositor->window_manager.cursor.offset.x = -hotspot_x;
+		compositor->window_manager.cursor.offset.x = -hotspot_y;
 	}
 }
 
@@ -441,7 +448,7 @@ xdg_toplevel_unbind(struct wl_resource *resource)
 
 	surface->pending.flags |= SURFACE_NEW_ROLE;
 	surface->pending.role = SURFACE_ROLE_NONE;
-	surface->xdg_toplevel = 0;
+	surface->xdg.toplevel = 0;
 }
 
 static void
@@ -456,7 +463,7 @@ xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
 
 	surface->pending.flags |= SURFACE_NEW_ROLE;
 	surface->pending.role = SURFACE_ROLE_TOPLEVEL;
-	surface->xdg_toplevel = xdg_toplevel;
+	surface->xdg.toplevel = xdg_toplevel;
 }
 
 
@@ -485,7 +492,7 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
 		&xdg_surface_interface, XDG_SURFACE_VERSION, id);
 	wl_resource_set_implementation(xdg_surface, &xdg_surface_impl, surface, 0);
 
-	surface->xdg_surface = xdg_surface;
+	surface->xdg.surface = xdg_surface;
 }
 
 static const struct xdg_wm_base_interface xdg_wm_base_impl = {
@@ -718,7 +725,7 @@ compositor_update(struct backend_memory *memory)
 			}
 
 			if (surface->current.role == SURFACE_ROLE_TOPLEVEL) {
-				struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+				struct wl_resource *xdg_toplevel = surface->xdg.toplevel;
 				struct wl_array array;
 				wl_array_init(&array);
 				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
@@ -755,7 +762,7 @@ compositor_update(struct backend_memory *memory)
 			}
 
 			if (surface->current.role == SURFACE_ROLE_TOPLEVEL) {
-				struct wl_resource *xdg_toplevel = surface->xdg_toplevel;
+				struct wl_resource *xdg_toplevel = surface->xdg.toplevel;
 				i32 *state = wl_array_add(&array, sizeof(*state));
 				*state = XDG_TOPLEVEL_STATE_ACTIVATED;
 				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);

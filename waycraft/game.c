@@ -635,9 +635,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 		v3 window_pos = focused_window->position;
 		v2 window_scale = focused_window->scale;
+		v2 cursor_offset = v2_mulf(wm->cursor.offset, 1./VIRTUAL_SCREEN_SIZE);
 		v3 cursor_world_pos = v3_add(window_pos, v3_add(v3_add(
-			v3_mulf(window_x, cursor_pos.x / window_scale.x),
-			v3_mulf(window_y, cursor_pos.y / window_scale.y)),
+			v3_mulf(window_x, cursor_pos.x / window_scale.x + cursor_offset.x),
+			v3_mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
 			v3_mulf(window_z, -0.01f)));
 
 		u32 cursor_texture = wm->cursor.texture;
@@ -681,8 +682,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			wm->focused_window = 0;
 		}
 	}
-
-	window_find(wm->windows, wm->window_count, camera->position, camera->front);
 
 	world_update(&game->world, game->camera.position, render_commands);
 

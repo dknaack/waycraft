@@ -36,6 +36,7 @@ struct game_window_manager {
 
 	struct game_cursor {
 		v2 position;
+		v2 offset;
 		v2 scale;
 		u32 texture;
 	} cursor;
