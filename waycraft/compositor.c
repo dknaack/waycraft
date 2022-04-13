@@ -69,6 +69,7 @@ struct surface {
 		};
 
 		struct wl_resource *parent_surface;
+		struct xwayland_surface xwayland_surface;
 	};
 
 	u32 width;
@@ -721,6 +722,10 @@ compositor_update(struct backend_memory *memory)
 				struct wl_array array;
 				wl_array_init(&array);
 				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			} else if (surface->current.role == SURFACE_ROLE_XWAYLAND) {
+				xcb_connection_t *connection = compositor->xwayland.xwm.connection;
+				xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE, XCB_NONE, XCB_CURRENT_TIME);
+				xcb_flush(connection);
 			}
 		}
 
@@ -754,6 +759,8 @@ compositor_update(struct backend_memory *memory)
 				i32 *state = wl_array_add(&array, sizeof(*state));
 				*state = XDG_TOPLEVEL_STATE_ACTIVATED;
 				xdg_toplevel_send_configure(xdg_toplevel, 0, 0, &array);
+			} else if (surface->current.role == SURFACE_ROLE_XWAYLAND) {
+				xwm_focus(&compositor->xwayland.xwm, &surface->xwayland_surface);
 			}
 		}
 
@@ -814,6 +821,8 @@ compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
 	struct compositor *compositor = memory->data;
 
 	if (compositor->focused_surface) {
+		log_info("sending button");
+
 		u32 time = get_time_msec();
 
 		struct wl_resource *pointer;

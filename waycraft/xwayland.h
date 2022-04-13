@@ -5,10 +5,7 @@
 
 struct xwayland_surface {
 	xcb_window_t window;
-	u32 wl_surface_id;
-
-	struct wl_resourse *wl_surface;
-	struct wl_list link;
+	u32 wl_surface;
 };
 
 enum xwm_atoms {
@@ -28,7 +25,7 @@ struct xwm {
     xcb_window_t window;
     xcb_atom_t atoms[XWM_ATOM_COUNT];
 
-	u32 unpaired_surfaces[256];
+	struct xwayland_surface unpaired_surfaces[256];
 	u32 unpaired_surface_count;
 
     struct wl_client *client;
@@ -51,5 +48,7 @@ struct xwayland {
 
 static i32 xwayland_init(struct xwayland *xwayland, struct compositor *compositor);
 static void xwayland_finish(struct xwayland *xwayland);
+
+static void xwm_focus(struct xwm *xwm, struct xwayland_surface *surface);
 
 #endif /* WAYCRAFT_XWAYLAND_H */

@@ -37,12 +37,22 @@ set_cloexec(i32 fd, i32 value)
 }
 
 static void
-xwayland_assign_role(struct wl_resource *resource)
+xwayland_assign_role(struct wl_resource *resource, xcb_window_t xcb_window, xcb_connection_t *connection)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
 	surface->pending.flags |= SURFACE_NEW_ROLE;
 	surface->pending.role = SURFACE_ROLE_XWAYLAND;
+	surface->xwayland_surface.window = xcb_window;
+
+	u32 mask = XCB_CW_EVENT_MASK;
+	u32 values[1];
+	values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE;
+	xcb_change_window_attributes(connection, xcb_window, mask, values);
+
+	mask = XCB_CONFIG_WINDOW_BORDER_WIDTH;
+	values[0] = 0;
+	xcb_configure_window(connection, xcb_window, mask, values);
 }
 
 static void
@@ -56,8 +66,6 @@ xwm_handle_create_notify(struct xwm *xwm, xcb_create_notify_event_t *event)
 			XCB_EVENT_MASK_FOCUS_CHANGE;
 		xcb_change_window_attributes(xwm->connection, window,
 			XCB_CW_EVENT_MASK, values);
-	} else {
-		log_info("window == xwm->window");
 	}
 }
 
@@ -83,12 +91,13 @@ xwm_handle_client_message(struct xwm *xwm, xcb_client_message_event_t *event)
 
 		// NOTE: surface may not have been created yet.
 		if (resource) {
-			xwayland_assign_role(resource);
-			log_info("assigned xwayland role to surface");
+			xwayland_assign_role(resource, event->window, xwm->connection);
 		} else {
-			log_info("unpaired xwayland surface %d!!!", wl_surface_id);
-			xwm->unpaired_surfaces[xwm->unpaired_surface_count++] =
-				wl_surface_id;
+			struct xwayland_surface *surface =
+				&xwm->unpaired_surfaces[xwm->unpaired_surface_count++];
+
+			surface->wl_surface = wl_surface_id;
+			surface->window = event->window;
 		}
 	} else {
 		log_info("unpaired window!");
@@ -131,8 +140,6 @@ xwm_handle_event(i32 fd, u32 mask, void *data)
 		if (!event_name) {
 			event_name = "unknown event";
 		}
-
-		log_info("%s (%d)", event_name, event_type);
 
 		switch (event->response_type & ~0x80) {
 		case XCB_CREATE_NOTIFY:
@@ -236,6 +243,20 @@ xwm_init(struct xwm *xwm, i32 wm_fd, struct wl_display *display)
 }
 
 static void
+xwm_focus(struct xwm *xwm, struct xwayland_surface *surface)
+{
+	xcb_connection_t *connection = xwm->connection;
+	xcb_window_t window = surface->window;
+	assert(window != XCB_WINDOW_NONE);
+
+    uint32_t values[] = { XCB_STACK_MODE_ABOVE };
+    xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, values);
+	xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE,
+		window, XCB_CURRENT_TIME);
+	xcb_flush(connection);
+}
+
+static void
 xwm_finish(struct xwm *xwm)
 {
 	if (xwm->connection) {
@@ -294,16 +315,15 @@ xwayland_new_surface(struct wl_listener *listener, void *data)
 	struct wl_resource *resource = data;
 	u32 id = wl_resource_get_id(resource);
 
-	log_info("new_surface");
-
 	for (u32 i = 0; i < xwm->unpaired_surface_count; i++) {
-		u32 unpaired_id = xwm->unpaired_surfaces[i];
-		log_debug("unpaired_id = %d", unpaired_id);
+		u32 unpaired_id = xwm->unpaired_surfaces[i].wl_surface;
 		if (id == unpaired_id) {
-			log_info("found an unpaired surface!");
+			xcb_window_t window = xwm->unpaired_surfaces[i].window;
+			assert(window != XCB_WINDOW_NONE);
+
 			xwm->unpaired_surfaces[i] =
 				xwm->unpaired_surfaces[--xwm->unpaired_surface_count];
-			xwayland_assign_role(resource);
+			xwayland_assign_role(resource, window, xwm->connection);
 			break;
 		}
 	}
@@ -420,8 +440,6 @@ xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
 		*arg++ = listen[1];
 		*arg++ = "-wm";
 		*arg++ = wm;
-		*arg++ = "-verbose";
-		*arg++ = "100";
 		*arg++ = 0;
 
 		signal(SIGUSR1, SIG_IGN);
