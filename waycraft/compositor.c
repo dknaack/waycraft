@@ -223,13 +223,15 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 				surface->current.role = surface->pending.role;
 			}
 		} else if (surface->pending.role == SURFACE_ROLE_XWAYLAND) {
-			log_info("xwayland buffer = %p\n", (void *)surface->current.buffer);
 			struct game_window *window = wm->windows + wm->window_count++;
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
 
 			surface->current.role = surface->pending.role;
+		} else if (surface->pending.role == SURFACE_ROLE_CURSOR) {
+			assert(surface->texture);
+			wm->cursor.texture = surface->texture;
 		}
 	}
 
@@ -261,6 +263,19 @@ static const struct wl_region_interface region_impl = {
 };
 
 static void
+surface_destroy(struct wl_resource *resource)
+{
+	struct surface *surface = wl_resource_get_user_data(resource);
+
+	surface->pending.flags |= SURFACE_NEW_ROLE;
+	surface->pending.role = SURFACE_ROLE_NONE;
+	if (surface->texture) {
+		gl.DeleteTextures(1, &surface->texture);
+		surface->texture = 0;
+	}
+}
+
+static void
 compositor_create_surface(struct wl_client *client,
 		struct wl_resource *resource, u32 id)
 {
@@ -269,7 +284,8 @@ compositor_create_surface(struct wl_client *client,
 		compositor->surface_count++;
 	struct wl_resource *wl_surface = wl_resource_create(client,
 		&wl_surface_interface, WL_SURFACE_VERSION, id);
-	wl_resource_set_implementation(wl_surface, &surface_impl, surface, 0);
+	wl_resource_set_implementation(wl_surface, &surface_impl, surface,
+		surface_destroy);
 
 	surface->resource = wl_surface;
 	surface->compositor = compositor;
@@ -305,9 +321,13 @@ pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
 {
 	if (_surface) {
 		struct surface *surface = wl_resource_get_user_data(_surface);
+		struct compositor *compositor = surface->compositor;
 
 		surface->pending.flags |= SURFACE_NEW_ROLE;
 		surface->pending.role = SURFACE_ROLE_CURSOR;
+		compositor->window_manager.cursor.texture = surface->texture;
+		compositor->window_manager.cursor.scale.x = surface->width;
+		compositor->window_manager.cursor.scale.y = surface->height;
 	}
 }
 
@@ -808,9 +828,8 @@ static void
 compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
 {
 	struct compositor *compositor = memory->data;
-	struct surface *focused_surface =
-		&compositor->surfaces[compositor->focused_surface];
-	if (focused_surface) {
+
+	if (compositor->focused_surface) {
 		u32 time = get_time_msec();
 
 		struct wl_resource *pointer;
