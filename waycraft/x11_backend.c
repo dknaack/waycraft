@@ -10,7 +10,7 @@
 #include <waycraft/game.h>
 
 enum x11_atom {
-	X11__NET_WM_NAME,
+	X11_NET_WM_NAME,
 	X11_WM_DELETE_WINDOW,
 	X11_WM_PROTOCOLS,
 	X11_WM_NAME,
@@ -27,6 +27,7 @@ union x11_event {
 	xcb_key_release_event_t *key_release;
 	xcb_motion_notify_event_t *motion_notify;
 	xcb_configure_notify_event_t *configure_notify;
+	xcb_property_notify_event_t *property_notify;
 };
 
 struct x11_window {
@@ -48,7 +49,7 @@ struct x11_window {
 };
 
 static const char *x11_atom_names[X11_ATOM_COUNT] = {
-	[X11__NET_WM_NAME]     = "_NET_WM_NAME",
+	[X11_NET_WM_NAME]      = "_NET_WM_NAME",
 	[X11_WM_DELETE_WINDOW] = "WM_DELETE_WINDOW",
 	[X11_WM_PROTOCOLS]     = "WM_PROTOCOLS",
 	[X11_WM_NAME]          = "WM_NAME",
@@ -110,8 +111,8 @@ allocate_shm_file(size_t size)
 static void
 x11_window_hide_cursor(xcb_connection_t *connection, xcb_window_t window)
 {
-	//xcb_xfixes_query_version(connection, 4, 0);
-	//xcb_xfixes_hide_cursor(connection, window);
+	xcb_xfixes_hide_cursor(connection, window);
+	xcb_xfixes_show_cursor(connection, window);
 }
 
 static i32
@@ -134,7 +135,7 @@ x11_window_init(struct x11_window *window)
 		XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
 		XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
 		XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
-		XCB_EVENT_MASK_POINTER_MOTION;
+		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
 
 	xcb_create_window(connection, screen->root_depth, xcb_window, screen->root,
 		0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
@@ -164,7 +165,8 @@ x11_window_init(struct x11_window *window)
 		atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
 		&atoms[X11_WM_DELETE_WINDOW]);
 
-	x11_window_hide_cursor(connection, xcb_window);
+	xcb_xfixes_query_version(connection, 4, 0);
+	xcb_xfixes_hide_cursor(connection, xcb_window);
 
 	xcb_flush(connection);
 
@@ -306,11 +308,13 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				window->is_open = 0;
 			}
 			break;
-		case XCB_ENTER_NOTIFY:
+		case XCB_FOCUS_IN:
 			window->is_focused = 1;
+			xcb_xfixes_hide_cursor(connection, window->window);
 			break;
-		case XCB_LEAVE_NOTIFY:
+		case XCB_FOCUS_OUT:
 			window->is_focused = 0;
+			xcb_xfixes_show_cursor(connection, window->window);
 			break;
 		}
 
