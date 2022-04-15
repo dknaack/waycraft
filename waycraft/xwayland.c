@@ -72,13 +72,13 @@ xwm_handle_create_notify(struct xwm *xwm, xcb_create_notify_event_t *event)
 static void
 xwm_handle_destroy_notify(struct xwm *xwm, xcb_destroy_notify_event_t *event)
 {
-	(void)event;
+	wl_signal_emit(&xwm->destroy_notify, event);
 }
 
 static void
 xwm_handle_property_notify(struct xwm *xwm, xcb_property_notify_event_t *event)
 {
-	(void)event;
+	// TODO
 }
 
 static void
@@ -252,7 +252,10 @@ xwm_focus(struct xwm *xwm, struct xwayland_surface *surface)
     uint32_t values[] = { XCB_STACK_MODE_ABOVE };
     xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, values);
 	xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE,
-		window, XCB_CURRENT_TIME);
+		XCB_WINDOW_NONE, XCB_CURRENT_TIME);
+	xcb_flush(connection);
+	xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE, window,
+		XCB_CURRENT_TIME);
 	xcb_flush(connection);
 }
 
@@ -449,6 +452,8 @@ xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
 
 	close(xwayland->wl_fd[1]);
 	close(xwayland->wm_fd[1]);
+
+	wl_signal_init(&xwayland->xwm.destroy_notify);
 
 	return 0;
 }

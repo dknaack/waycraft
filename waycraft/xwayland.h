@@ -32,6 +32,7 @@ struct xwm {
     struct wl_event_source *event_source;
 	struct wl_listener destroy_listener;
 	struct wl_listener new_surface;
+	struct wl_signal destroy_notify;
 };
 
 struct xwayland {

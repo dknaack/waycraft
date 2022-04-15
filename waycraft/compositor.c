@@ -103,6 +103,7 @@ struct compositor {
 	struct wl_list keyboards;
 	struct wl_list pointers;
 	struct wl_signal new_surface;
+	struct wl_listener xwayland_surface_destroy;
 	struct surface *surfaces;
 	u32 surface_count;
 	u32 focused_surface;
@@ -255,6 +256,8 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		} else if (surface->pending.role == SURFACE_ROLE_CURSOR) {
 			assert(surface->texture);
 			wm->cursor.texture = surface->texture;
+
+			surface->current.role = surface->pending.role;
 		}
 	}
 
@@ -593,6 +596,30 @@ data_device_manager_bind(struct wl_client *client, void *data, u32 version,
 	wl_resource_set_implementation(resource, &data_device_manager_impl, data, 0);
 }
 
+static void
+xwayland_surface_destroy(struct wl_listener *listener, void *data)
+{
+	struct compositor *compositor = wl_container_of(listener,
+		compositor, xwayland_surface_destroy);
+	xcb_destroy_notify_event_t *event = data;
+
+	struct surface *surface = compositor->surfaces + 1;
+	u32 surface_count = compositor->surface_count - 1;
+	while (surface_count-- > 0) {
+		printf("%d == %d?\n", surface->xwayland_surface.window, event->window);
+		if (surface->current.role == SURFACE_ROLE_XWAYLAND &&
+				surface->xwayland_surface.window == event->window) {
+			if (surface->window) {
+				surface->window->flags |= WINDOW_DESTROYED;
+			}
+			surface_destroy(surface->resource);
+			break;
+		}
+
+		surface++;
+	}
+}
+
 static i32
 compositor_init(struct backend_memory *memory, struct egl *egl,
 		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
@@ -649,6 +676,10 @@ compositor_init(struct backend_memory *memory, struct egl *egl,
 		log_err("Failed to initialize xwayland");
 		goto error_xwayland;
 	}
+
+	compositor->xwayland_surface_destroy.notify = xwayland_surface_destroy;
+	wl_signal_add(&compositor->xwayland.xwm.destroy_notify,
+		&compositor->xwayland_surface_destroy);
 
 	return 0;
 error_xwayland:
