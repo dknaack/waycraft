@@ -157,6 +157,24 @@ surface_frame(struct wl_client *client, struct wl_resource *resource,
 	surface->pending.frame_callback = frame_callback;
 }
 
+static struct game_window *
+window_manager_create_window(struct game_window_manager *wm)
+{
+	struct game_window *window = wm->windows;
+	u32 window_count = wm->window_count;
+
+	while (window_count-- > 0) {
+		if (window->flags & WINDOW_DESTROYED) {
+			return window;
+		}
+
+		window++;
+	}
+
+	wm->window_count++;
+	return window;
+}
+
 static void
 surface_commit(struct wl_client *client, struct wl_resource *resource)
 {
@@ -211,19 +229,7 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		struct game_window_manager *wm = &compositor->window_manager;
 
 		if (surface->pending.role == SURFACE_ROLE_TOPLEVEL) {
-			struct game_window *window = 0;
-			struct game_window *windows = wm->windows;
-			u32 window_count = wm->window_count;
-
-			for (u32 i = 0; i < window_count; i++) {
-				if (windows[i].flags & WINDOW_DESTROYED) {
-					window = &windows[i];
-				}
-			}
-
-			if (!window) {
-				window = wm->windows + wm->window_count++;
-			}
+			struct game_window *window = window_manager_create_window(wm);
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
@@ -240,7 +246,7 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 				surface->current.role = surface->pending.role;
 			}
 		} else if (surface->pending.role == SURFACE_ROLE_XWAYLAND) {
-			struct game_window *window = wm->windows + wm->window_count++;
+			struct game_window *window = window_manager_create_window(wm);
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
