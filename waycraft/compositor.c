@@ -211,8 +211,19 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 		struct game_window_manager *wm = &compositor->window_manager;
 
 		if (surface->pending.role == SURFACE_ROLE_TOPLEVEL) {
-			// TODO: reuse destroyed windows instead of allocating a new one each time.
-			struct game_window *window = wm->windows + wm->window_count++;
+			struct game_window *window = 0;
+			struct game_window *windows = wm->windows;
+			u32 window_count = wm->window_count;
+
+			for (u32 i = 0; i < window_count; i++) {
+				if (windows[i].flags & WINDOW_DESTROYED) {
+					window = &windows[i];
+				}
+			}
+
+			if (!window) {
+				window = wm->windows + wm->window_count++;
+			}
 			window->flags = 0;
 			window->texture = surface->texture;
 			surface->window = window;
@@ -744,10 +755,12 @@ compositor_update(struct backend_memory *memory)
 			struct wl_array array;
 			wl_array_init(&array);
 
+			u32 serial = wl_display_next_serial(compositor->display);
+
 			struct wl_resource *keyboard;
 			wl_resource_for_each(keyboard, &compositor->keyboards) {
-				wl_keyboard_send_enter(keyboard, 0, surface->resource, &array);
-				wl_keyboard_send_modifiers(keyboard, 0, 0, 0, 0, 0);
+				wl_keyboard_send_enter(keyboard, serial, surface->resource, &array);
+				wl_keyboard_send_modifiers(keyboard, serial, 0, 0, 0, 0);
 			}
 
 			struct wl_resource *pointer;
@@ -757,7 +770,7 @@ compositor_update(struct backend_memory *memory)
 				wl_fixed_t surface_x = wl_fixed_from_double(0.f);
 				wl_fixed_t surface_y = wl_fixed_from_double(0.f);
 				// TODO: generate a serial for the event
-				wl_pointer_send_enter(pointer, 0, surface->resource,
+				wl_pointer_send_enter(pointer, serial, surface->resource,
 					surface_x, surface_y);
 			}
 
@@ -784,10 +797,11 @@ compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
 
 	if (compositor->focused_surface) {
 		u32 time = get_time_msec();
+		u32 serial = wl_display_next_serial(compositor->display);
 
 		struct wl_resource *keyboard;
 		wl_resource_for_each(keyboard, &compositor->keyboards) {
-			wl_keyboard_send_key(keyboard, 0, time, key, state);
+			wl_keyboard_send_key(keyboard, serial, time, key, state);
 		}
 	}
 }
@@ -828,14 +842,14 @@ compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
 	struct compositor *compositor = memory->data;
 
 	if (compositor->focused_surface) {
-		log_info("sending button");
+		log_info("\n-------------------------------------\nsending button");
 
 		u32 time = get_time_msec();
+		u32 serial = wl_display_next_serial(compositor->display);
 
 		struct wl_resource *pointer;
 		wl_resource_for_each(pointer, &compositor->pointers) {
-			// TODO: generate a serial for the event
-			wl_pointer_send_button(pointer, 0, time, button, state);
+			wl_pointer_send_button(pointer, serial, time, button, state);
 		}
 	}
 }
