@@ -177,7 +177,7 @@ player_move(struct game_state *game, struct game_input *input)
 	v3 player_pos = player->position;
 	struct chunk *chunk = world_get_chunk(world, player_pos.x, player_pos.y,
 		player_pos.z);
-	if (!(chunk->flags & CHUNK_INITIALIZED)) {
+	if (!chunk || !(chunk->flags & CHUNK_INITIALIZED)) {
 		return;
 	}
 
