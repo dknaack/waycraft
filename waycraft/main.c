@@ -44,6 +44,7 @@
 #include "waycraft/xdg-shell-protocol.h"
 #include "waycraft/xwayland.h"
 
+#include "waycraft/backend_x11.c"
 #include "waycraft/block.c"
 #include "waycraft/compositor.c"
 #include "waycraft/debug.c"
@@ -57,7 +58,6 @@
 #include "waycraft/renderer.c"
 #include "waycraft/timer.c"
 #include "waycraft/world.c"
-#include "waycraft/x11_backend.c"
 #include "waycraft/xdg-shell-protocol.c"
 #include "waycraft/xwayland.c"
 
