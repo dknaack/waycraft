@@ -148,5 +148,5 @@ window_manager_get_window_id(struct game_window_manager *wm,
 	return window ? window - wm->windows + 1 : 0;
 }
 
-void game_update(struct backend_memory *memory, struct game_input *input,
+static void game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);

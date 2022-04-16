@@ -174,6 +174,13 @@ player_move(struct game_state *game, struct game_input *input)
 
 	f32 dt = input->dt;
 
+	v3 player_pos = player->position;
+	struct chunk *chunk = world_get_chunk(world, player_pos.x, player_pos.y,
+		player_pos.z);
+	if (!(chunk->flags & CHUNK_INITIALIZED)) {
+		return;
+	}
+
 	v3 front = camera->front;
 	v3 right = camera->right;
 	f32 speed = player->speed;
@@ -276,10 +283,6 @@ player_move(struct game_state *game, struct game_input *input)
 
 	player->position = position;
 	player->velocity = velocity;
-
-	camera->position = v3_add(player->position, V3(0, 0.75, 0));
-	camera_resize(&game->camera, input->width, input->height);
-	camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 }
 
 static u32
@@ -511,6 +514,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	if (!focused_window && !inventory_is_active) {
 		player_move(game, input);
+		camera->position = v3_add(player->position, V3(0, 0.75, 0));
+		camera_resize(&game->camera, input->width, input->height);
+		camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
+
 		v3 block_pos = {0};
 		v3 block_normal = {0};
 		f32 t = 0.f;
@@ -532,9 +539,6 @@ game_update(struct backend_memory *memory, struct game_input *input,
 				v3 offset = v3_mulf(camera_front, t - 0.01f);
 				v3 window_pos = v3_add(camera_pos, offset);
 				hot_window->flags |= WINDOW_VISIBLE;
-#if 0
-				debug_line(window_pos, v3_add(window_pos, block_normal));
-#endif
 				window_move(hot_window, window_pos, block_normal, relative_up);
 			} else {
 				hot_window->flags &= ~WINDOW_VISIBLE;
