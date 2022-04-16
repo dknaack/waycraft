@@ -1,7 +1,3 @@
-#include <time.h>
-
-#include <waycraft/timer.h>
-
 static i32 timer_initialized = 0;
 static FILE *timer_output;
 

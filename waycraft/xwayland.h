@@ -1,8 +1,3 @@
-#ifndef WAYCRAFT_XWAYLAND_H
-#define WAYCRAFT_XWAYLAND_H
-
-#include <xcb/xcb.h>
-
 struct xwayland_surface {
 	xcb_window_t window;
 	u32 wl_surface;
@@ -51,5 +46,3 @@ static i32 xwayland_init(struct xwayland *xwayland, struct compositor *composito
 static void xwayland_finish(struct xwayland *xwayland);
 
 static void xwm_focus(struct xwm *xwm, struct xwayland_surface *surface);
-
-#endif /* WAYCRAFT_XWAYLAND_H */

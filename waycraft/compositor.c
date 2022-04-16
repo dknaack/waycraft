@@ -1,21 +1,3 @@
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <wayland-server.h>
-#include <xkbcommon/xkbcommon.h>
-#include <time.h>
-
-#include <waycraft/backend.h>
-#include <waycraft/compositor.h>
-#include <waycraft/game.h>
-#include <waycraft/gl.h>
-#include <waycraft/log.h>
-#include <waycraft/xdg-shell-protocol.h>
-#include <waycraft/xwayland.h>
-
 #define WL_CALLBACK_VERSION 1
 #define WL_COMPOSITOR_VERSION 5
 #define WL_DATA_DEVICE_MANAGER_VERSION 3

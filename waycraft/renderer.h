@@ -1,8 +1,3 @@
-#ifndef WAYCRAFT_RENDERER_H
-#define WAYCRAFT_RENDERER_H
-
-#include <waycraft/types.h>
-
 struct vertex {
     v3 position;
     v2 texcoord;
@@ -130,5 +125,3 @@ static void mesh_destroy(struct render_command_buffer *cmd_buffer);
 static void mesh_push_quad(struct mesh_data *mesh,
 	v3 pos0, v3 pos1, v3 pos2, v3 pos3, v2 uv0, v2 uv1, v2 uv2, v2 uv3,
 	u32 texture);
-
-#endif /* WAYCRAFT_RENDERER_H */

@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <waycraft/log.h>
-
 static const char *log_str[LOG_LEVEL_COUNT] = {
 	[LOG_INFO] = "info",
 	[LOG_DEBUG] = "debug",

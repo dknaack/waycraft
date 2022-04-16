@@ -1,14 +1,3 @@
-#include <errno.h>
-#include <fcntl.h>
-#include <xkbcommon/xkbcommon-x11.h>
-#include <xkbcommon/xkbcommon-names.h>
-#include <xcb/xcb.h>
-#include <xcb/xfixes.h>
-#include <sys/mman.h>
-#include <linux/input-event-codes.h>
-
-#include <waycraft/game.h>
-
 enum x11_atom {
 	X11_NET_WM_NAME,
 	X11_WM_DELETE_WINDOW,

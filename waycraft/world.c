@@ -1,14 +1,3 @@
-#include <math.h>
-
-#include <waycraft/block.h>
-#include <waycraft/debug.h>
-#include <waycraft/gl.h>
-#include <waycraft/memory.h>
-#include <waycraft/stb_image.h>
-#include <waycraft/timer.h>
-#include <waycraft/types.h>
-#include <waycraft/world.h>
-
 // TODO: fix bug for top faces
 
 static inline f32

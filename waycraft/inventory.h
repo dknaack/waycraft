@@ -1,8 +1,3 @@
-#ifndef WAYCRAFT_INVENTORY_H
-#define WAYCRAFT_INVENTORY_H
-
-#include <waycraft/block.h>
-
 struct texture {
 	u32 handle;
 	u32 width;
@@ -56,5 +51,3 @@ static void inventory_render(struct inventory *inventory, f32 width, f32 height,
 	struct render_command_buffer *cmd_buffer);
 static void inventory_add_item(struct inventory *inventory,
 	enum item_type item, u32 count);
-
-#endif /* WAYCRAFT_INVENTORY_H */

@@ -1,8 +1,3 @@
-#ifndef MATH_H
-#define MATH_H
-
-#include <waycraft/types.h>
-
 static f32 v2_len(v2 a);
 static f32 v2_dot(v2 a, v2 b);
 static v2 v2_add(v2 a, v2 b);
@@ -61,5 +56,3 @@ static v4 qt_conj(v4 q);
 static v4 qt_inv(v4 q);
 static v4 qt_norm(v4 q);
 static v4 qt_rotate(v3 from, v3 to);
-
-#endif /* MATH_H */

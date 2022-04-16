@@ -1,8 +1,3 @@
-#ifndef MEMORY_H
-#define MEMORY_H
-
-#include <waycraft/types.h>
-
 struct memory_arena {
     u8 *data;
     usize size;
@@ -14,5 +9,3 @@ struct memory_arena {
 
 void arena_init(struct memory_arena *arena, void *data, usize size);
 void *arena_alloc_(struct memory_arena *arena, usize size);
-
-#endif /* MEMORY_H */

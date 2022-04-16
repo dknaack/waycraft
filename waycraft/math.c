@@ -1,8 +1,3 @@
-#include <math.h>
-
-#include "types.h"
-#include "math.h"
-
 static float
 lerp(float a, float b, float t)
 {

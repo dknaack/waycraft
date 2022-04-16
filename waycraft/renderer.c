@@ -1,6 +1,3 @@
-#include <waycraft/gl.h>
-#include <waycraft/renderer.h>
-
 #define VERTEX_BUFFER_SIZE MB(1)
 #define INDEX_BUFFER_SIZE MB(2)
 #define MESH_SIZE KB(16)

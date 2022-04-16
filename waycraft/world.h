@@ -1,9 +1,3 @@
-#ifndef WORLD_H
-#define WORLD_H
-
-#include <waycraft/renderer.h>
-#include <waycraft/block.h>
-
 #define WORLD_WIDTH  8
 #define WORLD_DEPTH  8
 #define WORLD_HEIGHT 8
@@ -52,5 +46,3 @@ void world_finish(struct world *world);
 void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
 void world_place_block(struct world *world, f32 x, f32 y, f32 z,
                        enum block_type block);
-
-#endif /* WORLD_H */

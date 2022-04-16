@@ -1,5 +1,3 @@
-#include <waycraft/memory.h>
-
 void
 arena_init(struct memory_arena *arena, void *data, u64 size)
 {

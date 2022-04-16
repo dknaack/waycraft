@@ -1,6 +1,3 @@
-#include <waycraft/block.h>
-#include <waycraft/math.h>
-
 static void
 block_texcoords(enum block_type block, v2 *uv)
 {

@@ -1,8 +1,3 @@
-#ifndef WAYCRAFT_BLOCK_H
-#define WAYCRAFT_BLOCK_H
-
-#include <waycraft/types.h>
-
 // NOTE: block with different directions should have the block facing to the
 // right first, then the block facing left next, and then the block facing up
 // and then down. The last two block should be the blocks facing forward and
@@ -52,5 +47,3 @@ block_is_not_water(enum block_type block)
 {
 	return block != BLOCK_WATER;
 }
-
-#endif /* WAYCRAFT_BLOCK_H */

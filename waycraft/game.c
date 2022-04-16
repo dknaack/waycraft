@@ -1,15 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-
-#include <waycraft/debug.h>
-#include <waycraft/gl.h>
-#include <waycraft/game.h>
-#include <waycraft/math.h>
-#include <waycraft/noise.h>
-#include <waycraft/timer.h>
-#include <waycraft/backend.h>
-
 #define VIRTUAL_SCREEN_SIZE 500
 
 static void

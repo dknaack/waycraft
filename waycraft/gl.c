@@ -1,5 +1,3 @@
-#include <waycraft/gl.h>
-
 static const char *gl_proc_names[] = {
 	"glViewport",
 	"glClear",

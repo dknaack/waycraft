@@ -1,10 +1,3 @@
-#ifndef TYPES_H
-#define TYPES_H
-
-#include <assert.h>
-#include <stdint.h>
-#include <stddef.h>
-
 typedef uintptr_t usize;
 typedef uint64_t  u64;
 typedef uint32_t  u32;
@@ -97,5 +90,3 @@ typedef union {
 #define I8_MIN  (i8)0x80
 
 #define F32_EPSILON 1e-5f
-
-#endif /* TYPES_H */

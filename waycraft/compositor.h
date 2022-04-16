@@ -1,8 +1,3 @@
-#ifndef COMPOSITOR_H
-#define COMPOSITOR_H
-
-#include <waycraft/types.h>
-
 struct egl {
 	EGLDisplay *display;
 	EGLSurface *surface;
@@ -21,5 +16,3 @@ static void compositor_send_motion(struct backend_memory *memory, i32 x, i32 y);
 static void compositor_send_modifiers(struct backend_memory *memory,
 	u32 depressed, u32 latched, u32 locked, u32 group);
 static void compositor_finish(struct backend_memory *memory);
-
-#endif /* COMPOSITOR_H */

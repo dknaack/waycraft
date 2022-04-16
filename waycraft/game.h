@@ -1,12 +1,3 @@
-#ifndef GAME_H
-#define GAME_H
-
-#include <waycraft/types.h>
-#include <waycraft/world.h>
-#include <waycraft/memory.h>
-#include <waycraft/inventory.h>
-#include <waycraft/renderer.h>
-
 enum game_window_flags {
 	WINDOW_INITIALIZED = 1 << 0,
 	WINDOW_VISIBLE     = 1 << 1,
@@ -153,5 +144,3 @@ window_manager_get_window_id(struct game_window_manager *wm,
 
 void game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);
-
-#endif /* GAME_H */

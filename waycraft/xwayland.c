@@ -1,16 +1,3 @@
-#include <xcb/composite.h>
-#include <xcb/xcb.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/wait.h>
-
-#include <waycraft/compositor.h>
-#include <waycraft/xwayland.h>
-#include <waycraft/log.h>
-
 static const char lock_file_fmt[] = "/tmp/.X%d-lock";
 static const char socket_fmt[] = "/tmp/.X11-unix/X%d";
 

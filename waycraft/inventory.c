@@ -1,6 +1,3 @@
-#include <waycraft/stb_image.h>
-#include <waycraft/inventory.h>
-
 static i32
 texture_init(struct texture *texture, const char *path)
 {
