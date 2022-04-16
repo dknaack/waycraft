@@ -100,7 +100,13 @@ struct game_state {
 	u32 cursor;
 };
 
-struct backend_memory;
+struct backend_memory {
+    void *data;
+    usize size;
+
+    u32 is_initialized;
+};
+
 struct compositor;
 
 static inline i32
