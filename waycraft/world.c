@@ -476,8 +476,6 @@ world_update(struct world *world, v3 player_pos,
 	v3 player_min = v3_sub(player_pos, v3_mulf(world_size, 0.5 * CHUNK_SIZE));
 	v3 player_max = v3_add(player_pos, v3_mulf(world_size, 0.5 * CHUNK_SIZE));
 
-	debug_cube(player_min, player_max);
-
 	struct chunk *chunk = world->chunks;
 	u32 chunk_count = WORLD_CHUNK_COUNT;
 	while (chunk_count-- > 0) {
@@ -519,9 +517,6 @@ world_update(struct world *world, v3 player_pos,
 			world_unload_chunk(world, chunk - WORLD_WIDTH * WORLD_HEIGHT);
 			chunk->flags &= ~CHUNK_INITIALIZED;
 		}
-
-		debug_cube(chunk_pos, v3_add(chunk_pos,
-				V3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE)));
 
 		chunk++;
 	}
