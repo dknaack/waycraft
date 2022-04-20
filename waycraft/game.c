@@ -609,7 +609,13 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		if (button_was_pressed(input->controller.toggle_inventory)) {
 			player->inventory.is_active = 0;
 		}
-	} else {
+	}
+	world_update(&game->world, game->camera.position, render_commands);
+
+	world_render(&game->world, render_commands);
+	window_manager_render(wm, view, projection, render_commands);
+
+	if (focused_window) {
 		log_info("focused_window = %d", wm->focused_window);
 
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
@@ -634,30 +640,24 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			v3_mulf(window_z, -0.01f)));
 
 		u32 cursor_texture = wm->cursor.texture;
-		debug_line(window_pos, cursor_world_pos);
-		{
-			v2 uv[4];
-			uv[0] = V2(0, 0);
-			uv[1] = V2(0, 1);
-			uv[2] = V2(1, 0);
-			uv[3] = V2(1, 1);
+		v2 uv[4];
+		uv[0] = V2(0, 0);
+		uv[1] = V2(0, 1);
+		uv[2] = V2(1, 0);
+		uv[3] = V2(1, 1);
 
-			v2 cursor_scale = v2_mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
-			v3 cursor_x = v3_mulf(v3_norm(window_x), cursor_scale.x);
-			v3 cursor_y = v3_mulf(v3_norm(window_y), cursor_scale.y);
+		v2 cursor_scale = v2_mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
+		v3 cursor_x = v3_mulf(v3_norm(window_x), cursor_scale.x);
+		v3 cursor_y = v3_mulf(v3_norm(window_y), cursor_scale.y);
 
-			v3 pos[4];
-			pos[0] = cursor_world_pos;
-			pos[1] = v3_add(cursor_world_pos, cursor_y);
-			pos[2] = v3_add(cursor_world_pos, cursor_x);
-			pos[3] = v3_add(pos[2], cursor_y);
+		v3 pos[4];
+		pos[0] = cursor_world_pos;
+		pos[1] = v3_add(cursor_world_pos, cursor_y);
+		pos[2] = v3_add(cursor_world_pos, cursor_x);
+		pos[3] = v3_add(pos[2], cursor_y);
 
-			debug_set_color(1, 0, 0);
-			debug_line(pos[0], pos[1]);
-			debug_line(pos[0], pos[2]);
-			render_quad(render_commands, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], cursor_texture);
-		}
+		render_quad(render_commands, pos[0], pos[1], pos[2], pos[3],
+			uv[0], uv[1], uv[2], uv[3], cursor_texture);
 
 		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
@@ -675,10 +675,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	world_update(&game->world, game->camera.position, render_commands);
-
-	world_render(&game->world, render_commands);
-	window_manager_render(wm, view, projection, render_commands);
+	// TODO: order the render commands inside the renderer
 	inventory_render(&player->inventory, input->width, input->height, render_commands);
 	renderer_end_frame(&game->renderer, render_commands);
 
