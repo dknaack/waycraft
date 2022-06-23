@@ -41,13 +41,3 @@ struct inventory {
 	struct texture active_slot_texture;
 	struct texture block_atlas_texture;
 };
-
-// NOTE: the direction determines the direction that the block faces after
-// placing it in the world.
-static enum block_type item_to_block(enum item_type item, v3 direction);
-
-static void inventory_init(struct inventory *inventory);
-static void inventory_render(struct inventory *inventory, f32 width, f32 height,
-	struct render_command_buffer *cmd_buffer);
-static void inventory_add_item(struct inventory *inventory,
-	enum item_type item, u32 count);

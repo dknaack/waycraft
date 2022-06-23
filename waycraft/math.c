@@ -44,16 +44,16 @@ v2_divf(v2 a, float f)
 	return V2(a.x / f, a.y / f);
 }
 
+f32
+v2_len(v2 a)
+{
+	return sqrtf(a.x * a.x + a.y * a.y);
+}
+
 v2
 v2_norm(v2 a)
 {
 	return v2_divf(a, v2_len(a));
-}
-
-float
-v2_len(v2 a)
-{
-	return sqrtf(a.x * a.x + a.y * a.y);
 }
 
 float
@@ -207,16 +207,16 @@ v4_divf(v4 a, float f)
 	return V4(a.x / f, a.y / f, a.z / f, a.w / f);
 }
 
+f32
+v4_len(v4 a)
+{
+	return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
+}
+
 v4
 v4_norm(v4 a)
 {
 	return v4_divf(a, v4_len(a));
-}
-
-float
-v4_len(v4 a)
-{
-	return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
 }
 
 float

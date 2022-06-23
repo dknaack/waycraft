@@ -37,15 +37,3 @@ struct chunk {
 
 struct memory_arena;
 struct render_command_buffer;
-
-static i32 world_init(struct world *world, struct memory_arena *arena);
-static u32 world_at(struct world *world, f32 x, f32 y, f32 z);
-static void world_update(struct world *world, v3 player_position,
-	struct render_command_buffer *cmd_buffer);
-static void world_render(const struct world *world,
-	struct render_command_buffer *cmd_buffer);
-static void world_finish(struct world *world);
-static void world_destroy_block(struct world *world, f32 x, f32 y, f32 z);
-static void world_place_block(struct world *world, f32 x, f32 y, f32 z,
-	enum block_type block);
-static struct chunk *world_get_chunk(struct world *world, f32 x, f32 y, f32 z);

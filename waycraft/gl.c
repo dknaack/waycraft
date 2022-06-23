@@ -1,3 +1,9 @@
+static void
+gl_shader_error(u32 shader, u8 *buffer, u32 size)
+{
+	gl.GetShaderInfoLog(shader, size - 1, 0, (char *)buffer);
+}
+
 static u32
 gl_shader_create(const u8 *src, u32 type)
 {
@@ -14,12 +20,6 @@ gl_shader_create(const u8 *src, u32 type)
 	}
 
 	return success ? shader : 0;
-}
-
-static void
-gl_shader_error(u32 shader, u8 *buffer, u32 size)
-{
-	gl.GetShaderInfoLog(shader, size - 1, 0, (char *)buffer);
 }
 
 static u32

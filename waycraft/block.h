@@ -28,14 +28,6 @@ enum block_type {
     BLOCK_MONITOR_FRONT,
 };
 
-static void block_texcoords(enum block_type block, v2 *uv);
-static void block_texcoords_top(enum block_type block, v2 *uv);
-static void block_texcoords_bottom(enum block_type block, v2 *uv);
-static void block_texcoords_right(enum block_type block, v2 *uv);
-static void block_texcoords_left(enum block_type block, v2 *uv);
-static void block_texcoords_front(enum block_type block, v2 *uv);
-static void block_texcoords_back(enum block_type block, v2 *uv);
-
 static inline u32
 block_is_empty(enum block_type block)
 {

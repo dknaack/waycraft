@@ -101,27 +101,3 @@ struct renderer {
 };
 
 struct memory_arena;
-
-static void renderer_init(struct renderer *renderer, struct memory_arena *arena);
-static void renderer_finish(struct renderer *renderer);
-static struct render_command_buffer *renderer_begin_frame(
-	struct renderer *renderer);
-static void renderer_end_frame(struct renderer *renderer,
-	struct render_command_buffer *commands);
-
-static void render_mesh(struct render_command_buffer *commands, u32 mesh,
-	m4x4 transform, u32 texture);
-static void render_clear(struct render_command_buffer *comands, v4 color);
-static void render_textured_quad(struct render_command_buffer *commands,
-	m4x4 transform, u32 texture);
-static void render_quad(struct render_command_buffer *cmd_buffer,
-	v3 pos0, v3 pos1, v3 pos2, v3 pos3, v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture);
-static void render_set_transform(struct render_command_buffer *cmd_buffer,
-	m4x4 view, m4x4 projection, v3 camera_pos);
-
-static u32 mesh_create(struct render_command_buffer *cmd_buffer,
-	struct mesh_data *data);
-static void mesh_destroy(struct render_command_buffer *cmd_buffer);
-static void mesh_push_quad(struct mesh_data *mesh,
-	v3 pos0, v3 pos1, v3 pos2, v3 pos3, v2 uv0, v2 uv1, v2 uv2, v2 uv3,
-	u32 texture);

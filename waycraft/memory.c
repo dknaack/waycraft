@@ -17,4 +17,3 @@ arena_alloc_(struct memory_arena *arena, usize size)
 
     return ptr;
 }
-

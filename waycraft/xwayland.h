@@ -41,8 +41,3 @@ struct xwayland {
     i32 wm_fd[2];
     i32 wl_fd[2];
 };
-
-static i32 xwayland_init(struct xwayland *xwayland, struct compositor *compositor);
-static void xwayland_finish(struct xwayland *xwayland);
-
-static void xwm_focus(struct xwm *xwm, struct xwayland_surface *surface);

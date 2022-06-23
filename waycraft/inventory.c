@@ -34,7 +34,8 @@ inventory_init(struct inventory *inventory)
 	texture_init(&inventory->block_atlas_texture, "res/textures.png");
 }
 
-// NOTE: direction determines the block faces after placement
+// NOTE: the direction determines the direction that the block faces after
+// placing it in the world.
 static enum block_type
 item_to_block(enum item_type item, v3 direction)
 {

@@ -568,12 +568,6 @@ world_finish(struct world *world)
 }
 
 void
-world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
-{
-	world_place_block(world, x, y, z, BLOCK_AIR);
-}
-
-void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
 	enum block_type block_type)
 {
@@ -600,4 +594,10 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
 			world_unload_chunk(world, next_chunk);
 		}
 	}
+}
+
+void
+world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
+{
+	world_place_block(world, x, y, z, BLOCK_AIR);
 }

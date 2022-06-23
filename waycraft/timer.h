@@ -3,9 +3,6 @@ struct timer {
     f64 start;
 };
 
-static struct timer timer_begin_(const char *name);
-static void timer_end_(struct timer *timer);
-
 #if 0
 #define timer_name(name) __timer_ ## name
 #define timer_begin(name) struct timer timer_name(name) = timer_begin_(""#name)

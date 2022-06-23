@@ -1,7 +1,5 @@
 #include <math.h>
 
-#include <waycraft/noise.h>
-
 /* source: https://en.wikipedia.org/wiki/Perlin_noise#Implementation */
 
 f32
