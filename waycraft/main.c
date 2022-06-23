@@ -1,5 +1,6 @@
 #include <waycraft/types.h>
 #include <waycraft/memory.h>
+#include <waycraft/backend.h>
 #include <waycraft/game.h>
 #include <waycraft/compositor.h>
 #include <waycraft/gl.h>
