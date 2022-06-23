@@ -481,7 +481,8 @@ x11_main(void)
 		return 1;
 	}
 
-	gl_init(&gl, (gl_get_proc_address_t *)eglGetProcAddress);
+#define X(name) gl.name = (gl##name##_t *)eglGetProcAddress("gl"#name);
+	OPENGL_MAP_FUNCTIONS();
 
 	game_memory.size = MB(512);
 	game_memory.data = calloc(game_memory.size, 1);
