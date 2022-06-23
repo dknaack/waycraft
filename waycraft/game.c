@@ -1,3 +1,11 @@
+#include "waycraft/renderer.c"
+#include "waycraft/block.c"
+#include "waycraft/debug.c"
+#include "waycraft/inventory.c"
+#include "waycraft/noise.c"
+#include "waycraft/timer.c"
+#include "waycraft/world.c"
+
 #define VIRTUAL_SCREEN_SIZE 500
 
 static void

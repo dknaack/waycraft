@@ -1,3 +1,8 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
 typedef uintptr_t usize;
 typedef uint64_t  u64;
 typedef uint32_t  u32;

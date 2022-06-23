@@ -1,3 +1,32 @@
+#include <EGL/egl.h>
+#include <wayland-server.h>
+#include <xcb/xcb.h>
+#include <xcb/composite.h>
+#include <xcb/xfixes.h>
+
+#include <waycraft/xwayland.h>
+
+#define WL_CALLBACK_VERSION 1
+#define WL_COMPOSITOR_VERSION 5
+#define WL_DATA_DEVICE_MANAGER_VERSION 3
+#define WL_DATA_SOURCE_VERSION 3
+#define WL_KEYBOARD_VERSION 7
+#define WL_OUTPUT_VERSION 4
+#define WL_POINTER_VERSION 7
+#define WL_REGION_VERSION 1
+#define WL_SEAT_VERSION 7
+#define WL_SUBCOMPOSITOR_VERSION 1
+#define WL_SUBSURFACE_VERSION 1
+#define WL_SURFACE_VERSION 5
+#define XDG_SURFACE_VERSION 4
+#define XDG_TOPLEVEL_VERSION 4
+#define XDG_WM_BASE_VERSION 4
+
+#define MAX_SURFACE_COUNT 256
+#define MAX_WINDOW_COUNT 256
+
+struct wl_resource;
+
 struct egl {
 	EGLDisplay *display;
 	EGLSurface *surface;

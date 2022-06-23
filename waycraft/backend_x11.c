@@ -1,3 +1,24 @@
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/input-event-codes.h>
+#include <math.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+#include <wayland-server.h>
+#include <xcb/xcb.h>
+#include <xcb/xfixes.h>
+#include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-names.h>
+#include <xkbcommon/xkbcommon-x11.h>
+
 enum x11_atom {
 	X11_NET_WM_NAME,
 	X11_WM_DELETE_WINDOW,

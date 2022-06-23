@@ -1,3 +1,8 @@
+#include <waycraft/block.h>
+#include <waycraft/inventory.h>
+#include <waycraft/renderer.h>
+#include <waycraft/world.h>
+
 enum game_window_flags {
 	WINDOW_INITIALIZED = 1 << 0,
 	WINDOW_VISIBLE     = 1 << 1,
