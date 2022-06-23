@@ -51,7 +51,6 @@ struct game_input {
 		u8 move_down;
 		u8 move_left;
 		u8 move_right;
-		u8 modifiers;
 		u8 jump;
 		u8 toggle_inventory;
 	} controller;
@@ -59,6 +58,9 @@ struct game_input {
 	f32 dt;
 	u32 width;
 	u32 height;
+	bool shift_down;
+	bool ctrl_down;
+	bool alt_down;
 };
 
 struct backend_memory {

@@ -554,7 +554,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 
 		if (input->mouse.buttons[1]) {
-			u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
+			u32 is_pressing_alt = input->alt_down;
 			struct game_window *window = 0;
 
 			if (is_pressing_alt) {
@@ -573,7 +573,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 
 		if (input->mouse.buttons[3]) {
-			u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
+			u32 is_pressing_alt = input->alt_down;
 			if (is_pressing_alt) {
 				if (hot_window) {
 					// TODO: resize window
@@ -667,7 +667,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		render_quad(render_commands, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], cursor_texture);
 
-		u32 is_pressing_alt = input->controller.modifiers & MOD_ALT;
+		u32 is_pressing_alt = input->alt_down;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
 			// TODO: change this to resizing the window, choose a different
 			// keybind for deselecting the active window.
