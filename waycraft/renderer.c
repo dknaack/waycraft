@@ -3,7 +3,7 @@
 #define MESH_SIZE KB(16)
 #define PUSH_BUFFER_SIZE MB(8)
 
-static const u8 *vert_shader_source = (u8 *)
+static char *vert_shader_source =
 	"#version 330 core\n"
 	"layout (location = 0) in vec3 pos;"
 	"layout (location = 1) in vec2 in_coords;"
@@ -18,7 +18,7 @@ static const u8 *vert_shader_source = (u8 *)
 	"    coords = in_coords;"
 	"}";
 
-static const u8 *frag_shader_source = (u8 *)
+static char *frag_shader_source =
 	"#version 330 core\n"
 	"in vec2 coords;"
 	"in vec3 frag_pos;"
@@ -61,7 +61,7 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 
 	u32 program = gl_program_create(vert_shader_source, frag_shader_source);
 	if (program == 0) {
-		u8 error[1024];
+		char error[1024] = {0};
 		gl_program_error(program, error, sizeof(error));
 		fprintf(stderr, "Failed to create program: %s\n", error);
 		return;

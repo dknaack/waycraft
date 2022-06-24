@@ -17,7 +17,7 @@ struct debug_state {
 	v3 color;
 };
 
-static const u8 *debug_vertex_shader_source = (u8 *)"#version 330\n"
+static char *debug_vertex_shader_source = "#version 330\n"
 "layout (location = 0) in vec3 in_pos;"
 "layout (location = 1) in vec3 in_color;"
 "uniform mat4 model;"
@@ -29,7 +29,7 @@ static const u8 *debug_vertex_shader_source = (u8 *)"#version 330\n"
 "   color = in_color;"
 "}";
 
-static const u8 *debug_fragment_shader_source = (u8 *)"#version 330\n"
+static char *debug_fragment_shader_source = "#version 330\n"
 "in vec3 color;\n"
 "out vec4 frag_color;\n"
 "void main() {"

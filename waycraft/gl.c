@@ -1,11 +1,11 @@
 static void
-gl_shader_error(u32 shader, u8 *buffer, u32 size)
+gl_shader_error(u32 shader, char *buffer, u32 size)
 {
-	gl.GetShaderInfoLog(shader, size - 1, 0, (char *)buffer);
+	gl.GetShaderInfoLog(shader, size - 1, 0, buffer);
 }
 
 static u32
-gl_shader_create(const u8 *src, u32 type)
+gl_shader_create(char *src, u32 type)
 {
 	u32 shader = gl.CreateShader(type);
 	i32 success;
@@ -14,7 +14,7 @@ gl_shader_create(const u8 *src, u32 type)
 	gl.CompileShader(shader);
 	gl.GetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if (!success) {
-		u8 error[1024];
+		char error[1024] = {0};
 		gl_shader_error(shader, error, sizeof(error));
 		fprintf(stderr, "Failed to create shader: %s\n", error);
 	}
@@ -23,7 +23,7 @@ gl_shader_create(const u8 *src, u32 type)
 }
 
 static u32
-gl_program_create(const u8 *vert_shader_source, const u8 *frag_shader_source)
+gl_program_create(char *vert_shader_source, char *frag_shader_source)
 {
 	u32 program = gl.CreateProgram();
 	u32 vert_shader = gl_shader_create(vert_shader_source, GL_VERTEX_SHADER);
@@ -45,7 +45,7 @@ gl_program_create(const u8 *vert_shader_source, const u8 *frag_shader_source)
 }
 
 static void
-gl_program_error(u32 program, u8 *buffer, u32 size)
+gl_program_error(u32 program, char *buffer, u32 size)
 {
-	gl.GetProgramInfoLog(program, size - 1, 0, (char *)buffer);
+	gl.GetProgramInfoLog(program, size - 1, 0, buffer);
 }
