@@ -14,8 +14,9 @@ cflags() {
 }
 
 [ ! -d "build" ] && mkdir build
+[ ! -f "build/stb_image.o" ] && cc $(cflags) -c waycraft/stb_image.c -o build/stb_image.o
 
 echo "Building waycraft..."
 cc $(cflags) -o build/waycraft waycraft/main.c $(waycraft_libs) -lm &
-cc $(cflags) -shared -o build/libgame.so waycraft/game.c -lm &
+cc $(cflags) -shared -o build/libgame.so build/stb_image.o waycraft/game.c -lm &
 wait

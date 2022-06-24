@@ -5,7 +5,6 @@
 #include <string.h>
 #include <time.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <waycraft/game.h>
 #include <waycraft/stb_image.h>
 
