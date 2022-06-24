@@ -23,22 +23,16 @@ struct render_command {
 };
 
 struct render_command_clear {
-	struct render_command base;
-
 	v4 color;
 };
 
 struct render_command_quads {
-	struct render_command base;
-
 	u32 index_offset;
 	u32 quad_count;
 	u32 texture;
 };
 
 struct render_command_mesh {
-	struct render_command base;
-
 	u32 mesh;
 	u32 texture;
 	m4x4 transform;

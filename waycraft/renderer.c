@@ -212,12 +212,13 @@ renderer_end_frame(struct renderer *renderer,
 
 	while (command_count-- > 0) {
 		struct render_command *base_command = (struct render_command *)push_buffer;
+		push_buffer += sizeof(*base_command);
 
 		switch (base_command->type) {
 		case RENDER_CLEAR:
 			{
-				struct render_command_clear *clear = CONTAINER_OF(base_command,
-					struct render_command_clear, base);
+				struct render_command_clear *clear =
+					(struct render_command_clear *)push_buffer;
 
 				v4 color = clear->color;
 				gl.ClearColor(color.r, color.g, color.b, color.a);
@@ -229,8 +230,8 @@ renderer_end_frame(struct renderer *renderer,
 
 		case RENDER_QUADS:
 			{
-				struct render_command_quads *command = CONTAINER_OF(
-					base_command, struct render_command_quads, base);
+				struct render_command_quads *command =
+					(struct render_command_quads *)push_buffer;
 
 				usize index_offset = sizeof(u32) * command->index_offset;
 
@@ -245,8 +246,8 @@ renderer_end_frame(struct renderer *renderer,
 
 		case RENDER_MESH:
 			{
-				struct render_command_mesh *command = CONTAINER_OF(
-					base_command, struct render_command_mesh, base);
+				struct render_command_mesh *command =
+					(struct render_command_mesh *)push_buffer;
 
 				struct mesh *mesh = &cmd_buffer->meshes[command->mesh];
 
