@@ -36,7 +36,6 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
 	[RENDER_QUADS] = sizeof(struct render_command_quads),
 	[RENDER_MESH] = sizeof(struct render_command_mesh),
-	[RENDER_TRANSFORM] = sizeof(struct render_command_transform),
 };
 
 static void
@@ -205,23 +204,6 @@ renderer_end_frame(struct renderer *renderer,
 				gl_uniform_m4x4(renderer->shader.model, command->transform);
 				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
 					GL_UNSIGNED_INT, 0);
-
-				push_buffer += sizeof(*command);
-			}
-			break;
-
-		case RENDER_TRANSFORM:
-			{
-				struct render_command_transform *command = CONTAINER_OF(
-					base_command, struct render_command_transform, base);
-
-				m4x4 view = command->view;
-				m4x4 projection = command->projection;
-				v3 camera_pos = command->camera_pos;
-
-				gl_uniform_v3(renderer->shader.camera_pos, camera_pos);
-				gl_uniform_m4x4(renderer->shader.projection, projection);
-				gl_uniform_m4x4(renderer->shader.view, view);
 
 				push_buffer += sizeof(*command);
 			}
@@ -412,16 +394,4 @@ mesh_push_quad(struct mesh_data *mesh,
 
 	mesh->index_count += 6;
 	mesh->vertex_count += 4;
-}
-
-static void
-render_set_transform(struct render_command_buffer *cmd_buffer, m4x4 view,
-	m4x4 projection, v3 camera_pos)
-{
-	struct render_command_transform *command = push_command(cmd_buffer,
-		RENDER_TRANSFORM);
-
-	command->view = view;
-	command->projection = projection;
-	command->camera_pos = camera_pos;
 }

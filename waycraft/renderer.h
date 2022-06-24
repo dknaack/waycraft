@@ -15,7 +15,6 @@ enum render_command_type {
 	RENDER_CLEAR,
 	RENDER_QUADS,
 	RENDER_MESH,
-	RENDER_TRANSFORM,
 	RENDER_COMMAND_COUNT
 };
 
@@ -45,23 +44,16 @@ struct render_command_mesh {
 	m4x4 transform;
 };
 
-struct render_command_transform {
-	struct render_command base;
-
+struct render_transform {
 	m4x4 view;
 	m4x4 projection;
 	v3 camera_pos;
 };
 
 struct render_command_buffer {
+	struct render_transform transform;
+
 	u32 command_count;
-
-	struct {
-		m4x4 view;
-		m4x4 projection;
-		v3 camera_pos;
-	} transform;
-
 	u8 *push_buffer;
 	u32 push_buffer_size;
 
