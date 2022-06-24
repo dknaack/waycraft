@@ -87,8 +87,6 @@ world_unload_chunk(struct world *world, struct chunk *chunk)
 			chunk->flags |= CHUNK_MODIFIED;
 
 			u32 chunk_index = chunk - world->chunks;
-			printf("unloading chunk no.%d at (%g, %g, %g)\n", chunk_index,
-				chunk->position.x, chunk->position.y, chunk->position.z);
 			u32 index = world->unloaded_chunk_count++;
 			assert(index < WORLD_CHUNK_COUNT);
 
@@ -525,7 +523,6 @@ world_update(struct world *world, v3 player_pos,
 	u32 unloaded_chunk_count = world->unloaded_chunk_count;
 	u32 batch_count = MIN(unloaded_chunk_count, max_load);
 	u32 *unloaded_chunks = world->unloaded_chunks + unloaded_chunk_count;
-	printf("unloaded_chunk_count = %d\n", unloaded_chunk_count);
 
 	for (u32 i = 0; i < batch_count; i++) {
 		unloaded_chunks--;
