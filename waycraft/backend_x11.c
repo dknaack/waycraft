@@ -455,7 +455,6 @@ x11_main(void)
 		return 1;
 	}
 
-	struct gl gl = {0};
 #define X(name) gl.name = (gl##name##_t *)eglGetProcAddress("gl"#name);
 	OPENGL_MAP_FUNCTIONS();
 #undef X
