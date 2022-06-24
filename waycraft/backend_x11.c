@@ -455,11 +455,14 @@ x11_main(void)
 		return 1;
 	}
 
+	struct gl gl = {0};
 #define X(name) gl.name = (gl##name##_t *)eglGetProcAddress("gl"#name);
 	OPENGL_MAP_FUNCTIONS();
+#undef X
 
 	game_memory.size = MB(512);
 	game_memory.data = calloc(game_memory.size, 1);
+	game_memory.gl = &gl;
 
 	compositor_memory.size = MB(64);
 	compositor_memory.data = calloc(compositor_memory.size, 1);

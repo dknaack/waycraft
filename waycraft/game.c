@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#define STB_IMAGE_IMPLEMENTATION
 #include <waycraft/game.h>
 #include <waycraft/stb_image.h>
 
@@ -504,12 +505,13 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	struct world *world = &game->world;
 	struct camera *camera = &game->camera;
 
+	assert(memory->gl);
+	gl = *memory->gl;
+
 	if (!memory->is_initialized) {
 		game_init(memory);
 		memory->is_initialized = 1;
 	}
-
-	gl = *memory->gl;
 
 	m4x4 projection = game->camera.projection;
 	m4x4 view = game->camera.view;
