@@ -1,4 +1,20 @@
-static f32 lerp(f32 a, f32 b, f32 t) { return a + (b - a) * t; }
+static f32
+lerp(f32 a, f32 b, f32 t)
+{
+	return a + (b - a) * t;
+}
+
+static f32
+degrees(f32 radians)
+{
+	return 180.0f * radians / PI;
+}
+
+static f32
+radians(f32 degrees)
+{
+	return PI * degrees / 180.0f;
+}
 
 /* v2 functions */
 static v2 v2_add(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }

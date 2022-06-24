@@ -57,9 +57,9 @@ camera_rotate(struct camera *camera, f32 dx, f32 dy)
 	camera->pitch = CLAMP(pitch, -89.f, 89.f);
 
 	v3 front;
-	front.x = cosf(DEG2RAD(camera->yaw)) * cosf(DEG2RAD(camera->pitch));
-	front.y = sinf(DEG2RAD(camera->pitch));
-	front.z = sinf(DEG2RAD(camera->yaw)) * cosf(DEG2RAD(camera->pitch));
+	front.x = cosf(radians(camera->yaw)) * cosf(radians(camera->pitch));
+	front.y = sinf(radians(camera->pitch));
+	front.z = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
 
 	camera->front = v3_norm(front);
 	camera->right = v3_norm(v3_cross(front, V3(0, 1, 0)));
