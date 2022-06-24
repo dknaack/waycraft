@@ -33,12 +33,6 @@ struct game_window_manager {
 	} cursor;
 };
 
-enum game_input_modifiers {
-	MOD_SHIFT = 1 << 0,
-	MOD_CTRL  = 1 << 1,
-	MOD_ALT   = 1 << 2,
-};
-
 struct game_input {
 	struct {
 		f32 dx, dy;
