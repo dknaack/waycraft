@@ -68,7 +68,32 @@ struct backend_memory {
     usize size;
 
     u32 is_initialized;
+	struct gl *gl;
 };
+
+typedef void game_update_t(struct backend_memory *memory, struct game_input *input,
+	struct game_window_manager *window_manager);
 
 void game_update(struct backend_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);
+
+static inline struct game_window *
+window_manager_get_window(struct game_window_manager *wm, u32 id)
+{
+	return id ? wm->windows + id - 1 : 0;
+}
+
+static inline struct game_window *
+window_manager_get_focused_window(struct game_window_manager *wm)
+{
+	return window_manager_get_window(wm, wm->focused_window);
+}
+
+static inline u32
+window_manager_get_window_id(struct game_window_manager *wm,
+		struct game_window *window)
+{
+	assert(!window || window - wm->windows < wm->window_count);
+
+	return window ? window - wm->windows + 1 : 0;
+}

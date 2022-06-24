@@ -472,6 +472,9 @@ x11_main(void)
 		return 1;
 	}
 
+	struct game_code game = {0};
+	game.path = "./build/libgame.so";
+
 	f64 target_frame_time = 1. / 60.;
 	while (window.is_open) {
 		f64 start_time = get_time_sec();
@@ -480,7 +483,10 @@ x11_main(void)
 		struct game_window_manager *wm = compositor_update(&compositor_memory);
 
 		gl.Viewport(0, 0, window.width, window.height);
-		game_update(&game_memory, &input, wm);
+		game_load(&game);
+		if (game.update) {
+			game.update(&game_memory, &input, wm);
+		}
 
 		eglSwapBuffers(egl.display, egl.surface);
 		f64 end_time = get_time_sec();

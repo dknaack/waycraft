@@ -1,3 +1,4 @@
+#include <EGL/egl.h>
 #include <GL/gl.h>
 
 typedef void glViewport_t(GLint x, GLint y, GLsizei width, GLsizei height);

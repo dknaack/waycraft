@@ -1,3 +1,17 @@
+#include <math.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include <waycraft/game.h>
+#include <waycraft/stb_image.h>
+
+#include "waycraft/gl.c"
+#include "waycraft/math.c"
+#include "waycraft/memory.c"
+#include "waycraft/log.c"
 #include "waycraft/renderer.c"
 #include "waycraft/block.c"
 #include "waycraft/debug.c"
@@ -495,6 +509,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		memory->is_initialized = 1;
 	}
 
+	gl = *memory->gl;
+
 	m4x4 projection = game->camera.projection;
 	m4x4 view = game->camera.view;
 
@@ -503,8 +519,11 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	struct render_command_buffer *render_commands =
 		renderer_begin_frame(&game->renderer);
+	render_commands->transform.view = view;
+	render_commands->transform.projection = projection;
+	render_commands->transform.camera_pos = camera_pos;
+
 	render_clear(render_commands, V4(0.45, 0.65, 0.85, 1.0));
-	render_set_transform(render_commands, view, projection, camera_pos);
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;

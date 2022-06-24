@@ -1,3 +1,9 @@
+#include <waycraft/types.h>
+#include <waycraft/backend.h>
+#include <waycraft/memory.h>
+#include <waycraft/gl.h>
+#include <waycraft/timer.h>
+#include <waycraft/log.h>
 #include <waycraft/block.h>
 #include <waycraft/inventory.h>
 #include <waycraft/renderer.h>
@@ -60,25 +66,4 @@ static inline i32
 button_is_down(u8 button)
 {
 	return button & 0x1;
-}
-
-static inline struct game_window *
-window_manager_get_window(struct game_window_manager *wm, u32 id)
-{
-	return id ? wm->windows + id - 1 : 0;
-}
-
-static inline struct game_window *
-window_manager_get_focused_window(struct game_window_manager *wm)
-{
-	return window_manager_get_window(wm, wm->focused_window);
-}
-
-static inline u32
-window_manager_get_window_id(struct game_window_manager *wm,
-		struct game_window *window)
-{
-	assert(!window || window - wm->windows < wm->window_count);
-
-	return window ? window - wm->windows + 1 : 0;
 }
