@@ -9,7 +9,6 @@
 #include <waycraft/game.h>
 #include <waycraft/stb_image.h>
 
-#include "waycraft/gl.c"
 #include "waycraft/math.c"
 #include "waycraft/memory.c"
 #include "waycraft/log.c"

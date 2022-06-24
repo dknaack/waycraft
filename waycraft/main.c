@@ -11,7 +11,6 @@
 #include <waycraft/timer.h>
 #include <waycraft/xdg-shell-protocol.h>
 
-#include "waycraft/gl.c"
 #include "waycraft/log.c"
 #include "waycraft/math.c"
 #include "waycraft/memory.c"
