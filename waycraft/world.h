@@ -22,5 +22,4 @@ struct chunk {
 struct world {
 	struct render_command_buffer tmp_cmd_buffer;
     struct chunk *chunks;
-	u32 texture;
 };

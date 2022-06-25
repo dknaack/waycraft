@@ -426,8 +426,10 @@ window_manager_render(struct game_window_manager *wm, m4x4 view,
 			pos[2] = v3_add(window_pos, window_x);
 			pos[3] = v3_add(pos[2], window_y);
 
+#if 0
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 				uv[0], uv[1], uv[2], uv[3], window->texture);
+#endif
 			window++;
 		}
 	}
@@ -682,8 +684,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		pos[2] = v3_add(cursor_world_pos, cursor_x);
 		pos[3] = v3_add(pos[2], cursor_y);
 
+#if 0
 		render_quad(&cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], cursor_texture);
+#endif
 
 		u32 is_pressing_alt = input->alt_down;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
@@ -713,5 +717,4 @@ static void
 game_finish(struct game_state *game)
 {
 	renderer_finish(&game->renderer);
-	world_finish(&game->world);
 }

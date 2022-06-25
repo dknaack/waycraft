@@ -1,30 +1,3 @@
-static i32
-texture_init(struct texture *texture, const char *path)
-{
-	i32 width, height, comp;
-	u8 *data = 0;
-
-	if (!(data = stbi_load(path, &width, &height, &comp, 3))) {
-		fprintf(stderr, "Failed to load texture\n");
-		return -1;
-	}
-
-	u32 texture_handle;
-	gl.GenTextures(1, &texture_handle);
-	gl.BindTexture(GL_TEXTURE_2D, texture_handle);
-	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	gl.GenerateMipmap(GL_TEXTURE_2D);
-
-	texture->handle = texture_handle;
-	texture->width  = width;
-	texture->height = height;
-
-	free(data);
-	return 0;
-}
-
 static void
 inventory_init(struct inventory *inventory)
 {
@@ -73,7 +46,7 @@ item_to_block(enum item_type item, v3 direction)
 
 static void
 item_render(struct inventory_item *item, struct rectangle rect,
-		u32 texture, struct render_command_buffer *cmd_buffer)
+		struct render_command_buffer *cmd_buffer)
 {
 	if (item->type == ITEM_WINDOW) {
 		v3 pos0 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
@@ -84,7 +57,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 		v2 uv[4] = {0};
 		block_texcoords_right(BLOCK_AIR, uv);
 		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-			uv[0], uv[1], uv[2], uv[3], texture);
+			uv[0], uv[1], uv[2], uv[3], TEXTURE_BLOCK_ATLAS);
 	} else {
 		enum block_type block = item_to_block(item->type, V3(1, 0, 0));
 		if (block != BLOCK_AIR) {
@@ -96,7 +69,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 			v2 uv[4] = {0};
 			block_texcoords_right(block, uv);
 			render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-				uv[0], uv[1], uv[2], uv[3], texture);
+				uv[0], uv[1], uv[2], uv[3], TEXTURE_BLOCK_ATLAS);
 		}
 	}
 }
@@ -114,12 +87,11 @@ inventory_render(struct inventory *inventory,
 	hotbar.x = (screen_width - hotbar.width) / 2.0f;
 	hotbar.y = 0;
 
-	render_sprite(cmd_buffer, hotbar, inventory->hotbar_texture.handle);
+	render_sprite(cmd_buffer, hotbar, TEXTURE_HOTBAR);
 
 	if (inventory->is_active) {
 		m4x4 transform = m4x4_id(0.75);
-		u32 texture = inventory->inventory_texture.handle;
-		render_textured_quad(cmd_buffer, transform, texture);
+		render_textured_quad(cmd_buffer, transform, TEXTURE_INVENTORY);
 
 		//struct inventory_item *item = inventory->items;
 		u32 y = LENGTH(inventory->items) / 9;
@@ -138,19 +110,17 @@ inventory_render(struct inventory *inventory,
 		active_slot.width = hotbar.height;
 		active_slot.height = hotbar.height;
 
-		render_sprite(cmd_buffer, active_slot, inventory->active_slot_texture.handle);
+		render_sprite(cmd_buffer, active_slot, TEXTURE_ACTIVE_SLOT);
 
 		struct inventory_item *item = inventory->items;
 		for (u32 i = 0; i < 9; i++) {
-			u32 texture = inventory->block_atlas_texture.handle;
-
 			struct rectangle item_rect = {0};
 			item_rect.x = hotbar.x + 0.5f * (hotbar.height - slot_size) + slot_advance * i;
 			item_rect.y = hotbar.y + 0.5f * (hotbar.height - slot_size);
 			item_rect.width = slot_size;
 			item_rect.height = slot_size;
 
-			item_render(item++, item_rect, texture, cmd_buffer);
+			item_render(item++, item_rect, cmd_buffer);
 		}
 	}
 }

@@ -1,3 +1,12 @@
+enum texture_id {
+	TEXTURE_NONE,
+	TEXTURE_BLOCK_ATLAS,
+	TEXTURE_INVENTORY,
+	TEXTURE_HOTBAR,
+	TEXTURE_ACTIVE_SLOT,
+	TEXTURE_COUNT,
+};
+
 struct vertex {
     v3 position;
     v2 texcoord;
@@ -71,7 +80,6 @@ struct mesh {
 struct renderer {
 	struct render_command_buffer command_buffer;
 
-	u32 white_texture;
 	u32 vertex_array;
 	u32 vertex_buffer;
 	u32 index_buffer;
@@ -85,6 +93,7 @@ struct renderer {
 		i32 enable_fog;
 	} shader;
 
+	struct texture textures[TEXTURE_COUNT];
 	struct mesh *meshes;
 	u32 max_mesh_count;
 	u32 mesh_count;

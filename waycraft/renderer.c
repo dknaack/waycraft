@@ -43,6 +43,29 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 };
 
 static void
+texture_init(struct texture *texture, char *path)
+{
+	i32 width, height, comp;
+	u8 *data = stbi_load(path, &width, &height, &comp, 3);
+
+	if (data) {
+		u32 texture_handle = 0;
+		gl.GenTextures(1, &texture_handle);
+		gl.BindTexture(GL_TEXTURE_2D, texture_handle);
+		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		gl.GenerateMipmap(GL_TEXTURE_2D);
+
+		texture->handle = texture_handle;
+		texture->width  = width;
+		texture->height = height;
+
+		free(data);
+	}
+}
+
+static void
 gl_uniform_m4x4(u32 uniform, m4x4 value)
 {
 	gl.UniformMatrix4fv(uniform, 1, GL_FALSE, (f32 *)value.e);
@@ -150,14 +173,14 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	gl.BindVertexArray(0);
 
 	// NOTE: allocate memory for the meshes
-	u32 max_mesh_count = 1024;
+	u32 max_mesh_count = 32 * 16 * 16;
 	renderer->meshes = arena_alloc(arena, max_mesh_count, struct mesh);
 	renderer->max_mesh_count = max_mesh_count;
 
 	// NOTE: generate a white texture
 	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
-	gl.GenTextures(1, &renderer->white_texture);
-	gl.BindTexture(GL_TEXTURE_2D, renderer->white_texture);
+	gl.GenTextures(1, &renderer->textures[0].handle);
+	gl.BindTexture(GL_TEXTURE_2D, renderer->textures[0].handle);
 	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -237,13 +260,25 @@ renderer_build_command_buffer(struct renderer *renderer,
 }
 
 static void
-renderer_bind_texture(struct renderer *renderer, u32 texture)
+renderer_bind_texture(struct renderer *renderer, u32 texture_id)
 {
-	if (texture == 0) {
-		texture = renderer->white_texture;
+	static char *texture_filenames[TEXTURE_COUNT] = {
+		[TEXTURE_NONE]        = "",
+		[TEXTURE_BLOCK_ATLAS] = "res/textures.png",
+		[TEXTURE_INVENTORY]   = "res/inventory.png",
+		[TEXTURE_HOTBAR]      = "res/hotbar.png",
+		[TEXTURE_ACTIVE_SLOT] = "res/active_slot.png",
+	};
+
+	struct texture *texture = &renderer->textures[texture_id];
+	if (!texture->handle) {
+		assert(texture_id != 0);
+		assert(texture_id < TEXTURE_COUNT);
+
+		texture_init(texture, texture_filenames[texture_id]);
 	}
 
-	gl.BindTexture(GL_TEXTURE_2D, texture);
+	gl.BindTexture(GL_TEXTURE_2D, texture->handle);
 }
 
 static void

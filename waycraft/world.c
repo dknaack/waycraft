@@ -208,7 +208,7 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 		}
 	}
 
-	u32 texture = world->texture;
+	u32 texture = TEXTURE_BLOCK_ATLAS;
 
 	block_texcoords_bottom(block, uv);
 	if (is_empty(world_at(world, x, y - 1, z))) {
@@ -258,27 +258,6 @@ world_init(struct world *world, struct memory_arena *arena)
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		world->chunks[i].blocks = blocks + i * BLOCK_COUNT;
 	}
-
-	// NOTE: load the texture atlas
-	// TODO: load this separate from the game
-	i32 width, height, comp;
-	u8 *data = stbi_load("res/textures.png", &width, &height, &comp, 3);
-	if (!data) {
-		fprintf(stderr, "Failed to load texture atlas\n");
-		assert(!"Failed to load texture atlas\n");
-		return -1;
-	}
-
-	u32 texture = 0;
-	gl.GenTextures(1, &texture);
-	gl.BindTexture(GL_TEXTURE_2D, texture);
-	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	gl.GenerateMipmap(GL_TEXTURE_2D);
-	world->texture = texture;
-
-	free(data);
 
 	// NOTE: initialize the temporary command buffer for generating chunk meshes
 	struct render_command_buffer *mesh = &world->tmp_cmd_buffer;
@@ -381,7 +360,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	}
 #endif
 
-	u32 texture = world->texture;
+	u32 texture = TEXTURE_BLOCK_ATLAS;
 	assert(blocks);
 
 	for (u32 i = 0; i < BLOCK_COUNT_X * BLOCK_COUNT_X * BLOCK_COUNT_X; i++) {
@@ -557,7 +536,7 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 
 	// NOTE: draw the loaded chunks
 	m4x4 transform = m4x4_id(1);
-	u32 texture = world->texture;
+	u32 texture = TEXTURE_BLOCK_ATLAS;
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		if (world->chunks[i].state == CHUNK_READY) {
 			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);
@@ -565,12 +544,6 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 
 		chunk++;
 	}
-}
-
-static void
-world_finish(struct world *world)
-{
-	gl.DeleteTextures(1, &world->texture);
 }
 
 static void
