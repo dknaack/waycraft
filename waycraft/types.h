@@ -55,7 +55,7 @@ typedef struct {
 
 typedef union {
     struct { i32 x, y, z; };
-    f32 e[3];
+    i32 e[3];
 } v3i;
 
 struct rectangle {
