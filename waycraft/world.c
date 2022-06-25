@@ -1,4 +1,56 @@
-// TODO: fix bug for top faces
+static inline u32
+block_index(u32 x, u32 y, u32 z)
+{
+	assert(x < BLOCK_COUNT_X);
+	assert(y < BLOCK_COUNT_X);
+	assert(z < BLOCK_COUNT_X);
+
+	return (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
+}
+
+static inline u32
+chunk_index(u32 x, u32 y, u32 z)
+{
+	assert(x < CHUNK_COUNT_X);
+	assert(y < CHUNK_COUNT_Y);
+	assert(z < CHUNK_COUNT_Z);
+
+	return (z * CHUNK_COUNT_Y + y) * CHUNK_COUNT_X + x;
+}
+
+static inline u32
+chunk_index_pack(v3i coord)
+{
+	u32 index = (coord.z * CHUNK_COUNT_Y + coord.y) * CHUNK_COUNT_X + coord.x;
+
+	assert(0 <= coord.x && coord.x < CHUNK_COUNT_X);
+	assert(0 <= coord.y && coord.y < CHUNK_COUNT_Y);
+	assert(0 <= coord.z && coord.z < CHUNK_COUNT_Z);
+
+	return index;
+}
+
+static inline v3i
+chunk_index_unpack(u32 index)
+{
+	assert(index < CHUNK_COUNT);
+
+	v3i result;
+	result.x = index % CHUNK_COUNT_X;
+	result.y = index / CHUNK_COUNT_X % CHUNK_COUNT_Y;
+	result.z = index / CHUNK_COUNT_X / CHUNK_COUNT_Y;
+
+	return result;
+}
+
+static inline v3
+chunk_get_pos(struct chunk *chunk)
+{
+	v3 offset = V3(chunk->coord.x, chunk->coord.y, chunk->coord.z);
+	v3 result = mulf(offset, BLOCK_COUNT_X);
+
+	return result;
+}
 
 static inline f32
 normalize_height(f32 value)
@@ -12,61 +64,15 @@ normalize_height(f32 value)
 	return x;
 }
 
-static void
-chunk_init(struct chunk *chunk)
-{
-	f32 noise_size = 0.1f;
-
-	if (chunk->flags & CHUNK_INITIALIZED) {
-		return;
-	}
-
-	chunk->flags = CHUNK_INITIALIZED;
-	u16 *blocks = chunk->blocks;
-	v3 chunk_pos = chunk->position;
-	assert(blocks);
-
-	memset(blocks, 0, CHUNK_BLOCK_COUNT * sizeof(*blocks));
-	for (i32 z = 0; z < CHUNK_SIZE; z++) {
-		for (i32 x = 0; x < CHUNK_SIZE; x++) {
-			f32 nx = noise_size * (chunk_pos.x + x + 0.5);
-			f32 nz = noise_size * (chunk_pos.z + z + 0.5);
-			i32 height = normalize_height(noise_layered_2d(nx, nz)) * CHUNK_SIZE - chunk_pos.y;
-
-			i32 ymax = MAX(0, MIN(CHUNK_SIZE, height));
-			for (i32 y = 0; y < ymax; y++) {
-				u32 i = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
-				if (y + 1 == height && chunk_pos.y + y > 0) {
-					blocks[i] = BLOCK_GRASS;
-				} else if (y + 2 >= height && chunk_pos.y + ymax <= 2 &&
-						chunk_pos.y + ymax >= -2) {
-					blocks[i] = BLOCK_SAND;
-				} else if (y + 2 >= height) {
-					blocks[i] = BLOCK_DIRT;
-				} else {
-					blocks[i] = BLOCK_STONE;
-				}
-			}
-
-			if (chunk_pos.y < 0) {
-				for (i32 y = ymax; y < CHUNK_SIZE; y++) {
-					u32 i = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
-					blocks[i] = BLOCK_WATER;
-				}
-			}
-		}
-	}
-}
-
 static u32
 chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
 	u32 result = 0;
-	u32 is_inside_chunk = (0 <= x && x < CHUNK_SIZE)
-		&& (0 <= y && y < CHUNK_SIZE)
-		&& (0 <= z && z < CHUNK_SIZE);
+	u32 is_inside_chunk = (0 <= x && x < BLOCK_COUNT_X)
+		&& (0 <= y && y < BLOCK_COUNT_X)
+		&& (0 <= z && z < BLOCK_COUNT_X);
 	if (is_inside_chunk) {
-		u32 index = (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+		u32 index = (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
 
 		result = chunk->blocks[index];
 	}
@@ -78,20 +84,11 @@ static void
 world_unload_chunk(struct world *world, struct chunk *chunk)
 {
 	struct chunk *first_chunk = world->chunks;
-	struct chunk *last_chunk = first_chunk + WORLD_CHUNK_COUNT;
+	struct chunk *last_chunk = first_chunk + CHUNK_COUNT;
 	u32 is_valid_chunk = chunk && first_chunk <= chunk && chunk < last_chunk;
 
 	if (is_valid_chunk) {
-		u32 is_already_modified = chunk->flags & CHUNK_MODIFIED;
-		if (!is_already_modified) {
-			chunk->flags |= CHUNK_MODIFIED;
-
-			u32 chunk_index = chunk - world->chunks;
-			u32 index = world->unloaded_chunk_count++;
-			assert(index < WORLD_CHUNK_COUNT);
-
-			world->unloaded_chunks[index] = chunk_index;
-		}
+		chunk->state = CHUNK_UNLOADED;
 	}
 }
 
@@ -99,38 +96,61 @@ world_unload_chunk(struct world *world, struct chunk *chunk)
 static struct chunk *
 world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 {
-	struct chunk *chunk = world->chunks;
-	for (u32 i = 0; i < WORLD_CHUNK_COUNT; i++) {
-		v3 chunk_pos = chunk->position;
+	struct chunk *result = 0;
 
-		if (chunk_pos.x <= x && x < chunk_pos.x + CHUNK_SIZE &&
-				chunk_pos.y <= y && y < chunk_pos.y + CHUNK_SIZE &&
-				chunk_pos.z <= z && z < chunk_pos.z + CHUNK_SIZE) {
-			return chunk;
-		}
+	v3i chunk_coord = {0};
+	chunk_coord.x = floor(x / BLOCK_COUNT_X);
+	chunk_coord.y = floor(y / BLOCK_COUNT_X);
+	chunk_coord.z = floor(z / BLOCK_COUNT_X);
 
-		chunk++;
+	v3i chunk_rel_coord = chunk_coord;
+	chunk_rel_coord.x %= CHUNK_COUNT_X;
+	if (chunk_rel_coord.x < 0) {
+		chunk_rel_coord.x += CHUNK_COUNT_X;
 	}
 
-	return 0;
+	chunk_rel_coord.y %= CHUNK_COUNT_Y;
+	if (chunk_rel_coord.y < 0) {
+		chunk_rel_coord.y += CHUNK_COUNT_Y;
+	}
+
+	chunk_rel_coord.z %= CHUNK_COUNT_Z;
+	if (chunk_rel_coord.z < 0) {
+		chunk_rel_coord.z += CHUNK_COUNT_Z;
+	}
+
+	assert(0 <= chunk_rel_coord.x && chunk_rel_coord.x < CHUNK_COUNT_X);
+	assert(0 <= chunk_rel_coord.y && chunk_rel_coord.y < CHUNK_COUNT_Y);
+	assert(0 <= chunk_rel_coord.z && chunk_rel_coord.z < CHUNK_COUNT_Z);
+
+	u32 chunk_index = chunk_index_pack(chunk_rel_coord);
+	struct chunk *chunk = &world->chunks[chunk_index];
+	if (v3i_equals(chunk->coord, chunk_coord)) {
+		result = chunk;
+
+		v3 chunk_pos = chunk_get_pos(chunk);
+		debug_set_color(1, 0, 1);
+		debug_cube(chunk_pos, add(chunk_pos, V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X)));
+	}
+
+	return result;
 }
 
 static v3
-world_get_block_position(const struct world *world, f32 x, f32 y, f32 z)
+world_get_block_pos(const struct world *world, f32 x, f32 y, f32 z)
 {
-	v3 relative_pos = v3_sub(V3(x + 1e-3, y + 1e-3, z + 1e-3), world->position);
-	v3 block_pos = v3_modf(relative_pos, CHUNK_SIZE);
+	v3 block_pos = v3_modf(V3(x + 1e-3, y + 1e-3, z + 1e-3), BLOCK_COUNT_X);
 
 	if (block_pos.x < 0) {
-		block_pos.x += CHUNK_SIZE;
+		block_pos.x += BLOCK_COUNT_X;
 	}
 
 	if (block_pos.y < 0) {
-		block_pos.y += CHUNK_SIZE;
+		block_pos.y += BLOCK_COUNT_X;
 	}
 
 	if (block_pos.z < 0) {
-		block_pos.z += CHUNK_SIZE;
+		block_pos.z += BLOCK_COUNT_X;
 	}
 
 	return block_pos;
@@ -144,7 +164,7 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 	struct chunk *chunk = world_get_chunk(world, x, y, z);
 
 	if (chunk) {
-		v3 block_pos = world_get_block_position(world, x, y, z);
+		v3 block_pos = world_get_block_pos(world, x, y, z);
 
 		assert(block_pos.x >= 0);
 		assert(block_pos.y >= 0);
@@ -227,30 +247,106 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 	}
 }
 
-static inline u32
-block_index(u32 x, u32 y, u32 z)
+static i32
+world_init(struct world *world, struct memory_arena *arena)
 {
-	return (z * CHUNK_SIZE + y) * CHUNK_SIZE + x;
+	// NOTE: allocate memory for the chunks and blocks
+	world->chunks = arena_alloc(arena, CHUNK_COUNT, struct chunk);
+	usize block_count = CHUNK_COUNT * BLOCK_COUNT;
+	u16 *blocks = arena_alloc(arena, block_count, u16);
+
+	for (u32 i = 0; i < CHUNK_COUNT; i++) {
+		world->chunks[i].blocks = blocks + i * BLOCK_COUNT;
+	}
+
+	// NOTE: load the texture atlas
+	// TODO: load this separate from the game
+	i32 width, height, comp;
+	u8 *data = stbi_load("res/textures.png", &width, &height, &comp, 3);
+	if (!data) {
+		fprintf(stderr, "Failed to load texture atlas\n");
+		assert(!"Failed to load texture atlas\n");
+		return -1;
+	}
+
+	u32 texture = 0;
+	gl.GenTextures(1, &texture);
+	gl.BindTexture(GL_TEXTURE_2D, texture);
+	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	gl.GenerateMipmap(GL_TEXTURE_2D);
+	world->texture = texture;
+
+	free(data);
+
+	// NOTE: initialize the temporary command buffer for generating chunk meshes
+	struct render_command_buffer *mesh = &world->tmp_cmd_buffer;
+	u32 max_vertex_count = CHUNK_COUNT * 64;
+	u32 max_index_count = CHUNK_COUNT * 128;
+	render_command_buffer_init(mesh, arena, KB(1),
+		max_vertex_count, max_index_count);
+
+	return 0;
 }
 
 static void
-chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct render_command_buffer *mesh, struct renderer *renderer)
+world_load_chunk(struct world *world, struct chunk *chunk,
+		struct render_command_buffer *mesh, struct renderer *renderer)
 {
-	chunk->flags &= ~CHUNK_MODIFIED;
+	v3 chunk_pos = chunk_get_pos(chunk);
+	u16 *blocks = chunk->blocks;
 
-	u16 blocks_empty[CHUNK_BLOCK_COUNT] = {0};
-	v3 chunk_pos = chunk->position;
+	if (chunk->state == CHUNK_UNLOADED) {
+		f32 noise_size = 0.1f;
 
+		memset(blocks, 0, BLOCK_COUNT * sizeof(*blocks));
+		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
+			for (i32 x = 0; x < BLOCK_COUNT_X; x++) {
+				f32 nx = noise_size * (chunk_pos.x + x + 0.5);
+				f32 nz = noise_size * (chunk_pos.z + z + 0.5);
+				i32 height = normalize_height(noise_layered_2d(nx, nz)) * BLOCK_COUNT_X - chunk_pos.y;
+
+				i32 ymax = MAX(0, MIN(BLOCK_COUNT_X, height));
+				for (i32 y = 0; y < ymax; y++) {
+					u32 i = block_index(x, y, z);
+
+					if (y + 1 == height && chunk_pos.y + y > 0) {
+						blocks[i] = BLOCK_GRASS;
+					} else if (y + 2 >= height && chunk_pos.y + ymax <= 2 &&
+							chunk_pos.y + ymax >= -2) {
+						blocks[i] = BLOCK_SAND;
+					} else if (y + 2 >= height) {
+						blocks[i] = BLOCK_DIRT;
+					} else {
+						blocks[i] = BLOCK_STONE;
+					}
+				}
+
+				if (chunk_pos.y < 0) {
+					for (i32 y = ymax; y < BLOCK_COUNT_X; y++) {
+						u32 i = (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
+						blocks[i] = BLOCK_WATER;
+					}
+				}
+			}
+		}
+	}
+
+	// TODO: fix bug for top faces
+	u16 blocks_empty[BLOCK_COUNT] = {0};
+
+#if 0
 	struct chunk *chunk_first = world->chunks;
-	struct chunk *chunk_last = world->chunks + WORLD_CHUNK_COUNT;
+	struct chunk *chunk_last = world->chunks + CHUNK_COUNT;
 
 	struct chunk *chunk_right  = chunk + 1;
 	struct chunk *chunk_left   = chunk - 1;
-	struct chunk *chunk_top    = chunk + WORLD_WIDTH;
-	struct chunk *chunk_bottom = chunk - WORLD_WIDTH;
-	struct chunk *chunk_front  = chunk + WORLD_WIDTH * WORLD_HEIGHT;
-	struct chunk *chunk_back   = chunk - WORLD_WIDTH * WORLD_HEIGHT;
+	struct chunk *chunk_top    = chunk + CHUNK_COUNT_X;
+	struct chunk *chunk_bottom = chunk - CHUNK_COUNT_X;
+	struct chunk *chunk_front  = chunk + CHUNK_COUNT_X * CHUNK_COUNT_Y;
+	struct chunk *chunk_back   = chunk - CHUNK_COUNT_X * CHUNK_COUNT_Y;
+#endif
 
 	u16 *blocks_right  = blocks_empty;
 	u16 *blocks_left   = blocks_empty;
@@ -259,49 +355,44 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 	u16 *blocks_front  = blocks_empty;
 	u16 *blocks_back   = blocks_empty;
 
-	if (chunk_right < chunk_last && chunk_right->position.x > chunk_pos.x) {
-		chunk_init(chunk_right);
+#if 0
+	if (chunk_right < chunk_last && chunk_right->coord.x > chunk->coord.x) {
 		blocks_right = chunk_right->blocks;
 	}
 
-	if (chunk_left >= chunk_first && chunk_left->position.x < chunk_pos.x) {
-		chunk_init(chunk_left);
+	if (chunk_left >= chunk_first && chunk_left->coord.x < chunk->coord.x) {
 		blocks_left = chunk_left->blocks;
 	}
 
-	if (chunk_top < chunk_last && chunk_top->position.y > chunk_pos.y) {
-		chunk_init(chunk_top);
+	if (chunk_top < chunk_last && chunk_top->coord.y > chunk->coord.y) {
 		blocks_top = chunk_top->blocks;
 	}
 
-	if (chunk_bottom >= chunk_first && chunk_bottom->position.y < chunk_pos.y) {
-		chunk_init(chunk_bottom);
+	if (chunk_bottom >= chunk_first && chunk_bottom->coord.y < chunk->coord.y) {
 		blocks_bottom = chunk_bottom->blocks;
 	}
 
-	if (chunk_front < chunk_last && chunk_front->position.z > chunk_pos.z) {
-		chunk_init(chunk_front);
+	if (chunk_front < chunk_last && chunk_front->coord.z > chunk->coord.z) {
 		blocks_front = chunk_front->blocks;
 	}
 
-	if (chunk_back >= chunk_first && chunk_back->position.z < chunk_pos.z) {
-		chunk_init(chunk_back);
+	if (chunk_back >= chunk_first && chunk_back->coord.z < chunk->coord.z) {
 		blocks_back = chunk_back->blocks;
 	}
+#endif
 
 	u32 texture = world->texture;
-	u16 *blocks = chunk->blocks;
 	assert(blocks);
 
-	for (u32 i = 0; i < CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE; i++) {
+	for (u32 i = 0; i < BLOCK_COUNT_X * BLOCK_COUNT_X * BLOCK_COUNT_X; i++) {
 		u32 block = blocks[i];
 		if (block == BLOCK_AIR) {
 			continue;
 		}
 
-		i32 x = i % CHUNK_SIZE;
-		i32 y = i / CHUNK_SIZE % CHUNK_SIZE;
-		i32 z = i / CHUNK_SIZE / CHUNK_SIZE % CHUNK_SIZE;
+		i32 x = i % BLOCK_COUNT_X;
+		i32 y = i / BLOCK_COUNT_X % BLOCK_COUNT_X;
+		i32 z = i / BLOCK_COUNT_X / BLOCK_COUNT_X % BLOCK_COUNT_X;
 
 		v3 pos[8];
 		v2 uv[4];
@@ -318,28 +409,28 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 
 		u32 (*is_empty)(enum block_type block) = block_is_empty;
 
-		u16 block_right = x + 1 >= CHUNK_SIZE ?
-			blocks_right[block_index(x + 1 - CHUNK_SIZE, y, z)] :
+		u16 block_right = x + 1 >= BLOCK_COUNT_X ?
+			blocks_right[block_index(x + 1 - BLOCK_COUNT_X, y, z)] :
 			blocks[block_index(x + 1, y, z)];
 
 		u16 block_left = x - 1 < 0 ?
-			blocks_left[block_index(x - 1 + CHUNK_SIZE, y, z)] :
+			blocks_left[block_index(x - 1 + BLOCK_COUNT_X, y, z)] :
 			blocks[block_index(x - 1, y, z)];
 
-		u16 block_top = y + 1 >= CHUNK_SIZE ?
-			blocks_top[block_index(x, y + 1 - CHUNK_SIZE, z)] :
+		u16 block_top = y + 1 >= BLOCK_COUNT_X ?
+			blocks_top[block_index(x, y + 1 - BLOCK_COUNT_X, z)] :
 			blocks[block_index(x, y + 1, z)];
 
 		u16 block_bottom = y - 1 < 0 ?
-			blocks_bottom[block_index(x, y - 1 + CHUNK_SIZE, z)] :
+			blocks_bottom[block_index(x, y - 1 + BLOCK_COUNT_X, z)] :
 			blocks[block_index(x, y - 1, z)];
 
-		u16 block_front = z + 1 >= CHUNK_SIZE ?
-			blocks_front[block_index(x, y, z + 1 - CHUNK_SIZE)] :
+		u16 block_front = z + 1 >= BLOCK_COUNT_X ?
+			blocks_front[block_index(x, y, z + 1 - BLOCK_COUNT_X)] :
 			blocks[block_index(x, y, z + 1)];
 
 		u16 block_back = z - 1 < 0 ?
-			blocks_back[block_index(x, y, z - 1 + CHUNK_SIZE)] :
+			blocks_back[block_index(x, y, z - 1 + BLOCK_COUNT_X)] :
 			blocks[block_index(x, y, z - 1)];
 
 		if (block == BLOCK_WATER) {
@@ -393,73 +484,7 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 	}
 
 	renderer_build_command_buffer(renderer, mesh, &chunk->mesh);
-}
-
-static i32
-world_init(struct world *world, struct memory_arena *arena)
-{
-	world->chunks = arena_alloc(arena, WORLD_CHUNK_COUNT, struct chunk);
-
-	f32 xoffset = -0.5f * WORLD_WIDTH  * CHUNK_SIZE;
-	f32 yoffset = -0.5f * WORLD_HEIGHT * CHUNK_SIZE;
-	f32 zoffset = -0.5f * WORLD_DEPTH  * CHUNK_SIZE;
-	world->position = V3(xoffset, yoffset, zoffset);
-
-	struct render_command_buffer *mesh = &world->tmp_cmd_buffer;
-	u32 size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-	u32 max_vertex_count = size * 64;
-	u32 max_index_count = size * 128;
-	render_command_buffer_init(mesh, arena, KB(1),
-		max_vertex_count, max_index_count);
-
-	i32 width, height, comp;
-	u8 *data = 0;
-
-	// TODO: load this separate from the game
-	if (!(data = stbi_load("res/textures.png", &width, &height, &comp, 3))) {
-		fprintf(stderr, "Failed to load texture atlas\n");
-		return -1;
-	}
-
-	u32 texture = 0;
-	gl.GenTextures(1, &texture);
-	gl.BindTexture(GL_TEXTURE_2D, texture);
-	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	gl.GenerateMipmap(GL_TEXTURE_2D);
-	world->texture = texture;
-
-	free(data);
-
-	usize block_size = WORLD_CHUNK_COUNT * CHUNK_BLOCK_COUNT;
-	world->blocks = arena_alloc(arena, block_size, u16);
-	world->unloaded_chunks = arena_alloc(arena, WORLD_CHUNK_COUNT, u32);
-	world->unloaded_chunk_count = 0;
-
-	v3 world_size = V3(WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH);
-	v3 world_min = world->position;
-	v3 world_max = v3_add(world_min, v3_mulf(world_size, CHUNK_SIZE));
-
-	u16 *blocks = world->blocks;
-	assert(blocks);
-
-	struct chunk *chunk = world->chunks;
-	for (f32 z = world_min.z; z < world_max.z; z += CHUNK_SIZE) {
-		for (f32 y = world_min.y; y < world_max.y; y += CHUNK_SIZE) {
-			for (f32 x = world_min.x; x < world_max.x; x += CHUNK_SIZE) {
-				chunk->blocks = blocks;
-				chunk->position = V3(x, y, z);
-				blocks += CHUNK_BLOCK_COUNT;
-
-				world_unload_chunk(world, chunk++);
-			}
-		}
-	}
-
-	assert(chunk - world->chunks == WORLD_CHUNK_COUNT);
-
-	return 0;
+	chunk->state = CHUNK_READY;
 }
 
 static void
@@ -467,84 +492,75 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		struct render_command_buffer *cmd_buffer)
 {
 	struct render_command_buffer *tmp_buffer = &world->tmp_cmd_buffer;
-	struct chunk *chunks = world->chunks;
+	struct box player_bounds;
 
-	v3 world_size = V3(WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH);
-	v3 player_min = v3_sub(player_pos, v3_mulf(world_size, 0.5 * CHUNK_SIZE));
-	v3 player_max = v3_add(player_pos, v3_mulf(world_size, 0.5 * CHUNK_SIZE));
+	v3 world_size = V3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
+	player_bounds.min = sub(player_pos, mulf(world_size, 0.5 * BLOCK_COUNT_X));
+	player_bounds.max = add(player_pos, mulf(world_size, 0.5 * BLOCK_COUNT_X));
 
+	// NOTE: unload any chunks that are outside the player bounds
 	struct chunk *chunk = world->chunks;
-	u32 chunk_count = WORLD_CHUNK_COUNT;
-	for (u32 i = 0; i < chunk_count; i++) {
-		u32 is_modified = 0;
-		v3 chunk_pos = chunk->position;
-
-		if (chunk_pos.x + CHUNK_SIZE < player_min.x) {
-			chunk_pos.x += WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
-		} else if (chunk_pos.x > player_max.x) {
-			chunk_pos.x -= WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
+	for (u32 i = 0; i < CHUNK_COUNT; i++) {
+		v3 chunk_pos = chunk_get_pos(&world->chunks[i]);
+		if (!box_contains_point(player_bounds, chunk_pos)) {
+			chunk->state = CHUNK_UNLOADED;
 		}
-
-		if (chunk_pos.y + CHUNK_SIZE < player_min.y) {
-			chunk_pos.y += WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
-		} else if (chunk_pos.y > player_max.y) {
-			chunk_pos.y -= WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
-		}
-
-		if (chunk_pos.z + CHUNK_SIZE < player_min.z) {
-			chunk_pos.z += WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
-		} else if (chunk_pos.z > player_max.z) {
-			chunk_pos.z -= WORLD_WIDTH * CHUNK_SIZE;
-			is_modified = 1;
-		}
-
-		if (is_modified) {
-			chunk->position = chunk_pos;
-			world_unload_chunk(world, chunk);
-			world_unload_chunk(world, chunk + 1);
-			world_unload_chunk(world, chunk - 1);
-			world_unload_chunk(world, chunk + WORLD_WIDTH);
-			world_unload_chunk(world, chunk - WORLD_WIDTH);
-			world_unload_chunk(world, chunk + WORLD_WIDTH * WORLD_HEIGHT);
-			world_unload_chunk(world, chunk - WORLD_WIDTH * WORLD_HEIGHT);
-			chunk->flags &= ~CHUNK_INITIALIZED;
-		}
-
-		chunk++;
 	}
 
-	u32 max_load = 8;
-	u32 unloaded_chunk_count = world->unloaded_chunk_count;
-	u32 batch_count = MIN(unloaded_chunk_count, max_load);
-	u32 *unloaded_chunks = world->unloaded_chunks + unloaded_chunk_count;
+	// NOTE: load any chunks that are unloaded or dirty
+	u32 max_load_count = 8;
+	v3i player_offset;
+	player_offset.x = floor(player_pos.x / BLOCK_COUNT_X - CHUNK_COUNT_X / 2.0f);
+	player_offset.y = floor(player_pos.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
+	player_offset.z = floor(player_pos.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
-	for (u32 i = 0; i < batch_count; i++) {
-		unloaded_chunks--;
-		struct chunk *chunk = &chunks[*unloaded_chunks];
+	for (u32 i = 0; max_load_count > 0 && i < CHUNK_COUNT; i++) {
+		v3i chunk_offset = chunk_index_unpack(i);
+		v3i chunk_coord = add(player_offset, chunk_offset);
+		v3i chunk_rel_coord = chunk_coord;
 
-		tmp_buffer->index_count = 0;
-		tmp_buffer->vertex_count = 0;
+		chunk_rel_coord.x %= CHUNK_COUNT_X;
+		if (chunk_rel_coord.x < 0) {
+			chunk_rel_coord.x += CHUNK_COUNT_X;
+		}
 
-		chunk_init(chunk);
-		chunk_generate_mesh(chunk, world, tmp_buffer, renderer);
+		chunk_rel_coord.y %= CHUNK_COUNT_Y;
+		if (chunk_rel_coord.y < 0) {
+			chunk_rel_coord.y += CHUNK_COUNT_Y;
+		}
+
+		chunk_rel_coord.z %= CHUNK_COUNT_Z;
+		if (chunk_rel_coord.z < 0) {
+			chunk_rel_coord.z += CHUNK_COUNT_Z;
+		}
+
+		u32 chunk_index = chunk_index_pack(chunk_rel_coord);
+		struct chunk *chunk = &world->chunks[chunk_index];
+
+		if (!v3i_equals(chunk->coord, chunk_coord)) {
+			chunk->state = CHUNK_UNLOADED;
+			chunk->coord = chunk_coord;
+		}
+
+		if (chunk->state != CHUNK_READY) {
+			tmp_buffer->push_buffer_size = 0;
+			tmp_buffer->index_count = 0;
+			tmp_buffer->vertex_count = 0;
+
+			chunk->coord = chunk_coord;
+			world_load_chunk(world, chunk, tmp_buffer, renderer);
+			max_load_count--;
+		}
+
+		assert(v3i_equals(chunk->coord, chunk_coord));
 	}
 
-	world->unloaded_chunk_count -= batch_count;
-
-	// NOTE: draw the world
+	// NOTE: draw the loaded chunks
 	m4x4 transform = m4x4_id(1);
 	u32 texture = world->texture;
-
-	chunk = world->chunks;
-	while (chunk_count-- > 0) {
-		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
-		if (is_initialized) {
-			render_mesh(cmd_buffer, chunk->mesh, transform, texture);
+	for (u32 i = 0; i < CHUNK_COUNT; i++) {
+		if (world->chunks[i].state == CHUNK_READY) {
+			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);
 		}
 
 		chunk++;
@@ -559,29 +575,28 @@ world_finish(struct world *world)
 
 static void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
-	enum block_type block_type)
+		enum block_type block_type)
 {
-	v3 point = {{ x, y, z }};
+	v3 point = V3(x, y, z);
+
 	struct chunk *chunk = world_get_chunk(world, x, y, z);
 	if (chunk) {
-		v3 block_pos = world_get_block_position(world, x, y, z);
+		v3 block_pos = world_get_block_pos(world, x, y, z);
 		v3i block = v3i_vec3(v3_floor(block_pos));
 
-		u32 i = (block.z * CHUNK_SIZE + block.y) * CHUNK_SIZE + block.x;
+		u32 i = block_index(block.x, block.y, block.z);
 		chunk->blocks[i] = block_type;
-		world_unload_chunk(world, chunk);
+		chunk->state = CHUNK_DIRTY;
 
-		struct chunk *next_chunk = 0;
-		v3 offset, next;
 		for (u32 i = 0; i < 3; i++) {
-			offset = V3(i == 0, i == 1, i == 2);
-			next = v3_add(point, offset);
-			next_chunk = world_get_chunk(world, next.x, next.y, next.z);
-			world_unload_chunk(world, next_chunk);
+			v3 offset = V3(i == 0, i == 1, i == 2);
+			v3 next = add(point, offset);
+			struct chunk *next_chunk = world_get_chunk(world, next.x, next.y, next.z);
+			next_chunk->state = CHUNK_DIRTY;
 
 			next = v3_sub(point, offset);
 			next_chunk = world_get_chunk(world, next.x, next.y, next.z);
-			world_unload_chunk(world, next_chunk);
+			next_chunk->state = CHUNK_DIRTY;
 		}
 	}
 }

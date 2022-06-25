@@ -1,39 +1,26 @@
-#define WORLD_WIDTH 8
-#define WORLD_DEPTH 8
-#define WORLD_HEIGHT 8
-#define WORLD_CHUNK_COUNT (WORLD_WIDTH * WORLD_HEIGHT * WORLD_DEPTH)
-#define CHUNK_SIZE 16
-#define CHUNK_BLOCK_COUNT (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE)
+#define CHUNK_COUNT_X 8
+#define CHUNK_COUNT_Z 8
+#define CHUNK_COUNT_Y 8
+#define CHUNK_COUNT (CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z)
+#define BLOCK_COUNT_X 16
+#define BLOCK_COUNT (BLOCK_COUNT_X * BLOCK_COUNT_X * BLOCK_COUNT_X)
 
 enum chunk_state {
-    CHUNK_INITIALIZED = 0x1,
-    CHUNK_MODIFIED    = 0x2,
-};
-
-/*
- * NOTE: world and chunks should be initialized to zero
- */
-struct world {
-    struct chunk *chunks;
-    u16 *blocks;
-
-	struct render_command_buffer tmp_cmd_buffer;
-    u32 *unloaded_chunks;
-    u32 unloaded_chunk_count;
-    u32 unloaded_chunk_start;
-    u32 texture;
-    // NOTE: bottom left corner of the world, such that (0, 0, 0) relative to
-    // world is the first chunk (0, 0, 0)
-    v3 position;
-	v3i offset;
+	CHUNK_UNLOADED,
+	// NOTE: a chunk is dirty if the mesh has not been generated for it yet
+	CHUNK_DIRTY,
+	CHUNK_READY,
 };
 
 struct chunk {
-    u16 *blocks;
+	u32 state;
 	u32 mesh;
-    u8 flags;
-	v3 position;
+    u16 *blocks;
+	v3i coord;
 };
 
-struct memory_arena;
-struct render_command_buffer;
+struct world {
+	struct render_command_buffer tmp_cmd_buffer;
+    struct chunk *chunks;
+	u32 texture;
+};
