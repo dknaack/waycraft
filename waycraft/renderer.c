@@ -41,7 +41,7 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 static void
 gl_uniform_m4x4(u32 uniform, m4x4 value)
 {
-	gl.UniformMatrix4fv(uniform, 1, GL_FALSE, value.e);
+	gl.UniformMatrix4fv(uniform, 1, GL_FALSE, (f32 *)value.e);
 }
 
 static void

@@ -69,28 +69,33 @@ v3_cross(v3 a, v3 b)
 
 
 /* m4x4 function definitions */
-m4x4
+static m4x4
 m4x4_add(m4x4 a, m4x4 b)
 {
-	u32 i;
+	m4x4 result = {0};
 
-	for (i = 0; i < 16; i++)
-		a.e[i] += b.e[i];
-	return a;
+	result.c[0] = v4_add(a.c[0], b.c[0]);
+	result.c[1] = v4_add(a.c[1], b.c[1]);
+	result.c[2] = v4_add(a.c[2], b.c[2]);
+	result.c[3] = v4_add(a.c[3], b.c[3]);
+
+	return result;
 }
 
-m4x4
+static m4x4
 m4x4_sub(m4x4 a, m4x4 b)
 {
-	u32 i;
+	m4x4 result = {0};
 
-	for (i = 0; i < 16; i++)
-		a.e[i] -= b.e[i];
+	result.c[0] = v4_sub(a.c[0], b.c[0]);
+	result.c[1] = v4_sub(a.c[1], b.c[1]);
+	result.c[2] = v4_sub(a.c[2], b.c[2]);
+	result.c[3] = v4_sub(a.c[3], b.c[3]);
 
-	return a;
+	return result;
 }
 
-m4x4
+static m4x4
 m4x4_mul(m4x4 a, m4x4 b)
 {
 	m4x4 result = {0};
@@ -98,7 +103,7 @@ m4x4_mul(m4x4 a, m4x4 b)
 	for (u32 i = 0; i < 4; i++) {
 		for (u32 j = 0; j < 4; j++) {
 			for (u32 k = 0; k < 4; k++) {
-				result.e[i + 4 * j] += a.e[i + 4 * k] * b.e[k + 4 * j];
+				result.e[i][j] += a.e[k][j] * b.e[i][k];
 			}
 		}
 	}
@@ -106,74 +111,82 @@ m4x4_mul(m4x4 a, m4x4 b)
 	return result;
 }
 
-m4x4
+static m4x4
 m4x4_mulf(m4x4 a, f32 f)
-{
-	for (u32 i = 0; i < 16; i++) {
-		a.e[i] *= f;
-	}
-
-	return a;
-}
-
-m4x4
-m4x4_transpose(m4x4 a)
-{
-	return M4X4(
-		a.e[0], a.e[4], a.e[ 8], a.e[12],
-		a.e[1], a.e[5], a.e[ 9], a.e[13],
-		a.e[2], a.e[6], a.e[10], a.e[14],
-		a.e[3], a.e[7], a.e[11], a.e[15]);
-}
-
-m4x4
-m4x4_id(f32 f)
-{
-	return M4X4(
-		f, 0, 0, 0,
-		0, f, 0, 0,
-		0, 0, f, 0,
-		0, 0, 0, 1);
-}
-
-m4x4
-m4x4_translate(f32 x, f32 y, f32 z)
-{
-	return M4X4(
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		x, y, z, 1);
-}
-
-m4x4
-m4x4_scale(f32 x, f32 y, f32 z)
-{
-	return M4X4(
-		x, 0, 0, 0,
-		0, y, 0, 0,
-		0, 0, z, 0,
-		0, 0, 0, 1);
-}
-
-m4x4
-m4x4_perspective(f32 fov, f32 aspect, f32 near, f32 far)
 {
 	m4x4 result = {0};
 
-	f32 top = near * tanf(fov * PI / 180.f * 0.5f);
-	f32 right = top * aspect;
-	f32 fn = (far - near);
+	result.c[0] = v4_mulf(a.c[0], f);
+	result.c[1] = v4_mulf(a.c[1], f);
+	result.c[2] = v4_mulf(a.c[2], f);
+	result.c[3] = v4_mulf(a.c[3], f);
 
-	result.e[0]  = near / right;
-	result.e[5]  = near / top;
-	result.e[10] = -(far + near) / fn;
-	result.e[11] = -1.f;
-	result.e[14] = -(2.f * far * near) / fn;
+	return result;
+}
 
-#if MATH_FLIP_Y
-	result.e[5] *= -1.f;
-#endif
+static m4x4
+m4x4_transpose(m4x4 a)
+{
+	m4x4 result = {0};
+
+	for (u32 i = 0; i < 4; i++) {
+		for (u32 j = 0; j < 4; j++) {
+			result.e[i][j] = a.e[j][i];
+		}
+	}
+
+	return result;
+}
+
+static m4x4
+m4x4_id(f32 f)
+{
+	m4x4 result = {0};
+
+	result.e[0][0] = 1;
+	result.e[1][1] = 1;
+	result.e[2][2] = 1;
+	result.e[3][3] = 1;
+
+	return result;
+}
+
+static m4x4
+m4x4_translate(f32 x, f32 y, f32 z)
+{
+	m4x4 result = m4x4_id(1);
+
+	result.c[3].x = x;
+	result.c[3].y = y;
+	result.c[3].z = z;
+
+	return result;
+}
+
+static m4x4
+m4x4_scale(f32 x, f32 y, f32 z)
+{
+	m4x4 result = {0};
+
+	result.e[0][0] = x;
+	result.e[1][1] = y;
+	result.e[2][2] = z;
+	result.e[3][3] = 1;
+
+	return result;
+}
+
+static m4x4
+m4x4_perspective(f32 fov, f32 aspect, f32 near, f32 far)
+{
+	m4x4 result = {0};
+	f32 tan_fov = tan(radians(fov) / 2);
+
+	result.e[0][0] = 1 / (aspect * tan_fov);
+	result.e[1][1] = 1 / (tan_fov);
+	result.e[2][2] = -(far + near) / (far - near);
+	result.e[2][3] = -1;
+	result.e[3][2] = -(2 * far * near) / (far - near);
 
 	return result;
 }
@@ -183,41 +196,42 @@ m4x4_ortho(f32 bottom, f32 top, f32 left, f32 right, f32 near, f32 far)
 {
 	m4x4 result = m4x4_id(1);
 
-    result.v[0][0] = 2 / (right - left);
-    result.v[1][1] = 2 / (top - bottom);
-    result.v[2][2] = -2 / (far - near);
+    result.e[0][0] = 2 / (right - left);
+    result.e[1][1] = 2 / (top - bottom);
+    result.e[2][2] = -2 / (far - near);
 
-    result.v[3][0] = -(right + left) / (right - left);
-    result.v[3][1] = -(top + bottom) / (top - bottom);
-    result.v[3][2] = -(far + near) / (far - near);
+    result.e[3][0] = -(right + left) / (right - left);
+    result.e[3][1] = -(top + bottom) / (top - bottom);
+    result.e[3][2] = -(far + near) / (far - near);
 
 	return result;
 }
 
-m4x4
-m4x4_look_at(v3 eye, v3 target, v3 up)
+static m4x4
+m4x4_look_at(v3 eye, v3 center, v3 up)
 {
-	m4x4 result = {0};
+	m4x4 result = m4x4_id(1);
 
-	v3 z = v3_norm(v3_sub(eye, target));
-	v3 x = v3_norm(v3_cross(up, z));
-	v3 y = v3_cross(z, x);
+	v3 z = v3_norm(v3_sub(center, eye));
+	v3 x = v3_norm(v3_cross(z, up));
+	v3 y = v3_cross(x, z);
 
-	result.e[0]  = x.x;
-	result.e[1]  = y.x;
-	result.e[2]  = z.x;
+	result.e[0][0] = x.x;
+	result.e[1][0] = x.y;
+	result.e[2][0] = x.z;
+	result.e[3][0] = -v3_dot(x, eye);
 
-	result.e[4]  = x.y;
-	result.e[5]  = y.y;
-	result.e[6]  = z.y;
+	result.e[0][1] = y.x;
+	result.e[1][1] = y.y;
+	result.e[2][1] = y.z;
+	result.e[3][1] = -v3_dot(y, eye);
 
-	result.e[8]  = x.z;
-	result.e[9]  = y.z;
-	result.e[10] = z.z;
+	result.e[0][2] = -z.x;
+	result.e[1][2] = -z.y;
+	result.e[2][2] = -z.z;
+	result.e[3][2] = v3_dot(z, eye);
 
-	result.e[15] = 1.f;
-
-	return m4x4_mul(result, m4x4_translate(-eye.x, -eye.y, -eye.z));
+	return result;
 }
 
 static m4x4
@@ -259,59 +273,14 @@ m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward)
 static v4
 m4x4_mulv(m4x4 m, v4 v)
 {
-	return V4(
-		m.e[0] * v.x + m.e[4] * v.y + m.e[ 8] * v.z + m.e[12] * v.w,
-		m.e[1] * v.x + m.e[5] * v.y + m.e[ 9] * v.z + m.e[13] * v.w,
-		m.e[2] * v.x + m.e[6] * v.y + m.e[10] * v.z + m.e[14] * v.w,
-		m.e[3] * v.x + m.e[7] * v.y + m.e[11] * v.z + m.e[15] * v.w);
-}
+	v4 result = {0};
 
-static inline v4
-m4x4_to_qt(m4x4 m)
-{
-	v4 q;
+	result = v4_add(result, v4_mul(m.c[0], V4(v.x, v.x, v.x, v.x)));
+	result = v4_add(result, v4_mul(m.c[1], V4(v.y, v.y, v.y, v.y)));
+	result = v4_add(result, v4_mul(m.c[2], V4(v.z, v.z, v.z, v.z)));
+	result = v4_add(result, v4_mul(m.c[3], V4(v.w, v.w, v.w, v.w)));
 
-	q.w = sqrt(1 + m.e[0] + m.e[5] + m.e[10]) / 2;
-	q.x = (m.e[9] - m.e[6]) / (4 * q.w);
-	q.y = (m.e[2] - m.e[8]) / (4 * q.w);
-	q.z = (m.e[4] - m.e[1]) / (4 * q.w);
-
-	return q;
-}
-
-static v4
-m3x3_to_qt(m3x3 m)
-{
-	f32 t = m.v[0][0] + m.v[1][1] + m.v[2][2];
-	v4 q;
-
-	if (t > 0) {
-		f32 s = sqrt(t + 1) * 2;
-		q.x = (m.v[2][1] - m.v[1][2]) / s;
-		q.y = (m.v[0][2] - m.v[2][0]) / s;
-		q.z = (m.v[1][0] - m.v[0][1]) / s;
-		q.w = 0.25 * s;
-	} else if (m.v[0][0] > m.v[1][1] && m.v[0][0] > m.v[2][2]) {
-		f32 s = sqrt(1.0 + m.v[0][0] - m.v[1][1] - m.v[2][2]) * 2;
-		q.x = 0.25 * s;
-		q.y = (m.v[0][1] + m.v[1][0]) / s;
-		q.z = (m.v[0][2] + m.v[2][0]) / s;
-		q.w = (m.v[2][1] - m.v[1][2]) / s;
-	} else if (m.v[1][1] > m.v[2][2]) {
-		f32 s = sqrt(1.0 + m.v[1][1] - m.v[0][0] - m.v[2][2]) * 2;
-		q.x = (m.v[0][1] + m.v[1][0]) / s;
-		q.y = 0.25 * s;
-		q.z = (m.v[1][2] + m.v[2][1]) / s;
-		q.w = (m.v[0][2] - m.v[2][0]) / s;
-	} else {
-		f32 s = sqrt(1.0 + m.v[2][2] - m.v[0][0] - m.v[1][1]) * 2;
-		q.x = (m.v[0][2] + m.v[2][0]) / s;
-		q.y = (m.v[1][2] + m.v[2][1]) / s;
-		q.z = 0.25 * s;
-		q.w = (m.v[1][0] - m.v[0][1]) / s;
-	}
-
-	return q;
+	return result;
 }
 
 static v3
@@ -333,72 +302,4 @@ v3i_vec3(v3 a)
 	result.z = a.z;
 
 	return result;
-}
-
-/*
- * quaternion functions
- */
-
-static v4
-qt_add(v4 a, v4 b)
-{
-	return v4_add(a, b);
-}
-
-static v4
-qt_mul(v4 a, v4 b)
-{
-	v4 result;
-
-	result.xyz = v3_add(v3_cross(a.xyz, b.xyz),
-		v3_add(v3_mulf(b.xyz, a.w), v3_mulf(a.xyz, b.w)));
-	result.w = a.w * b.w - v3_dot(a.xyz, b.xyz);
-
-	return result;
-}
-
-static v3
-qt_mul_v3(v4 q, v3 v)
-{
-	v3 t = v3_mulf(v3_cross(q.xyz, v), 2);
-	return v3_add(v, v3_add(v3_mulf(t, q.w), v3_cross(q.xyz, t)));
-}
-
-static v4
-qt_conj(v4 a)
-{
-	v4 result;
-
-	result.xyz = v3_neg(a.xyz);
-	result.w = a.w;
-
-	return result;
-}
-
-static f32
-qt_len(v4 a)
-{
-	return v4_dot(a, a);
-}
-
-static v4
-qt_inv(v4 q)
-{
-	return v4_divf(qt_conj(q), qt_len(q));
-}
-
-static v4
-qt_rotate(v3 from, v3 to)
-{
-	v4 q = V4(0, 0, 1, 0);
-	f32 w = v3_dot(from, to);
-
-	if (w != -1) {
-		q.xyz = v3_cross(from, to);
-		q.w = w;
-		q.w += v4_len(q);
-		q = v4_norm(q);
-	}
-
-	return q;
 }

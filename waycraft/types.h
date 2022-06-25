@@ -41,9 +41,11 @@ typedef union {
     f32 e[4];
 } v4;
 
+// NOTE: matrices are column major
 typedef struct {
-	f32 e[16];
-    f32 v[4][4];
+	f32 _e[16];
+	f32 e[4][4];
+	v4 c[4];
 } m4x4;
 
 typedef struct {

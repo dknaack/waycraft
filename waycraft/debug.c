@@ -132,9 +132,9 @@ debug_render(m4x4 view, m4x4 projection)
 		debug.vertex_count * sizeof(struct debug_vertex), debug.vertices);
 
 	gl.UseProgram(debug.program);
-	gl.UniformMatrix4fv(debug.model, 1, GL_FALSE, m4x4_id(1).e);
-	gl.UniformMatrix4fv(debug.projection, 1, GL_FALSE, projection.e);
-	gl.UniformMatrix4fv(debug.view, 1, GL_FALSE, view.e);
+	gl.UniformMatrix4fv(debug.model, 1, GL_FALSE, (f32 *)m4x4_id(1).e);
+	gl.UniformMatrix4fv(debug.projection, 1, GL_FALSE, (f32 *)projection.e);
+	gl.UniformMatrix4fv(debug.view, 1, GL_FALSE, (f32 *)view.e);
 
 	gl.DrawArrays(GL_LINES, 0, debug.vertex_count);
 
