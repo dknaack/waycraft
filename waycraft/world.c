@@ -478,22 +478,24 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 	player_bounds.max = add(player_pos, mulf(world_size, 0.5 * BLOCK_COUNT_X));
 
 	// NOTE: unload any chunks that are outside the player bounds
-	struct chunk *chunk = world->chunks;
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		v3 chunk_pos = chunk_get_pos(&world->chunks[i]);
 		if (!box_contains_point(player_bounds, chunk_pos)) {
-			chunk->state = CHUNK_UNLOADED;
+			world->chunks[i].state = CHUNK_UNLOADED;
 		}
 	}
 
 	// NOTE: load any chunks that are unloaded or dirty
-	u32 max_load_count = 8;
 	v3i player_offset;
 	player_offset.x = floor(player_pos.x / BLOCK_COUNT_X - CHUNK_COUNT_X / 2.0f);
 	player_offset.y = floor(player_pos.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
 	player_offset.z = floor(player_pos.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
-	for (u32 i = 0; max_load_count > 0 && i < CHUNK_COUNT; i++) {
+	struct chunk *chunks_to_load[8] = {0};
+	f32 distances[8] = {0};
+	u32 load_count = 0;
+
+	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		v3i chunk_offset = chunk_index_unpack(i);
 		v3i chunk_coord = add(player_offset, chunk_offset);
 		v3i chunk_rel_coord = chunk_coord;
@@ -522,16 +524,31 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		}
 
 		if (chunk->state != CHUNK_READY) {
-			tmp_buffer->push_buffer_size = 0;
-			tmp_buffer->index_count = 0;
-			tmp_buffer->vertex_count = 0;
-
 			chunk->coord = chunk_coord;
-			world_load_chunk(world, chunk, tmp_buffer, renderer);
-			max_load_count--;
+
+			for (u32 i = 0; i < LENGTH(chunks_to_load); i++) {
+				v3 chunk_pos = chunk_get_pos(chunk);
+				f32 distance = length(sub(player_pos, chunk_pos));
+
+				if (!chunks_to_load[i] || distance < distances[i]) {
+					chunks_to_load[i] = chunk;
+					distances[i] = distance;
+					break;
+				}
+			}
 		}
 
 		assert(v3i_equals(chunk->coord, chunk_coord));
+	}
+
+	for (u32 i = 0; chunks_to_load[i] && i < 8; i++) {
+		assert(chunks_to_load[i]->state != CHUNK_READY);
+
+		tmp_buffer->push_buffer_size = 0;
+		tmp_buffer->index_count = 0;
+		tmp_buffer->vertex_count = 0;
+
+		world_load_chunk(world, chunks_to_load[i], tmp_buffer, renderer);
 	}
 
 	// NOTE: draw the loaded chunks
@@ -541,8 +558,6 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		if (world->chunks[i].state == CHUNK_READY) {
 			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);
 		}
-
-		chunk++;
 	}
 }
 
