@@ -40,7 +40,6 @@ struct game_state {
 	struct memory_arena frame_arena;
 	struct renderer renderer;
 	struct game_window *hot_window;
-
 	struct player player;
 
 	u32 window_vertex_array;
@@ -70,4 +69,12 @@ static inline i32
 button_is_down(u8 button)
 {
 	return button & 0x1;
+}
+
+static inline i32
+box_contains_point(struct box box, v3 point)
+{
+	return (box.min.x <= point.x && point.x <= box.max.x &&
+		box.min.y <= point.y && point.y <= box.max.y &&
+		box.min.z <= point.z && point.z <= box.max.z);
 }

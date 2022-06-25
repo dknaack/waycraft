@@ -104,11 +104,6 @@ game_init(struct backend_memory *memory)
 	renderer_init(&game->renderer, arena);
 }
 
-struct box {
-	v3 min;
-	v3 max;
-};
-
 static struct box
 box_from_center(v3 center, v3 size)
 {
@@ -117,14 +112,6 @@ box_from_center(v3 center, v3 size)
 	box.min = v3_sub(center, size);
 	box.max = v3_add(center, size);
 	return box;
-}
-
-static i32
-box_contains_point(struct box box, v3 point)
-{
-	return (box.min.x <= point.x && point.x <= box.max.x &&
-		box.min.y <= point.y && point.y <= box.max.y &&
-		box.min.z <= point.z && point.z <= box.max.z);
 }
 
 static v3

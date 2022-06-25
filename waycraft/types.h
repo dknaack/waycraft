@@ -63,6 +63,11 @@ struct rectangle {
 	f32 width, height;
 };
 
+struct box {
+	v3 min;
+	v3 max;
+};
+
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
 #define GB(x)     (MB(x) * 1024ll)
