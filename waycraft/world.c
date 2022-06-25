@@ -136,7 +136,7 @@ world_get_block_position(const struct world *world, f32 x, f32 y, f32 z)
 	return block_pos;
 }
 
-u32
+static u32
 world_at(struct world *world, f32 x, f32 y, f32 z)
 {
 	u32 result = 0;
@@ -158,7 +158,7 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 
 static void
 block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
-	struct world *world, struct mesh_data *mesh)
+	struct world *world, struct render_command_buffer *mesh)
 {
 	v3 pos[8];
 	v2 uv[4];
@@ -192,37 +192,37 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 
 	block_texcoords_bottom(block, uv);
 	if (is_empty(world_at(world, x, y - 1, z))) {
-		mesh_push_quad(mesh, pos[7], pos[6], pos[3], pos[2],
+		render_quad(mesh, pos[7], pos[6], pos[3], pos[2],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_top(block, uv);
 	if (is_empty(world_at(world, x, y + 1, z))) {
-		mesh_push_quad(mesh, pos[4], pos[5], pos[0], pos[1],
+		render_quad(mesh, pos[4], pos[5], pos[0], pos[1],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_right(block, uv);
 	if (is_empty(world_at(world, x + 1, y, z))) {
-		mesh_push_quad(mesh, pos[4], pos[0], pos[6], pos[2],
+		render_quad(mesh, pos[4], pos[0], pos[6], pos[2],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_left(block, uv);
 	if (is_empty(world_at(world, x - 1, y, z))) {
-		mesh_push_quad(mesh, pos[1], pos[5], pos[3], pos[7],
+		render_quad(mesh, pos[1], pos[5], pos[3], pos[7],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_front(block, uv);
 	if (is_empty(world_at(world, x, y, z + 1))) {
-		mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
+		render_quad(mesh, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 
 	block_texcoords_back(block, uv);
 	if (is_empty(world_at(world, x, y, z - 1))) {
-		mesh_push_quad(mesh, pos[5], pos[4], pos[7], pos[6],
+		render_quad(mesh, pos[5], pos[4], pos[7], pos[6],
 			uv[0], uv[1], uv[2], uv[3], texture);
 	}
 }
@@ -235,7 +235,7 @@ block_index(u32 x, u32 y, u32 z)
 
 static void
 chunk_generate_mesh(struct chunk *chunk, struct world *world,
-	struct mesh_data *mesh, struct render_command_buffer *cmd_buffer)
+	struct render_command_buffer *mesh, struct renderer *renderer)
 {
 	chunk->flags &= ~CHUNK_MODIFIED;
 
@@ -357,45 +357,45 @@ chunk_generate_mesh(struct chunk *chunk, struct world *world,
 
 		if (is_empty(block_right)) {
 			block_texcoords_right(block, uv);
-			mesh_push_quad(mesh, pos[4], pos[0], pos[6], pos[2],
+			render_quad(mesh, pos[4], pos[0], pos[6], pos[2],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_left)) {
 			block_texcoords_left(block, uv);
-			mesh_push_quad(mesh, pos[1], pos[5], pos[3], pos[7],
+			render_quad(mesh, pos[1], pos[5], pos[3], pos[7],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_top)) {
 			block_texcoords_top(block, uv);
-			mesh_push_quad(mesh, pos[4], pos[5], pos[0], pos[1],
+			render_quad(mesh, pos[4], pos[5], pos[0], pos[1],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_bottom)) {
 			block_texcoords_bottom(block, uv);
-			mesh_push_quad(mesh, pos[7], pos[6], pos[3], pos[2],
+			render_quad(mesh, pos[7], pos[6], pos[3], pos[2],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_front)) {
 			block_texcoords_front(block, uv);
-			mesh_push_quad(mesh, pos[0], pos[1], pos[2], pos[3],
+			render_quad(mesh, pos[0], pos[1], pos[2], pos[3],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_back)) {
 			block_texcoords_back(block, uv);
-			mesh_push_quad(mesh, pos[5], pos[4], pos[7], pos[6],
+			render_quad(mesh, pos[5], pos[4], pos[7], pos[6],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 	}
 
-	chunk->mesh = mesh_create(cmd_buffer, mesh);
+	renderer_build_command_buffer(renderer, mesh, &chunk->mesh);
 }
 
-i32
+static i32
 world_init(struct world *world, struct memory_arena *arena)
 {
 	world->chunks = arena_alloc(arena, WORLD_CHUNK_COUNT, struct chunk);
@@ -405,16 +405,15 @@ world_init(struct world *world, struct memory_arena *arena)
 	f32 zoffset = -0.5f * WORLD_DEPTH  * CHUNK_SIZE;
 	world->position = V3(xoffset, yoffset, zoffset);
 
-	struct mesh_data *mesh = &world->mesh;
+	struct render_command_buffer *mesh = &world->tmp_cmd_buffer;
 	u32 size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-	mesh->vertices = arena_alloc(arena, size * 64, struct vertex);
-	mesh->indices = arena_alloc(arena, size * 36, u32);
-	if (!mesh->vertices || !mesh->indices) {
-		return -1;
-	}
+	u32 max_vertex_count = size * 64;
+	u32 max_index_count = size * 128;
+	render_command_buffer_init(mesh, arena, KB(1),
+		max_vertex_count, max_index_count);
 
 	i32 width, height, comp;
-	u8 *data;
+	u8 *data = 0;
 
 	// TODO: load this separate from the game
 	if (!(data = stbi_load("res/textures.png", &width, &height, &comp, 3))) {
@@ -422,7 +421,7 @@ world_init(struct world *world, struct memory_arena *arena)
 		return -1;
 	}
 
-	u32 texture;
+	u32 texture = 0;
 	gl.GenTextures(1, &texture);
 	gl.BindTexture(GL_TEXTURE_2D, texture);
 	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -463,11 +462,11 @@ world_init(struct world *world, struct memory_arena *arena)
 	return 0;
 }
 
-void
-world_update(struct world *world, v3 player_pos,
+static void
+world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		struct render_command_buffer *cmd_buffer)
 {
-	struct mesh_data *mesh = &world->mesh;
+	struct render_command_buffer *tmp_buffer = &world->tmp_cmd_buffer;
 	struct chunk *chunks = world->chunks;
 
 	v3 world_size = V3(WORLD_WIDTH, WORLD_HEIGHT, WORLD_DEPTH);
@@ -476,7 +475,7 @@ world_update(struct world *world, v3 player_pos,
 
 	struct chunk *chunk = world->chunks;
 	u32 chunk_count = WORLD_CHUNK_COUNT;
-	while (chunk_count-- > 0) {
+	for (u32 i = 0; i < chunk_count; i++) {
 		u32 is_modified = 0;
 		v3 chunk_pos = chunk->position;
 
@@ -528,25 +527,20 @@ world_update(struct world *world, v3 player_pos,
 		unloaded_chunks--;
 		struct chunk *chunk = &chunks[*unloaded_chunks];
 
-		mesh->index_count = 0;
-		mesh->vertex_count = 0;
+		tmp_buffer->index_count = 0;
+		tmp_buffer->vertex_count = 0;
 
 		chunk_init(chunk);
-		chunk_generate_mesh(chunk, world, mesh, cmd_buffer);
+		chunk_generate_mesh(chunk, world, tmp_buffer, renderer);
 	}
 
 	world->unloaded_chunk_count -= batch_count;
-}
 
-void
-world_render(const struct world *world, struct render_command_buffer *cmd_buffer)
-{
-#if 1
+	// NOTE: draw the world
 	m4x4 transform = m4x4_id(1);
 	u32 texture = world->texture;
 
-	u32 chunk_count = WORLD_CHUNK_COUNT;
-	struct chunk *chunk = world->chunks;
+	chunk = world->chunks;
 	while (chunk_count-- > 0) {
 		u32 is_initialized = chunk->flags & CHUNK_INITIALIZED;
 		if (is_initialized) {
@@ -555,16 +549,15 @@ world_render(const struct world *world, struct render_command_buffer *cmd_buffer
 
 		chunk++;
 	}
-#endif
 }
 
-void
+static void
 world_finish(struct world *world)
 {
 	gl.DeleteTextures(1, &world->texture);
 }
 
-void
+static void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
 	enum block_type block_type)
 {
@@ -593,7 +586,7 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
 	}
 }
 
-void
+static void
 world_destroy_block(struct world *world, f32 x, f32 y, f32 z)
 {
 	world_place_block(world, x, y, z, BLOCK_AIR);

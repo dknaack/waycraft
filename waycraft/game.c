@@ -651,8 +651,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	world_update(&game->world, game->camera.position, &cmd_buffer);
-	world_render(&game->world, &cmd_buffer);
+	world_update(&game->world, game->camera.position, &game->renderer, &cmd_buffer);
 	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {

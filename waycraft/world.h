@@ -17,7 +17,7 @@ struct world {
     struct chunk *chunks;
     u16 *blocks;
 
-    struct mesh_data mesh;
+	struct render_command_buffer tmp_cmd_buffer;
     u32 *unloaded_chunks;
     u32 unloaded_chunk_count;
     u32 unloaded_chunk_start;

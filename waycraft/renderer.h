@@ -3,14 +3,6 @@ struct vertex {
     v2 texcoord;
 };
 
-struct mesh_data {
-	struct vertex *vertices;
-	u32 *indices;
-
-	u32 vertex_count;
-	u32 index_count;
-};
-
 enum render_command_type {
 	RENDER_CLEAR,
 	RENDER_QUADS,
@@ -59,9 +51,6 @@ struct render_command_buffer {
 	u32 max_vertex_count;
 	u32 max_index_count;
 
-	struct mesh *meshes;
-	u32 mesh_count;
-
 	struct render_command_quads *current_quads;
 };
 
@@ -87,6 +76,10 @@ struct renderer {
 		i32 projection;
 		i32 camera_pos;
 	} shader;
+
+	struct mesh *meshes;
+	u32 max_mesh_count;
+	u32 mesh_count;
 };
 
 struct memory_arena;
