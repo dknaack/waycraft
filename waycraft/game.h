@@ -1,4 +1,5 @@
 #include <waycraft/types.h>
+#include <waycraft/math.h>
 #include <waycraft/backend.h>
 #include <waycraft/memory.h>
 #include <waycraft/gl.h>
