@@ -535,7 +535,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		KB(64), 4 * 128, 6 * 128);
 	ui_cmd_buffer.mode = RENDER_2D;
 	ui_cmd_buffer.transform.view = m4x4_id(1);
-	ui_cmd_buffer.transform.projection = m4x4_ortho(0, input->width, 0, input->height, -1, 1);
+	ui_cmd_buffer.transform.projection = m4x4_ortho(0, input->height, 0, input->width, -1, 1);
 	ui_cmd_buffer.transform.camera_pos = V3(0, 0, 0);
 
 	render_clear(&cmd_buffer, V4(0.45, 0.65, 0.85, 1.0));
