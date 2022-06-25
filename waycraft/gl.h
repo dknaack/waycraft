@@ -37,6 +37,7 @@ typedef void glActiveTexture_t(GLenum texture);
 typedef void glTexParameteri_t(GLenum target, GLenum pname, GLint param);
 typedef void glGenerateMipmap_t(GLenum target);
 typedef GLint glGetUniformLocation_t(GLuint program, const GLchar *name);
+typedef void glUniform1i_t(GLint location, GLint v0);
 typedef void glUniform1f_t(GLint location, GLfloat v0);
 typedef void glUniform2f_t(GLint location, GLfloat v0, GLfloat v1);
 typedef void glUniform3f_t(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
@@ -87,6 +88,7 @@ typedef void glLineWidth_t(GLfloat width);
 	X(TexParameteri) \
 	X(GenerateMipmap) \
 	X(GetUniformLocation) \
+	X(Uniform1i) \
 	X(Uniform1f) \
 	X(Uniform2f) \
 	X(Uniform3f) \
