@@ -178,6 +178,22 @@ m4x4_perspective(f32 fov, f32 aspect, f32 near, f32 far)
 	return result;
 }
 
+static m4x4
+m4x4_ortho(f32 bottom, f32 top, f32 left, f32 right, f32 near, f32 far)
+{
+	m4x4 result = m4x4_id(1);
+
+    result.v[0][0] = 2 / (right - left);
+    result.v[1][1] = 2 / (top - bottom);
+    result.v[2][2] = -2 / (far - near);
+
+    result.v[3][0] = -(right + left) / (right - left);
+    result.v[3][1] = -(top + bottom) / (top - bottom);
+    result.v[3][2] = -(far + near) / (far - near);
+
+	return result;
+}
+
 m4x4
 m4x4_look_at(v3 eye, v3 target, v3 up)
 {
