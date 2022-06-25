@@ -32,6 +32,7 @@ game_load(struct game_code *game)
 			if (game->handle) {
 				dlclose(game->handle);
 				game->handle = NULL;
+				game->update = NULL;
 			}
 
 			game->handle = dlopen(game->path, RTLD_LAZY);
