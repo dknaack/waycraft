@@ -58,6 +58,19 @@ static f32 v4_len_sq(v4 a) { return v4_dot(a, a); }
 static f32 v4_len(v4 a) { return sqrtf(v4_len_sq(a)); }
 static v4 v4_norm(v4 a) { return v4_divf(a, v4_len(a)); }
 
+static v3i v3i_add(v3i a, v3i b) { return V3I(a.x + b.x, a.y + b.y, a.z + b.z); }
+static v3i v3i_sub(v3i a, v3i b) { return V3I(a.x - b.x, a.y - b.y, a.z - b.z); }
+static v3i v3i_mul(v3i a, v3i b) { return V3I(a.x * b.x, a.y * b.y, a.z * b.z); }
+static v3i v3i_div(v3i a, v3i b) { return V3I(a.x / b.x, a.y / b.y, a.z / b.z); }
+
+static bool
+v3i_equals(v3i a, v3i b)
+{
+	bool result = a.x == b.x && a.y == b.y && a.z == b.z;
+
+	return result;
+}
+
 static v3
 v3_cross(v3 a, v3 b)
 {

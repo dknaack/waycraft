@@ -1,5 +1,5 @@
-#define add(a, b) (_Generic((a), v2: v2_add, v3: v3_add, v4: v4_add, m4x4: m4x4_add)(a, b))
-#define sub(a, b) (_Generic((a), v2: v2_sub, v3: v3_sub, v4: v4_sub, m4x4: m4x4_sub)(a, b))
+#define add(a, b) (_Generic((a), v2: v2_add, v3: v3_add, v4: v4_add, m4x4: m4x4_add, v3i: v3i_add)(a, b))
+#define sub(a, b) (_Generic((a), v2: v2_sub, v3: v3_sub, v4: v4_sub, m4x4: m4x4_sub, v3i: v3i_sub)(a, b))
 #define div(a, b) (_Generic((a), v2: v2_div, v3: v3_div, v4: v4_div)(a, b))
 #define dot(a, b) (_Generic((a), v2: v2_dot, v3: v3_dot, v4: v4_dot)(a, b))
 #define mulf(a, f) (_Generic((a), v2: v2_mulf, v3: v3_mulf, v4: v4_mulf, m4x4: m4x4_mulf)(a, f))
