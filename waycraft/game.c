@@ -96,6 +96,7 @@ game_init(struct backend_memory *memory)
 	struct game_state *game = memory->data;
 	struct memory_arena *arena = &game->arena;
 	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
+	arena_suballoc(arena, MB(32), &game->frame_arena);
 
 	debug_init(arena);
 	world_init(&game->world, arena);
@@ -511,19 +512,31 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		memory->is_initialized = 1;
 	}
 
+	// NOTE: reset the frame arena
+	game->frame_arena.used = 0;
+
 	m4x4 projection = game->camera.projection;
 	m4x4 view = game->camera.view;
 
 	v3 camera_pos = camera->position;
 	v3 camera_front = camera->front;
 
-	struct render_command_buffer *render_commands =
-		renderer_begin_frame(&game->renderer);
-	render_commands->transform.view = view;
-	render_commands->transform.projection = projection;
-	render_commands->transform.camera_pos = camera_pos;
+	u32 max_quad_count = 1024;
+	struct render_command_buffer cmd_buffer = {0};
+	render_command_buffer_init(&cmd_buffer, &game->frame_arena,
+		MB(1), 4 * max_quad_count, 6 * max_quad_count);
+	cmd_buffer.transform.view = view;
+	cmd_buffer.transform.projection = projection;
+	cmd_buffer.transform.camera_pos = camera_pos;
 
-	render_clear(render_commands, V4(0.45, 0.65, 0.85, 1.0));
+	struct render_command_buffer ui_cmd_buffer = {0};
+	render_command_buffer_init(&ui_cmd_buffer, &game->frame_arena,
+		KB(64), 4 * 128, 6 * 128);
+	ui_cmd_buffer.transform.view = m4x4_id(1);
+	ui_cmd_buffer.transform.projection = /* TODO */ m4x4_id(1);
+	ui_cmd_buffer.transform.camera_pos = V3(0, 0, 0);
+
+	render_clear(&cmd_buffer, V4(0.45, 0.65, 0.85, 1.0));
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
@@ -637,14 +650,12 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			player->inventory.is_active = 0;
 		}
 	}
-	world_update(&game->world, game->camera.position, render_commands);
 
-	world_render(&game->world, render_commands);
-	window_manager_render(wm, view, projection, render_commands);
+	world_update(&game->world, game->camera.position, &cmd_buffer);
+	world_render(&game->world, &cmd_buffer);
+	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {
-		log_info("focused_window = %d", wm->focused_window);
-
 		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
 		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
@@ -683,7 +694,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		pos[2] = v3_add(cursor_world_pos, cursor_x);
 		pos[3] = v3_add(pos[2], cursor_y);
 
-		render_quad(render_commands, pos[0], pos[1], pos[2], pos[3],
+		render_quad(&cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], cursor_texture);
 
 		u32 is_pressing_alt = input->alt_down;
@@ -703,8 +714,9 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	}
 
 	// TODO: order the render commands inside the renderer
-	inventory_render(&player->inventory, input->width, input->height, render_commands);
-	renderer_end_frame(&game->renderer, render_commands);
+	inventory_render(&player->inventory, input->width, input->height, &ui_cmd_buffer);
+	renderer_submit(&game->renderer, &cmd_buffer);
+	renderer_submit(&game->renderer, &ui_cmd_buffer);
 
 	debug_render(view, projection);
 }

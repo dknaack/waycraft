@@ -50,11 +50,14 @@ struct render_command_buffer {
 	u32 command_count;
 	u8 *push_buffer;
 	u32 push_buffer_size;
+	u32 max_push_buffer_size;
 
 	struct vertex *vertex_buffer;
 	u32 *index_buffer;
 	u32 vertex_count;
 	u32 index_count;
+	u32 max_vertex_count;
+	u32 max_index_count;
 
 	struct mesh *meshes;
 	u32 mesh_count;

@@ -124,16 +124,6 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	renderer->shader.camera_pos = gl.GetUniformLocation(program, "camera_pos");
 	renderer->shader.program = program;
 
-	renderer->command_buffer.push_buffer =
-		arena_alloc(arena, PUSH_BUFFER_SIZE, u8);
-	renderer->command_buffer.vertex_buffer =
-		arena_alloc(arena, VERTEX_BUFFER_SIZE, struct vertex);
-	renderer->command_buffer.index_buffer =
-		arena_alloc(arena, VERTEX_BUFFER_SIZE, u32);
-	renderer->command_buffer.meshes =
-		arena_alloc(arena, MESH_SIZE, struct mesh);
-	renderer->command_buffer.mesh_count = 0;
-
 	gl.GenVertexArrays(1, &renderer->vertex_array);
 	gl.GenBuffers(1, &renderer->vertex_buffer);
 	gl.GenBuffers(1, &renderer->index_buffer);
@@ -168,23 +158,23 @@ renderer_finish(struct renderer *renderer)
 	gl.DeleteProgram(renderer->shader.program);
 }
 
-static struct render_command_buffer *
-renderer_begin_frame(struct renderer *renderer)
+static void
+render_command_buffer_init(struct render_command_buffer *cmd_buffer,
+		struct memory_arena *arena, u32 max_push_buffer_size,
+		u32 max_vertex_count, u32 max_index_count)
 {
-	struct render_command_buffer *cmd_buffer = &renderer->command_buffer;
+	cmd_buffer->max_vertex_count = max_vertex_count;
+	cmd_buffer->max_index_count = max_index_count;
+	cmd_buffer->max_push_buffer_size = max_push_buffer_size;
 
-	cmd_buffer->current_quads    = 0;
-	cmd_buffer->command_count    = 0;
-	cmd_buffer->push_buffer_size = 0;
-	cmd_buffer->vertex_count     = 0;
-	cmd_buffer->index_count      = 0;
-
-	return cmd_buffer;
+	cmd_buffer->push_buffer = arena_alloc(arena, max_push_buffer_size, u8);
+	cmd_buffer->vertex_buffer = arena_alloc(arena, max_vertex_count, struct vertex);
+	cmd_buffer->index_buffer = arena_alloc(arena, max_index_count, u32);
+	cmd_buffer->meshes = arena_alloc(arena, MESH_SIZE, struct mesh);
 }
 
 static void
-renderer_end_frame(struct renderer *renderer,
-	struct render_command_buffer *cmd_buffer)
+renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buffer)
 {
 	u32 command_count = cmd_buffer->command_count;
 	u8 *push_buffer = cmd_buffer->push_buffer;
@@ -279,11 +269,12 @@ push_command(struct render_command_buffer *cmd_buffer, u32 type)
 	assert(command_size != 0);
 
 	command->type = type;
+	cmd_buffer->push_buffer_size += sizeof(*command);
 	cmd_buffer->push_buffer_size += command_size;
 	cmd_buffer->command_count++;
 
-	assert(cmd_buffer->push_buffer_size < PUSH_BUFFER_SIZE);
-	return command;
+	assert(cmd_buffer->push_buffer_size < cmd_buffer->max_push_buffer_size);
+	return command + 1;
 }
 
 static void

@@ -21,23 +21,26 @@ struct camera {
 	f32 fov;
 };
 
+struct player {
+	f32 speed;
+	v3 position;
+	v3 velocity;
+	u8 is_jumping;
+	u8 frames_since_jump;
+
+	struct inventory inventory;
+	i8 hotbar_selection;
+};
+
 struct game_state {
 	struct world world;
 	struct camera camera;
 	struct memory_arena arena;
+	struct memory_arena frame_arena;
 	struct renderer renderer;
 	struct game_window *hot_window;
 
-	struct player {
-		f32 speed;
-		v3 position;
-		v3 velocity;
-		u8 is_jumping;
-		u8 frames_since_jump;
-
-		struct inventory inventory;
-		i8 hotbar_selection;
-	} player;
+	struct player player;
 
 	u32 window_vertex_array;
 	u32 window_vertex_buffer;
