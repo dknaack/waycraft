@@ -5,32 +5,36 @@
 
 static char *vert_shader_source =
 	"#version 330 core\n"
-	"layout (location = 0) in vec3 pos;"
-	"layout (location = 1) in vec2 in_coords;"
-	"out vec2 coords;"
-	"out vec3 frag_pos;"
-	"uniform mat4 model;"
-	"uniform mat4 view;"
-	"uniform mat4 projection;"
-	"void main() {"
-	"    gl_Position = projection * view * model * vec4(pos, 1.);"
-	"    frag_pos = pos;"
-	"    coords = in_coords;"
-	"}";
+	"layout (location = 0) in vec3 pos;\n"
+	"layout (location = 1) in vec2 in_coords;\n"
+	"out vec2 coords;\n"
+	"out vec3 frag_pos;\n"
+	"uniform mat4 model;\n"
+	"uniform mat4 view;\n"
+	"uniform mat4 projection;\n"
+	"void main() {\n"
+	"    gl_Position = projection * view * model * vec4(pos, 1.);\n"
+	"    frag_pos = pos;\n"
+	"    coords = in_coords;\n"
+	"}\n";
 
 static char *frag_shader_source =
 	"#version 330 core\n"
-	"in vec2 coords;"
-	"in vec3 frag_pos;"
-	"out vec4 frag_color;"
-	"uniform sampler2D tex;"
-	"uniform vec3 camera_pos;"
-	"void main() {"
-	"	frag_color = texture(tex, coords);"
-	"	float dist = distance(camera_pos, frag_pos);"
-	"	float alpha = clamp(0.1 * (256 - dist), 0, 1);"
-	"	frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, alpha);"
-	"}";
+	"in vec2 coords;\n"
+	"in vec3 frag_pos;\n"
+	"out vec4 frag_color;\n"
+	"uniform int enable_fog;\n"
+	"uniform sampler2D tex;\n"
+	"uniform vec3 camera_pos;\n"
+	"void main() {\n"
+	"	frag_color = texture(tex, coords);\n"
+	""
+	"	if (enable_fog != 0) {\n"
+	"		float dist = distance(camera_pos, frag_pos);\n"
+	"		float alpha = clamp(0.1 * (256 - dist), 0, 1);\n"
+	"		frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, alpha);\n"
+	"	}\n"
+	"}\n";
 
 static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_command_clear),
@@ -69,6 +73,7 @@ gl_shader_create(char *src, u32 type)
 		char error[1024] = {0};
 		gl_shader_error(shader, error, sizeof(error));
 		fprintf(stderr, "Failed to create shader: %s\n", error);
+		assert(!"Failed to create shader");
 	}
 
 	return success ? shader : 0;
@@ -116,13 +121,14 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 		char error[1024] = {0};
 		gl_program_error(program, error, sizeof(error));
 		fprintf(stderr, "Failed to create program: %s\n", error);
-		return;
+		assert(!"Failed to create program");
 	}
 
 	renderer->shader.model = gl.GetUniformLocation(program, "model");
 	renderer->shader.view = gl.GetUniformLocation(program, "view");
 	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
 	renderer->shader.camera_pos = gl.GetUniformLocation(program, "camera_pos");
+	renderer->shader.enable_fog = gl.GetUniformLocation(program, "enable_fog");
 	renderer->shader.program = program;
 
 	// NOTE: initialize the main vertex array
@@ -147,6 +153,16 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	u32 max_mesh_count = 1024;
 	renderer->meshes = arena_alloc(arena, max_mesh_count, struct mesh);
 	renderer->max_mesh_count = max_mesh_count;
+
+	// NOTE: generate a white texture
+	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
+	gl.GenTextures(1, &renderer->white_texture);
+	gl.BindTexture(GL_TEXTURE_2D, renderer->white_texture);
+	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 static void
@@ -221,6 +237,16 @@ renderer_build_command_buffer(struct renderer *renderer,
 }
 
 static void
+renderer_bind_texture(struct renderer *renderer, u32 texture)
+{
+	if (texture == 0) {
+		texture = renderer->white_texture;
+	}
+
+	gl.BindTexture(GL_TEXTURE_2D, texture);
+}
+
+static void
 renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buffer)
 {
 	u32 command_count = cmd_buffer->command_count;
@@ -232,6 +258,15 @@ renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buf
 	v3 camera_pos = cmd_buffer->transform.camera_pos;
 
 	gl.UseProgram(renderer->shader.program);
+
+	if (cmd_buffer->mode == RENDER_3D) {
+		gl.Enable(GL_DEPTH_TEST);
+		gl.Uniform1i(renderer->shader.enable_fog, true);
+	} else if (cmd_buffer->mode == RENDER_2D) {
+		gl.Disable(GL_DEPTH_TEST);
+		gl.Uniform1i(renderer->shader.enable_fog, false);
+	}
+
 	gl_uniform_v3(renderer->shader.camera_pos, camera_pos);
 	gl_uniform_m4x4(renderer->shader.model, model);
 	gl_uniform_m4x4(renderer->shader.projection, projection);
@@ -273,7 +308,7 @@ renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buf
 				usize index_offset = sizeof(u32) * command->index_offset;
 
 				gl.BindVertexArray(renderer->vertex_array);
-				gl.BindTexture(GL_TEXTURE_2D, command->texture);
+				renderer_bind_texture(renderer, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
 					GL_UNSIGNED_INT, (void *)index_offset);
 
@@ -289,7 +324,7 @@ renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buf
 				struct mesh *mesh = &renderer->meshes[command->mesh];
 
 				gl.BindVertexArray(mesh->vertex_array);
-				gl.BindTexture(GL_TEXTURE_2D, command->texture);
+				renderer_bind_texture(renderer, command->texture);
 				gl_uniform_m4x4(renderer->shader.model, command->transform);
 				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
 					GL_UNSIGNED_INT, 0);
@@ -382,6 +417,23 @@ render_quad(struct render_command_buffer *cmd_buffer,
 
 	assert(cmd_buffer->index_count < INDEX_BUFFER_SIZE);
 	assert(cmd_buffer->vertex_count < VERTEX_BUFFER_SIZE);
+}
+
+static void
+render_sprite(struct render_command_buffer *cmd_buffer,
+		struct rectangle rect, u32 texture)
+{
+	v3 pos0 = V3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
+	v3 pos1 = V3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
+	v3 pos2 = V3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
+	v3 pos3 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
+
+	v2 uv0 = V2(0, 0);
+	v2 uv1 = V2(1, 0);
+	v2 uv2 = V2(0, 1);
+	v2 uv3 = V2(1, 1);
+
+	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
 
 static void

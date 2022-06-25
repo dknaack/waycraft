@@ -58,6 +58,11 @@ typedef union {
     f32 e[3];
 } v3i;
 
+struct rectangle {
+	f32 x, y;
+	f32 width, height;
+};
+
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
 #define GB(x)     (MB(x) * 1024ll)

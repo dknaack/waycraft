@@ -3,6 +3,11 @@ struct vertex {
     v2 texcoord;
 };
 
+enum render_mode {
+	RENDER_3D,
+	RENDER_2D,
+};
+
 enum render_command_type {
 	RENDER_CLEAR,
 	RENDER_QUADS,
@@ -38,6 +43,7 @@ struct render_transform {
 
 struct render_command_buffer {
 	struct render_transform transform;
+	enum render_mode mode;
 
 	u32 command_count;
 	u8 *push_buffer;
@@ -65,6 +71,7 @@ struct mesh {
 struct renderer {
 	struct render_command_buffer command_buffer;
 
+	u32 white_texture;
 	u32 vertex_array;
 	u32 vertex_buffer;
 	u32 index_buffer;
@@ -75,6 +82,7 @@ struct renderer {
 		i32 view;
 		i32 projection;
 		i32 camera_pos;
+		i32 enable_fog;
 	} shader;
 
 	struct mesh *meshes;
