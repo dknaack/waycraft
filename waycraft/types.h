@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -67,6 +66,8 @@ struct box {
 	v3 min;
 	v3 max;
 };
+
+#define assert(expr) ((expr) ? 0 : (*(volatile int *)0 = 0))
 
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
