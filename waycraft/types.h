@@ -87,6 +87,7 @@ struct box {
 #define V4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
 #define V3(x, y, z)    (v3){{ (x), (y), (z) }}
 #define V2(x, y)       (v2){{ (x), (y) }}
+#define V3I(x, y, z)   (v3i){{ (x), (y), (z) }}
 
 #define PI 3.14159265359f
 
