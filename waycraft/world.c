@@ -127,10 +127,6 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 	struct chunk *chunk = &world->chunks[chunk_index];
 	if (v3i_equals(chunk->coord, chunk_coord)) {
 		result = chunk;
-
-		v3 chunk_pos = chunk_get_pos(chunk);
-		debug_set_color(1, 0, 1);
-		debug_cube(chunk_pos, add(chunk_pos, V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X)));
 	}
 
 	return result;
