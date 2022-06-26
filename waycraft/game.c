@@ -495,10 +495,9 @@ window_manager_render(struct game_window_manager *wm, m4x4 view,
 			pos[2] = v3_add(window_pos, window_x);
 			pos[3] = v3_add(pos[2], window_y);
 
-#if 0
+			struct texture_id window_texture = {window->texture};
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], window->texture);
-#endif
+				uv[0], uv[1], uv[2], uv[3], window_texture);
 			window++;
 		}
 	}
@@ -739,7 +738,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 			v3_mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
 			v3_mulf(window_z, -0.01f)));
 
-		u32 cursor_texture = wm->cursor.texture;
+		struct texture_id cursor_texture = {wm->cursor.texture};
 		v2 uv[4];
 		uv[0] = V2(0, 0);
 		uv[1] = V2(0, 1);
@@ -756,10 +755,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		pos[2] = v3_add(cursor_world_pos, cursor_x);
 		pos[3] = v3_add(pos[2], cursor_y);
 
-#if 0
 		render_quad(&cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], cursor_texture);
-#endif
 
 		u32 is_pressing_alt = input->alt_down;
 		if (input->mouse.buttons[3] && is_pressing_alt) {
