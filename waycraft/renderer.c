@@ -176,6 +176,8 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	u32 max_mesh_count = 32 * 16 * 16;
 	renderer->meshes = arena_alloc(arena, max_mesh_count, struct mesh);
 	renderer->max_mesh_count = max_mesh_count;
+	// NOTE: we ignore the first mesh
+	renderer->mesh_count = 1;
 
 	// NOTE: generate a white texture
 	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
