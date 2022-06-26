@@ -23,9 +23,10 @@ static v2 v2_mul(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
 static v2 v2_div(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
 static v2 v2_mulf(v2 a, f32 f) { return V2(a.x * f, a.y * f); }
 static v2 v2_divf(v2 a, f32 f) { return V2(a.x / f, a.y / f); }
-static f32 v2_len(v2 a) { return sqrtf(a.x * a.x + a.y * a.y); }
-static v2 v2_norm(v2 a) { return v2_divf(a, v2_len(a)); }
 static f32 v2_dot(v2 a, v2 b) { return a.x * b.x + a.y * b.y; }
+static f32 v2_len_sq(v2 a) { return v2_dot(a, a); }
+static f32 v2_len(v2 a) { return sqrtf(v2_len_sq(a)); }
+static v2 v2_norm(v2 a) { return v2_divf(a, v2_len(a)); }
 
 /* v3 functions */
 static v3 v3_add(v3 a, v3 b) { return V3(a.x + b.x, a.y + b.y, a.z + b.z); }
