@@ -23,21 +23,22 @@ typedef unsigned int   uint;
 typedef unsigned long  ulong;
 
 typedef union {
-    struct { f32 x, y; };
-    f32 e[2];
+	struct { f32 x, y; };
+	struct { f32 width, height; };
+	f32 e[2];
 } v2;
 
 typedef union {
-    struct { f32 x, y, z; };
-    struct { f32 r, g, b; };
-    f32 e[3];
+	struct { f32 x, y, z; };
+	struct { f32 r, g, b; };
+	f32 e[3];
 } v3;
 
 typedef union {
-    struct { f32 x, y, z, w; };
-    struct { f32 r, g, b, a; };
+	struct { f32 x, y, z, w; };
+	struct { f32 r, g, b, a; };
 	struct { v3 xyz; f32 _w; };
-    f32 e[4];
+	f32 e[4];
 } v4;
 
 // NOTE: matrices are column major
@@ -49,12 +50,12 @@ typedef struct {
 
 typedef struct {
 	f32 e[9];
-    f32 v[3][3];
+	f32 v[3][3];
 } m3x3;
 
 typedef union {
-    struct { i32 x, y, z; };
-    i32 e[3];
+	struct { i32 x, y, z; };
+	i32 e[3];
 } v3i;
 
 struct rectangle {
@@ -81,7 +82,7 @@ struct box {
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
 
 #define CONTAINER_OF(ptr, type, member) \
-    ((type *)((char *)(ptr) - offsetof(type, member)))
+	((type *)((char *)(ptr) - offsetof(type, member)))
 
 #define M4X4(...)      (m4x4){{ __VA_ARGS__ }}
 #define M3X3(...)      (m3x3){{ __VA_ARGS__ }}
