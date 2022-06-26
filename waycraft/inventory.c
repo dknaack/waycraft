@@ -1,12 +1,3 @@
-static void
-inventory_init(struct inventory *inventory)
-{
-	texture_init(&inventory->inventory_texture, "res/inventory.png");
-	texture_init(&inventory->hotbar_texture, "res/hotbar.png");
-	texture_init(&inventory->active_slot_texture, "res/active_slot.png");
-	texture_init(&inventory->block_atlas_texture, "res/textures.png");
-}
-
 // NOTE: the direction determines the direction that the block faces after
 // placing it in the world.
 static enum block_type
@@ -46,8 +37,10 @@ item_to_block(enum item_type item, v3 direction)
 
 static void
 item_render(struct inventory_item *item, struct rectangle rect,
-		struct render_command_buffer *cmd_buffer)
+		struct render_command_buffer *cmd_buffer, struct game_assets *assets)
 {
+	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
+
 	if (item->type == ITEM_WINDOW) {
 		v3 pos0 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
 		v3 pos1 = V3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
@@ -57,7 +50,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 		v2 uv[4] = {0};
 		block_texcoords_right(BLOCK_AIR, uv);
 		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-			uv[0], uv[1], uv[2], uv[3], TEXTURE_BLOCK_ATLAS);
+			uv[0], uv[1], uv[2], uv[3], texture);
 	} else {
 		enum block_type block = item_to_block(item->type, V3(1, 0, 0));
 		if (block != BLOCK_AIR) {
@@ -69,7 +62,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 			v2 uv[4] = {0};
 			block_texcoords_right(block, uv);
 			render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-				uv[0], uv[1], uv[2], uv[3], TEXTURE_BLOCK_ATLAS);
+				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 	}
 }
@@ -77,9 +70,11 @@ item_render(struct inventory_item *item, struct rectangle rect,
 static void
 inventory_render(struct inventory *inventory,
 		f32 screen_width, f32 screen_height,
-		struct render_command_buffer *cmd_buffer)
+		struct render_command_buffer *cmd_buffer,
+		struct game_assets *assets)
 {
-	f32 hotbar_aspect = inventory->hotbar_texture.width / inventory->hotbar_texture.height;
+	struct texture hotbar_texture = get_texture(assets, TEXTURE_HOTBAR);
+	f32 hotbar_aspect = hotbar_texture.width / hotbar_texture.height;
 
 	struct rectangle hotbar = {0};
 	hotbar.width = screen_width * 0.5f;
@@ -87,11 +82,12 @@ inventory_render(struct inventory *inventory,
 	hotbar.x = (screen_width - hotbar.width) / 2.0f;
 	hotbar.y = 0;
 
-	render_sprite(cmd_buffer, hotbar, TEXTURE_HOTBAR);
+	render_sprite(cmd_buffer, hotbar, hotbar_texture.id);
 
 	if (inventory->is_active) {
+		struct texture_id texture = get_texture(assets, TEXTURE_INVENTORY).id;
 		m4x4 transform = m4x4_id(0.75);
-		render_textured_quad(cmd_buffer, transform, TEXTURE_INVENTORY);
+		render_textured_quad(cmd_buffer, transform, texture);
 
 		//struct inventory_item *item = inventory->items;
 		u32 y = LENGTH(inventory->items) / 9;
@@ -110,7 +106,8 @@ inventory_render(struct inventory *inventory,
 		active_slot.width = hotbar.height;
 		active_slot.height = hotbar.height;
 
-		render_sprite(cmd_buffer, active_slot, TEXTURE_ACTIVE_SLOT);
+		struct texture_id texture = get_texture(assets, TEXTURE_ACTIVE_SLOT).id;
+		render_sprite(cmd_buffer, active_slot, texture);
 
 		struct inventory_item *item = inventory->items;
 		for (u32 i = 0; i < 9; i++) {
@@ -120,7 +117,7 @@ inventory_render(struct inventory *inventory,
 			item_rect.width = slot_size;
 			item_rect.height = slot_size;
 
-			item_render(item++, item_rect, cmd_buffer);
+			item_render(item++, item_rect, cmd_buffer, assets);
 		}
 	}
 }

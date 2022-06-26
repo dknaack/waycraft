@@ -43,29 +43,6 @@ static const u32 render_command_size[RENDER_COMMAND_COUNT] = {
 };
 
 static void
-texture_init(struct texture *texture, char *path)
-{
-	i32 width, height, comp;
-	u8 *data = stbi_load(path, &width, &height, &comp, 3);
-
-	if (data) {
-		u32 texture_handle = 0;
-		gl.GenTextures(1, &texture_handle);
-		gl.BindTexture(GL_TEXTURE_2D, texture_handle);
-		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		gl.GenerateMipmap(GL_TEXTURE_2D);
-
-		texture->handle = texture_handle;
-		texture->width  = width;
-		texture->height = height;
-
-		free(data);
-	}
-}
-
-static void
 gl_uniform_m4x4(u32 uniform, m4x4 value)
 {
 	gl.UniformMatrix4fv(uniform, 1, GL_FALSE, (f32 *)value.e);
@@ -181,8 +158,8 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 
 	// NOTE: generate a white texture
 	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
-	gl.GenTextures(1, &renderer->textures[0].handle);
-	gl.BindTexture(GL_TEXTURE_2D, renderer->textures[0].handle);
+	gl.GenTextures(1, &renderer->white_texture);
+	gl.BindTexture(GL_TEXTURE_2D, renderer->white_texture);
 	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -264,23 +241,7 @@ renderer_build_command_buffer(struct renderer *renderer,
 static void
 renderer_bind_texture(struct renderer *renderer, u32 texture_id)
 {
-	static char *texture_filenames[TEXTURE_COUNT] = {
-		[TEXTURE_NONE]        = "",
-		[TEXTURE_BLOCK_ATLAS] = "res/textures.png",
-		[TEXTURE_INVENTORY]   = "res/inventory.png",
-		[TEXTURE_HOTBAR]      = "res/hotbar.png",
-		[TEXTURE_ACTIVE_SLOT] = "res/active_slot.png",
-	};
-
-	struct texture *texture = &renderer->textures[texture_id];
-	if (!texture->handle) {
-		assert(texture_id != 0);
-		assert(texture_id < TEXTURE_COUNT);
-
-		texture_init(texture, texture_filenames[texture_id]);
-	}
-
-	gl.BindTexture(GL_TEXTURE_2D, texture->handle);
+	gl.BindTexture(GL_TEXTURE_2D, texture_id);
 }
 
 static void
@@ -408,13 +369,13 @@ render_clear(struct render_command_buffer *cmd_buffer, v4 color)
 static void
 render_quad(struct render_command_buffer *cmd_buffer,
 		v3 pos0, v3 pos1, v3 pos2, v3 pos3,
-		v2 uv0, v2 uv1, v2 uv2, v2 uv3, u32 texture)
+		v2 uv0, v2 uv1, v2 uv2, v2 uv3, struct texture_id texture)
 {
 	struct render_command_quads *command = cmd_buffer->current_quads;
 
-	if (!command || command->texture != texture) {
+	if (!command || command->texture != texture.value) {
 		command = push_command(cmd_buffer, RENDER_QUADS);
-		command->texture = texture;
+		command->texture = texture.value;
 		command->index_offset = cmd_buffer->index_count;
 		command->quad_count = 0;
 		cmd_buffer->current_quads = command;
@@ -458,7 +419,7 @@ render_quad(struct render_command_buffer *cmd_buffer,
 
 static void
 render_sprite(struct render_command_buffer *cmd_buffer,
-		struct rectangle rect, u32 texture)
+		struct rectangle rect, struct texture_id texture)
 {
 	v3 pos0 = V3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
 	v3 pos1 = V3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
@@ -475,7 +436,7 @@ render_sprite(struct render_command_buffer *cmd_buffer,
 
 static void
 render_textured_quad(struct render_command_buffer *cmd_buffer,
-		m4x4 transform, u32 texture)
+		m4x4 transform, struct texture_id texture)
 {
 	v3 pos0 = m4x4_mulv(transform, V4(+1, +1, 0, 1)).xyz;
 	v3 pos1 = m4x4_mulv(transform, V4(-1, +1, 0, 1)).xyz;
@@ -492,11 +453,11 @@ render_textured_quad(struct render_command_buffer *cmd_buffer,
 
 static void
 render_mesh(struct render_command_buffer *cmd_buffer,
-		u32 mesh, m4x4 transform, u32 texture)
+		u32 mesh, m4x4 transform, struct texture_id texture)
 {
 	struct render_command_mesh *command = push_command(cmd_buffer, RENDER_MESH);
 
 	command->mesh = mesh;
-	command->texture = texture;
+	command->texture = texture.value;
 	command->transform = transform;
 }

@@ -178,7 +178,8 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 
 static void
 block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
-	struct world *world, struct render_command_buffer *mesh)
+	struct world *world, struct render_command_buffer *mesh,
+	struct game_assets *assets)
 {
 	v3 pos[8];
 	v2 uv[4];
@@ -208,7 +209,7 @@ block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
 		}
 	}
 
-	u32 texture = TEXTURE_BLOCK_ATLAS;
+	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 
 	block_texcoords_bottom(block, uv);
 	if (is_empty(world_at(world, x, y - 1, z))) {
@@ -264,7 +265,8 @@ world_init(struct world *world, struct memory_arena *arena)
 
 static void
 world_load_chunk(struct world *world, struct chunk *chunk,
-		struct render_command_buffer *mesh, struct renderer *renderer)
+		struct render_command_buffer *mesh, struct renderer *renderer,
+		struct game_assets *assets)
 {
 	v3 chunk_pos = chunk_get_pos(chunk);
 	u16 *blocks = chunk->blocks;
@@ -353,7 +355,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	}
 #endif
 
-	u32 texture = TEXTURE_BLOCK_ATLAS;
+	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 	assert(blocks);
 
 	for (u32 i = 0; i < BLOCK_COUNT_X * BLOCK_COUNT_X * BLOCK_COUNT_X; i++) {
@@ -461,7 +463,8 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 
 static void
 world_update(struct world *world, v3 player_pos, struct renderer *renderer,
-		struct render_command_buffer *cmd_buffer, struct memory_arena *frame_arena)
+		struct render_command_buffer *cmd_buffer, struct memory_arena *frame_arena,
+		struct game_assets *assets)
 {
 	struct render_command_buffer tmp_buffer;
 	u32 max_vertex_count = CHUNK_COUNT * 64;
@@ -545,12 +548,12 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		tmp_buffer.index_count = 0;
 		tmp_buffer.vertex_count = 0;
 		tmp_buffer.current_quads = 0;
-		world_load_chunk(world, chunks_to_load[i], &tmp_buffer, renderer);
+		world_load_chunk(world, chunks_to_load[i], &tmp_buffer, renderer, assets);
 	}
 
 	// NOTE: draw the loaded chunks
 	m4x4 transform = m4x4_id(1);
-	u32 texture = TEXTURE_BLOCK_ATLAS;
+	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		if (world->chunks[i].mesh != 0) {
 			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);

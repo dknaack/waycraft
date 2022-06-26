@@ -30,6 +30,29 @@ struct player {
 	i8 hotbar_selection;
 };
 
+enum texture_name {
+	TEXTURE_NONE,
+	TEXTURE_BLOCK_ATLAS,
+	TEXTURE_INVENTORY,
+	TEXTURE_HOTBAR,
+	TEXTURE_ACTIVE_SLOT,
+	TEXTURE_COUNT,
+};
+
+struct texture_id {
+	u32 value;
+};
+
+struct texture {
+	struct texture_id id;
+	u32 width;
+	u32 height;
+};
+
+struct game_assets {
+	struct texture textures[TEXTURE_COUNT];
+};
+
 struct game_state {
 	struct world world;
 	struct camera camera;
@@ -37,6 +60,7 @@ struct game_state {
 	struct memory_arena frame_arena;
 	struct renderer renderer;
 	struct game_window *hot_window;
+	struct game_assets assets;
 	struct player player;
 
 	u32 window_vertex_array;
@@ -47,6 +71,8 @@ struct game_state {
 
 	u32 cursor;
 };
+
+static struct texture get_texture(struct game_assets *assets, u32 texture_id);
 
 static inline i32
 button_was_pressed(u8 button)

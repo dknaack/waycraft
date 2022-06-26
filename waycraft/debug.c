@@ -38,7 +38,7 @@ static char *debug_fragment_shader_source = "#version 330\n"
 
 static struct debug_state debug = {0};
 
-void
+static void
 debug_init(struct memory_arena *arena)
 {
 	debug.vertices = arena_alloc(arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
@@ -68,13 +68,13 @@ debug_init(struct memory_arena *arena)
 	gl.EnableVertexAttribArray(1);
 }
 
-void
+static void
 debug_set_color(f32 r, f32 g, f32 b)
 {
 	debug.color = V3(r, g, b);
 }
 
-void
+static void
 debug_line(v3 start, v3 end)
 {
 	struct debug_vertex *vertex = debug.vertices + debug.vertex_count;
@@ -92,7 +92,7 @@ debug_line(v3 start, v3 end)
 	debug.vertex_count += 2;
 }
 
-void
+static void
 debug_cube(v3 min, v3 max)
 {
 	v3 pos0 = V3(min.x, min.y, min.z);
@@ -120,7 +120,7 @@ debug_cube(v3 min, v3 max)
 	debug_line(pos3, pos7);
 }
 
-void
+static void
 debug_render(m4x4 view, m4x4 projection)
 {
 	gl.Disable(GL_DEPTH_TEST);

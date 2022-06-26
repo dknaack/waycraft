@@ -1,9 +1,3 @@
-struct texture {
-	u32 handle;
-	u32 width;
-	u32 height;
-};
-
 enum item_type {
 	ITEM_NONE,
 	// NOTE: blocks should be synchronized with the block_type enum.
@@ -35,9 +29,5 @@ struct inventory_item {
 struct inventory {
 	struct inventory_item items[36];
 	u8 active_item;
-	u8 is_active;
-	struct texture inventory_texture;
-	struct texture hotbar_texture;
-	struct texture active_slot_texture;
-	struct texture block_atlas_texture;
+	bool is_active;
 };

@@ -22,6 +22,49 @@
 #define VIRTUAL_SCREEN_SIZE 500
 
 static void
+texture_init(struct texture *texture, char *path)
+{
+	i32 width, height, comp;
+	u8 *data = stbi_load(path, &width, &height, &comp, 3);
+
+	if (data) {
+		u32 texture_handle = 0;
+		gl.GenTextures(1, &texture_handle);
+		gl.BindTexture(GL_TEXTURE_2D, texture_handle);
+		gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		gl.GenerateMipmap(GL_TEXTURE_2D);
+
+		texture->id.value = texture_handle;
+		texture->width  = width;
+		texture->height = height;
+
+		free(data);
+	}
+}
+
+static struct texture
+get_texture(struct game_assets *assets, u32 texture_id)
+{
+	static char *texture_filenames[TEXTURE_COUNT] = {
+		[TEXTURE_NONE]        = "",
+		[TEXTURE_BLOCK_ATLAS] = "res/textures.png",
+		[TEXTURE_INVENTORY]   = "res/inventory.png",
+		[TEXTURE_HOTBAR]      = "res/hotbar.png",
+		[TEXTURE_ACTIVE_SLOT] = "res/active_slot.png",
+	};
+
+	assert(texture_id < TEXTURE_COUNT);
+
+	if (assets->textures[texture_id].id.value == 0) {
+		texture_init(&assets->textures[texture_id], texture_filenames[texture_id]);
+	}
+
+	return assets->textures[texture_id];
+}
+
+static void
 camera_init(struct camera *camera, v3 position, f32 fov)
 {
 	camera->position = position;
@@ -101,7 +144,6 @@ player_init(struct player *player, struct camera *camera)
 	f32 camera_fov = 75.f;
 	v3 player_position = V3(0, 20, 0);
 
-	inventory_init(&player->inventory);
 	camera_init(camera, player_position, camera_fov);
 	player->position = player_position;
 	player->speed = player_speed;
@@ -670,7 +712,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	}
 
 	world_update(&game->world, game->camera.position,
-		&game->renderer, &cmd_buffer, &game->frame_arena);
+		&game->renderer, &cmd_buffer, &game->frame_arena, &game->assets);
 	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {
@@ -735,7 +777,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	inventory_render(&player->inventory, input->width, input->height, &ui_cmd_buffer);
+	inventory_render(&player->inventory, input->width, input->height, &ui_cmd_buffer, &game->assets);
 
 	renderer_submit(&game->renderer, &cmd_buffer);
 	renderer_submit(&game->renderer, &ui_cmd_buffer);
