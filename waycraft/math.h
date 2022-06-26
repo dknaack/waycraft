@@ -11,3 +11,4 @@
 #define length(x) (_Generic((x), v2: v2_len, v3: v3_len, v4: v4_len)(x))
 #define length_sq(x) (_Generic((x), v2: v2_len_sq, v3: v3_len_sq, v4: v4_len_sq)(x))
 #define normalize(x) (_Generic((x), v2: v2_norm, v3: v3_norm, v4: v4_norm)(x))
+#define cross(a, b) v3_cross(a, b)
