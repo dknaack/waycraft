@@ -71,7 +71,7 @@ static void
 player_init(struct player *player, struct camera *camera)
 {
 	f32 player_speed = 150.f;
-	f32 camera_fov = 65.f;
+	f32 camera_fov = 75.f;
 	v3 player_position = V3(0, 20, 0);
 
 	inventory_init(&player->inventory);
@@ -642,7 +642,8 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	world_update(&game->world, game->camera.position, &game->renderer, &cmd_buffer);
+	world_update(&game->world, game->camera.position,
+		&game->renderer, &cmd_buffer, &game->frame_arena);
 	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {
