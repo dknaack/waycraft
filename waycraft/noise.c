@@ -1,79 +1,131 @@
-#include <math.h>
-
-/* source: https://en.wikipedia.org/wiki/Perlin_noise#Implementation */
-
-f32
-smoothstep(f32 a, f32 b, f32 t)
+static f32
+gradient(u32 hash, f32 x, f32 y, f32 z)
 {
-	return (b - a) * ((t * (t * 6 - 15) + 10) * t * t * t) + a;
+	switch (hash & 0xf) {
+	case 0x0: return  x + y;
+	case 0x1: return -x + y;
+	case 0x2: return  x - y;
+	case 0x3: return -x - y;
+	case 0x4: return  x + z;
+	case 0x5: return -x + z;
+	case 0x6: return  x - z;
+	case 0x7: return -x - z;
+	case 0x8: return  y + z;
+	case 0x9: return -y + z;
+	case 0xa: return  y - z;
+	case 0xb: return -y - z;
+	case 0xc: return  y + x;
+	case 0xd: return -y + z;
+	case 0xe: return  y - x;
+	case 0xf: return -y - z;
+	default:  assert(false); return 0;
+	}
 }
 
-v2
-noise_random_gradient(i32 ix, i32 iy)
+static f32
+fade(f32 t)
 {
-	u32 w = 8 * sizeof(u32);
-	u32 s = w / 2;
-
-	u32 a = ix, b = iy;
-	a *= 3284157443;
-	b ^= (a << s | (a >> w)) - s;
-	b *= 1911520717;
-	a ^= (b << s | (b >> w)) - s;
-	a *= 2048419325;
-
-	f32 random = a * (3.14159265 / ~(~0u >> 1));
-	return V2(cosf(random), sinf(random));
+	return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
-f32
-noise_gradient(i32 ix, i32 iy, f32 x, f32 y)
+static u8 perlin_noise_hash[] = {
+	151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140,
+	36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120,
+	234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71,
+	134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133,
+	230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161,
+	1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130,
+	116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250,
+	124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227,
+	47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44,
+	154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39, 253, 19,
+	98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+	251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235,
+	249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176,
+	115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29,
+	24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
+};
+
+static f32
+perlin_noise(f32 x, f32 y, f32 z)
 {
-	v2 gradient = noise_random_gradient(ix, iy);
+	i32 ix = (i32)floor(x) & 255;
+	i32 iy = (i32)floor(y) & 255;
+	i32 iz = (i32)floor(z) & 255;
 
-	f32 dx = x - (f32)ix;
-	f32 dy = y - (f32)iy;
+	x -= floorf(x);
+	y -= floorf(y);
+	z -= floorf(z);
 
-	return dx * gradient.x + dy * gradient.y;
-}
+	f32 tx = fade(x);
+	f32 ty = fade(y);
+	f32 tz = fade(z);
 
-f32
-noise_2d(f32 x, f32 y)
-{
-	i32 x0 = floorf(x);
-	i32 x1 = x0 + 1;
-	i32 y0 = floorf(y);
-	i32 y1 = y0 + 1;
+	u8 *hash = perlin_noise_hash;
 
-	f32 sx = x - (f32)x0;
-	f32 sy = y - (f32)y0;
+	i32 h000 = hash[(hash[(hash[(ix + 0) & 255] + iy + 0) & 255] + iz + 0) & 255];
+	i32 h001 = hash[(hash[(hash[(ix + 1) & 255] + iy + 0) & 255] + iz + 0) & 255];
+	i32 h010 = hash[(hash[(hash[(ix + 0) & 255] + iy + 1) & 255] + iz + 0) & 255];
+	i32 h011 = hash[(hash[(hash[(ix + 1) & 255] + iy + 1) & 255] + iz + 0) & 255];
+	i32 h100 = hash[(hash[(hash[(ix + 0) & 255] + iy + 0) & 255] + iz + 1) & 255];
+	i32 h101 = hash[(hash[(hash[(ix + 1) & 255] + iy + 0) & 255] + iz + 1) & 255];
+	i32 h110 = hash[(hash[(hash[(ix + 0) & 255] + iy + 1) & 255] + iz + 1) & 255];
+	i32 h111 = hash[(hash[(hash[(ix + 1) & 255] + iy + 1) & 255] + iz + 1) & 255];
 
-	f32 n00 = noise_gradient(x0, y0, x, y);
-	f32 n01 = noise_gradient(x1, y0, x, y);
-	f32 ix0 = smoothstep(n00, n01, sx);
+	f32 g000 = gradient(h000, x - 0, y - 0, z - 0);
+	f32 g001 = gradient(h001, x - 1, y - 0, z - 0);
+	f32 g010 = gradient(h010, x - 0, y - 1, z - 0);
+	f32 g011 = gradient(h011, x - 1, y - 1, z - 0);
 
-	f32 n10 = noise_gradient(x0, y1, x, y);
-	f32 n11 = noise_gradient(x1, y1, x, y);
-	f32 ix1 = smoothstep(n10, n11, sx);
+	f32 g100 = gradient(h100, x - 0, y - 0, z - 1);
+	f32 g101 = gradient(h101, x - 1, y - 0, z - 1);
+	f32 g110 = gradient(h110, x - 0, y - 1, z - 1);
+	f32 g111 = gradient(h111, x - 1, y - 1, z - 1);
 
-	f32 result = smoothstep(ix0, ix1, sy);
+	f32 x00 = lerp(g000, g001, tx);
+	f32 x01 = lerp(g010, g011, tx);
+	f32 y0 = lerp(x00, x01, ty);
+
+	f32 x10 = lerp(g100, g101, tx);
+	f32 x11 = lerp(g110, g111, tx);
+	f32 y1 = lerp(x10, x11, ty);
+
+	f32 result = 0.5f * (lerp(y0, y1, tz) + 1.0f);
+
 	return result;
 }
 
-f32
-noise_layered_2d(f32 x, f32 y)
+static f32
+perlin_noise_layered(f32 x, f32 y, f32 z, u32 octave_count, f32 persistance)
 {
-	u32 layer_count = 8;
-	f32 noise_value = 0;
-	f32 noise_size = 0.125;
-	f32 amplitude_multiplier = 2.0;
-	for (u32 i = 0; i < layer_count; i++) {
-		f32 nx = noise_size * x;
-		f32 ny = noise_size * y;
+	f32 result = 0.0f;
+	f32 max_value = 0.0f;
+	f32 amplitude = 1.0f;
+	f32 frequency = 1.0f;
 
-		noise_value += amplitude_multiplier * noise_2d(nx, ny);
-		amplitude_multiplier /= 1.375;
-		noise_size *= 1.5;
+	while (octave_count-- > 0) {
+		result += amplitude * perlin_noise(
+			x * frequency, y * frequency, z * frequency);
+
+		max_value += amplitude;
+		amplitude *= persistance;
+		frequency *= 2.0f;
 	}
 
-	return noise_value;
+	result /= max_value;
+
+	return result;
+}
+
+static f32
+noise_2d(f32 x, f32 y)
+{
+	return perlin_noise(x, y, 0.0f);
+}
+
+static f32
+noise_layered_2d(f32 x, f32 y)
+{
+	return perlin_noise_layered(x, y, 0.0f, 4, 0.5f);
 }
