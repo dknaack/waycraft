@@ -1,13 +1,14 @@
 #include <waycraft/types.h>
 #include <waycraft/math.h>
 #include <waycraft/backend.h>
-#include <waycraft/memory.h>
-#include <waycraft/gl.h>
-#include <waycraft/timer.h>
-#include <waycraft/log.h>
 #include <waycraft/block.h>
+#include <waycraft/debug.h>
+#include <waycraft/gl.h>
 #include <waycraft/inventory.h>
+#include <waycraft/log.h>
+#include <waycraft/memory.h>
 #include <waycraft/renderer.h>
+#include <waycraft/timer.h>
 #include <waycraft/world.h>
 
 struct camera {
@@ -62,6 +63,7 @@ struct game_state {
 	struct game_window *hot_window;
 	struct game_assets assets;
 	struct player player;
+	struct debug_state debug_state;
 
 	u32 window_vertex_array;
 	u32 window_vertex_buffer;

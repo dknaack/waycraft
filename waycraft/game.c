@@ -19,7 +19,7 @@
 #include "waycraft/timer.c"
 #include "waycraft/world.c"
 
-#define VIRTUAL_SCREEN_SIZE 500
+#define VIRTUAL_SCREEN_SIZE 400
 
 static void
 texture_init(struct texture *texture, char *path)
@@ -167,7 +167,7 @@ game_init(struct backend_memory *memory)
 	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
 	arena_suballoc(arena, MB(32), &game->frame_arena);
 
-	debug_init(arena);
+	debug_init(&game->debug_state);
 	world_init(&game->world, arena);
 	player_init(&game->player, &game->camera);
 	renderer_init(&game->renderer, arena);
@@ -571,6 +571,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 	// NOTE: reset the frame arena
 	game->frame_arena.used = 0;
+	debug_update(&game->debug_state, &game->frame_arena);
 
 	m4x4 projection = camera_get_projection(camera);
 	m4x4 view = camera_get_view(camera);
