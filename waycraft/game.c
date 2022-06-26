@@ -24,8 +24,6 @@
 static void
 camera_init(struct camera *camera, v3 position, f32 fov)
 {
-	camera->view = m4x4_id(1.f);
-	camera->projection = m4x4_id(1.f);
 	camera->position = position;
 	camera->yaw = 0.f;
 	camera->pitch = 0.f;
@@ -35,12 +33,25 @@ camera_init(struct camera *camera, v3 position, f32 fov)
 static void
 camera_resize(struct camera *camera, f32 width, f32 height)
 {
-	f32 fov = camera->fov;
-	f32 znear = 0.1f;
-	f32 zfar = 1000.f;
-	f32 aspect_ratio = width / height;
+	camera->viewport.width = width;
+	camera->viewport.height = height;
+}
 
-	camera->projection = m4x4_perspective(fov, aspect_ratio, znear, zfar);
+static void
+camera_axes(struct camera *camera, v3 *out_right, v3 *out_up, v3 *out_forward)
+{
+	v3 forward, right, up;
+	forward.x = cosf(radians(camera->yaw)) * cosf(radians(camera->pitch));
+	forward.y = sinf(radians(camera->pitch));
+	forward.z = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
+
+	forward = normalize(forward);
+	right = normalize(cross(forward, V3(0, 1, 0)));
+	up = normalize(cross(right, forward));
+
+	*out_right   = right;
+	*out_up      = up;
+	*out_forward = forward;
 }
 
 static void
@@ -54,17 +65,33 @@ camera_rotate(struct camera *camera, f32 dx, f32 dy)
 	camera->yaw   = fmodf(yaw + 360.f, 360.f);
 	camera->pitch = CLAMP(pitch, -89.f, 89.f);
 
-	v3 front;
-	front.x = cosf(radians(camera->yaw)) * cosf(radians(camera->pitch));
-	front.y = sinf(radians(camera->pitch));
-	front.z = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
+	v3 direction;
+	direction.x = cosf(radians(camera->yaw)) * cosf(radians(camera->pitch));
+	direction.y = sinf(radians(camera->pitch));
+	direction.z = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
 
-	camera->front = v3_norm(front);
-	camera->right = v3_norm(v3_cross(front, V3(0, 1, 0)));
-	camera->up = v3_norm(v3_cross(camera->right, camera->front));
+	camera->direction = normalize(direction);
+}
 
-	v3 target = v3_add(camera->position, camera->front);
-	camera->view = m4x4_look_at(camera->position, target, camera->up);
+static m4x4
+camera_get_view(struct camera *camera)
+{
+	v3 target = v3_add(camera->position, camera->direction);
+	m4x4 result = m4x4_look_at(camera->position, target, V3(0, 1, 0));
+
+	return result;
+}
+
+static m4x4
+camera_get_projection(struct camera *camera)
+{
+	f32 fov = camera->fov;
+	f32 znear = 0.1f;
+	f32 zfar = 1000.f;
+	f32 aspect_ratio = camera->viewport.width / camera->viewport.height;
+	m4x4 result = m4x4_perspective(fov, aspect_ratio, znear, zfar);
+
+	return result;
 }
 
 static void
@@ -190,12 +217,12 @@ player_move(struct game_state *game, struct game_input *input)
 		return;
 	}
 
-	v3 front = camera->front;
-	v3 right = camera->right;
+	v3 right, up, forward;
+	camera_axes(camera, &right, &up, &forward);
 	f32 speed = player->speed;
 	v3 position = player->position;
 	v3 velocity = player->velocity;
-	v3 acceleration = player_direction_from_input(input, front, right, speed);
+	v3 acceleration = player_direction_from_input(input, forward, right, speed);
 	acceleration = v3_sub(acceleration, v3_mulf(velocity, 15.f));
 	acceleration.y = -100.f;
 
@@ -307,7 +334,7 @@ player_select_block(struct game_state *game, struct game_input *input,
 	struct box selected_block = box_from_center(block_pos, block_size);
 
 	v3 start = camera->position;
-	v3 direction = camera->front;
+	v3 direction = camera->direction;
 
 	i32 has_selected_block = 0;
 	v3 normal_min = {0};
@@ -504,11 +531,11 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	// NOTE: reset the frame arena
 	game->frame_arena.used = 0;
 
-	m4x4 projection = game->camera.projection;
-	m4x4 view = game->camera.view;
+	m4x4 projection = camera_get_projection(camera);
+	m4x4 view = camera_get_view(camera);
 
 	v3 camera_pos = camera->position;
-	v3 camera_front = camera->front;
+	v3 camera_front = camera->direction;
 
 	u32 max_quad_count = 1024;
 	struct render_command_buffer cmd_buffer = {0};
@@ -647,8 +674,10 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {
-		v3 mouse_dx = v3_mulf(camera->right, input->mouse.dx * 0.001f);
-		v3 mouse_dy = v3_mulf(camera->up, -input->mouse.dy * 0.001f);
+		v3 camera_right, camera_up, camera_forward;
+		camera_axes(camera, &camera_right, &camera_up, &camera_forward);
+		v3 mouse_dx = v3_mulf(camera_right, input->mouse.dx * 0.001f);
+		v3 mouse_dy = v3_mulf(camera_up, -input->mouse.dy * 0.001f);
 		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
 		v3 camera_pos = v3_add(camera->position, mouse_pos);
 
@@ -658,7 +687,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 
 		v2 cursor_pos = {0};
 		window_ray_intersection_point(focused_window,
-			camera_pos, camera->front, &cursor_pos);
+			camera_pos, camera->direction, &cursor_pos);
 
 		v3 window_pos = focused_window->position;
 		v2 window_scale = focused_window->scale;

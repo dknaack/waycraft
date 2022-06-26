@@ -11,15 +11,12 @@
 #include <waycraft/world.h>
 
 struct camera {
-	m4x4 view;
-	m4x4 projection;
 	v3 position;
-	v3 front;
-	v3 up;
-	v3 right;
+	v3 direction;
 	f32 yaw;
 	f32 pitch;
 	f32 fov;
+	v2 viewport;
 };
 
 struct player {
@@ -50,8 +47,6 @@ struct game_state {
 
 	u32 cursor;
 };
-
-struct compositor;
 
 static inline i32
 button_was_pressed(u8 button)
