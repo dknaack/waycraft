@@ -434,7 +434,7 @@ get_time_sec(void)
 }
 
 int
-x11_main(void)
+x11_main(struct game_code game)
 {
 	struct game_window_manager window_manager = {0};
 	struct x11_window window = {0};
@@ -459,9 +459,7 @@ x11_main(void)
 	OPENGL_MAP_FUNCTIONS();
 #undef X
 
-	game_memory.size = MB(512);
-	game_memory.data = calloc(game_memory.size, 1);
-	game_memory.gl = &gl;
+	game.memory.gl = &gl;
 
 	compositor_memory.size = MB(64);
 	compositor_memory.data = calloc(compositor_memory.size, 1);
@@ -474,9 +472,6 @@ x11_main(void)
 		return 1;
 	}
 
-	struct game_code game = {0};
-	game.path = "./build/libgame.so";
-
 	f64 target_frame_time = 1. / 60.;
 	while (window.is_open) {
 		f64 start_time = get_time_sec();
@@ -487,7 +482,7 @@ x11_main(void)
 		gl.Viewport(0, 0, window.width, window.height);
 		game_load(&game);
 		if (game.update) {
-			game.update(&game_memory, &input, wm);
+			game.update(&game.memory, &input, wm);
 		}
 
 		eglSwapBuffers(egl.display, egl.surface);

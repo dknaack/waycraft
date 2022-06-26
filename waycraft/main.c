@@ -17,6 +17,7 @@
 #include "waycraft/compositor.c"
 
 struct game_code {
+	struct backend_memory memory;
 	char *path;
 	game_update_t *update;
 	ino_t ino;
@@ -50,5 +51,10 @@ game_load(struct game_code *game)
 int
 main(void)
 {
-    return x11_main();
+	struct game_code game = {0};
+	game.path = "./build/libgame.so";
+	game.memory.size = MB(256);
+	game.memory.data = calloc(game.memory.size, 1);
+
+    return x11_main(game);
 }
