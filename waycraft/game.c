@@ -165,7 +165,7 @@ game_init(struct backend_memory *memory)
 	struct game_state *game = memory->data;
 	struct memory_arena *arena = &game->arena;
 	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
-	arena_suballoc(arena, MB(32), &game->frame_arena);
+	arena_suballoc(arena, MB(64), &game->frame_arena);
 
 	debug_init(&game->debug_state);
 	world_init(&game->world, arena);
@@ -711,7 +711,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 		}
 	}
 
-	world_update(&game->world, game->camera.position,
+	world_update(&game->world, game->camera.position, game->camera.direction,
 		&game->renderer, &cmd_buffer, &game->frame_arena, &game->assets);
 	window_manager_render(wm, view, projection, &cmd_buffer);
 

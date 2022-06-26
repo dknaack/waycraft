@@ -458,9 +458,9 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 }
 
 static void
-world_update(struct world *world, v3 player_pos, struct renderer *renderer,
-		struct render_command_buffer *cmd_buffer, struct memory_arena *frame_arena,
-		struct game_assets *assets)
+world_update(struct world *world, v3 player_pos, v3 player_dir,
+		struct renderer *renderer, struct render_command_buffer *cmd_buffer,
+		struct memory_arena *frame_arena, struct game_assets *assets)
 {
 	struct render_command_buffer tmp_buffer;
 	u32 max_vertex_count = CHUNK_COUNT * 64;
@@ -469,9 +469,10 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 		max_vertex_count, max_index_count);
 
 	struct box player_bounds = {0};
+	v3 target = add(player_pos, mulf(player_dir, 3 * BLOCK_COUNT_X));
 	v3 world_size = V3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
-	player_bounds.min = sub(player_pos, mulf(world_size, 0.5 * BLOCK_COUNT_X));
-	player_bounds.max = add(player_pos, mulf(world_size, 0.5 * BLOCK_COUNT_X));
+	player_bounds.min = sub(target, mulf(world_size, 0.5 * BLOCK_COUNT_X));
+	player_bounds.max = add(target, mulf(world_size, 0.5 * BLOCK_COUNT_X));
 
 	// NOTE: unload any chunks that are outside the player bounds
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
@@ -483,9 +484,9 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 
 	// NOTE: load any chunks that are unloaded or dirty
 	v3i player_offset;
-	player_offset.x = floor(player_pos.x / BLOCK_COUNT_X - CHUNK_COUNT_X / 2.0f);
-	player_offset.y = floor(player_pos.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
-	player_offset.z = floor(player_pos.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
+	player_offset.x = floor(target.x / BLOCK_COUNT_X - CHUNK_COUNT_X / 2.0f);
+	player_offset.y = floor(target.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
+	player_offset.z = floor(target.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
 #define MAX_LOAD_PER_FRAME 16
 	struct chunk *chunks_to_load[MAX_LOAD_PER_FRAME] = {0};
@@ -527,7 +528,7 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 				v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X), 0.5f);
 				chunk_pos = add(chunk_pos, chunk_half_dim);
 
-				f32 distance = length_sq(sub(player_pos, chunk_pos));
+				f32 distance = length_sq(sub(target, chunk_pos));
 
 				if (!chunks_to_load[i] || distance < distances[i]) {
 					chunks_to_load[i] = chunk;
@@ -554,7 +555,10 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 	m4x4 transform = m4x4_id(1);
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
-		if (world->chunks[i].mesh != 0) {
+		v3 chunk_pos = chunk_get_pos(&world->chunks[i]);
+		v3 chunk_dir = sub(chunk_pos, player_pos);
+
+		if (world->chunks[i].mesh != 0 && (length_sq(chunk_dir) < 1024 || dot(player_dir, chunk_dir)) > 0) {
 			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);
 		}
 	}
