@@ -49,7 +49,7 @@ get_texture(struct game_assets *assets, u32 texture_id)
 {
 	static char *texture_filenames[TEXTURE_COUNT] = {
 		[TEXTURE_NONE]        = "",
-		[TEXTURE_BLOCK_ATLAS] = "res/textures.png",
+		[TEXTURE_BLOCK_ATLAS] = "res/block_atlas.png",
 		[TEXTURE_INVENTORY]   = "res/inventory.png",
 		[TEXTURE_HOTBAR]      = "res/hotbar.png",
 		[TEXTURE_ACTIVE_SLOT] = "res/active_slot.png",
