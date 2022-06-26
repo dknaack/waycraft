@@ -69,6 +69,7 @@ struct box {
 };
 
 #define assert(expr) ((expr) ? 0 : (*(volatile int *)0 = 0))
+#define static_assert(expr, msg) _Static_assert(expr, msg)
 
 #define KB(x)       ((x) * 1024ll)
 #define MB(x)     (KB(x) * 1024ll)
