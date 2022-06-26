@@ -524,6 +524,9 @@ world_update(struct world *world, v3 player_pos, struct renderer *renderer,
 
 			for (u32 i = 0; i < LENGTH(chunks_to_load); i++) {
 				v3 chunk_pos = chunk_get_pos(chunk);
+				v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X), 0.5f);
+				chunk_pos = add(chunk_pos, chunk_half_dim);
+
 				f32 distance = length_sq(sub(player_pos, chunk_pos));
 
 				if (!chunks_to_load[i] || distance < distances[i]) {
