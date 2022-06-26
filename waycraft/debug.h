@@ -1,4 +1,4 @@
-#define DEBUG_VERTEX_BUFFER_SIZE KB(8)
+#define DEBUG_VERTEX_BUFFER_SIZE MB(1)
 
 struct debug_vertex {
 	v3 position;
