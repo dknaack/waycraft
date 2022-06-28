@@ -109,4 +109,5 @@ struct box {
 #define I16_MIN (i16)0x8000
 #define I8_MIN  (i8)0x80
 
+#define F32_INF INFINITY
 #define F32_EPSILON 1e-5f
