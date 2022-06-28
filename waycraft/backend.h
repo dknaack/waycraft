@@ -62,7 +62,7 @@ struct backend_memory {
     usize size;
 
     u32 is_initialized;
-	struct gl *gl;
+	struct opengl_api *gl;
 };
 
 typedef void game_update_t(struct backend_memory *memory, struct game_input *input,

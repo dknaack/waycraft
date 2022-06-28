@@ -102,7 +102,7 @@ typedef void glLineWidth_t(GLfloat width);
 	X(PolygonMode) \
 	X(LineWidth)
 
-struct gl {
+struct opengl_api {
 #define X(name) gl##name##_t *name;
 	OPENGL_MAP_FUNCTIONS()
 #undef X
@@ -113,4 +113,4 @@ struct x11_window;
 typedef void gl_proc_t(void);
 typedef gl_proc_t *gl_get_proc_address_t(const u8 *proc_name);
 
-static struct gl gl;
+static struct opengl_api gl;
