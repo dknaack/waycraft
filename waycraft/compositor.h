@@ -116,34 +116,3 @@ struct compositor {
 	i32 keymap;
 	i32 keymap_size;
 };
-
-enum compositor_event_type {
-	COMPOSITOR_NONE,
-	COMPOSITOR_BUTTON,
-	COMPOSITOR_KEY,
-	COMPOSITOR_MODIFIERS,
-	COMPOSITOR_MOTION,
-};
-
-struct compositor_event {
-	u32 type;
-
-	union {
-		struct {
-			i32 code;
-			i32 state;
-		} key, button;
-
-		struct {
-			u32 depressed;
-			u32 latched;
-			u32 locked;
-			u32 group;
-		} modifiers;
-
-		struct {
-			i32 x;
-			i32 y;
-		} motion;
-	};
-};

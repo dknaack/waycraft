@@ -605,7 +605,7 @@ get_time_msec(void)
 
 static struct game_window_manager *
 compositor_update(struct platform_memory *memory,
-		struct compositor_event *event, u32 event_count)
+		struct platform_event *event, u32 event_count)
 {
 	struct compositor *compositor = memory->data;
 	struct game_window_manager *wm = &compositor->window_manager;
@@ -617,7 +617,7 @@ compositor_update(struct platform_memory *memory,
 
 	while (event_count-- > 0) {
 		switch (event->type) {
-		case COMPOSITOR_BUTTON:
+		case PLATFORM_EVENT_BUTTON:
 			{
 				i32 button = event->button.code;
 				i32 state = event->button.state;
@@ -634,7 +634,7 @@ compositor_update(struct platform_memory *memory,
 				}
 			}
 			break;
-		case COMPOSITOR_KEY:
+		case PLATFORM_EVENT_KEY:
 			{
 				i32 key = event->key.code;
 				i32 state = event->key.state;
@@ -650,7 +650,7 @@ compositor_update(struct platform_memory *memory,
 				}
 			}
 			break;
-		case COMPOSITOR_MODIFIERS:
+		case PLATFORM_EVENT_MODIFIERS:
 			{
 				u32 depressed = event->modifiers.depressed;
 				u32 latched = event->modifiers.latched;
@@ -679,7 +679,7 @@ compositor_update(struct platform_memory *memory,
 				}
 			}
 			break;
-		case COMPOSITOR_MOTION:
+		case PLATFORM_EVENT_MOTION:
 			{
 				if (compositor->focused_surface) {
 					u32 time = get_time_msec();

@@ -19,7 +19,7 @@
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-x11.h>
 
-#include <waycraft/backend_x11.h>
+#include <waycraft/x11.h>
 
 static const char *x11_atom_names[X11_ATOM_COUNT] = {
 	[X11_NET_WM_NAME]      = "_NET_WM_NAME",
@@ -29,16 +29,16 @@ static const char *x11_atom_names[X11_ATOM_COUNT] = {
 	[X11_UTF8_STRING]      = "UTF8_STRING",
 };
 
-struct compositor_event_array {
-	struct compositor_event *at;
+struct platform_event_array {
+	struct platform_event *at;
 	u32 max_count;
 	u32 count;
 };
 
-static struct compositor_event *
-push_event(struct compositor_event_array *events, u32 type)
+static struct platform_event *
+push_event(struct platform_event_array *events, u32 type)
 {
-	struct compositor_event *result = 0;
+	struct platform_event *result = 0;
 
 	if (events->count < events->max_count) {
 		result = &events->at[events->count++];
@@ -200,13 +200,13 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 
 static void
 x11_window_update_modifiers(struct x11_window *window,
-	struct compositor_event_array *event_array)
+	struct platform_event_array *event_array)
 {
 }
 
 static void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
-	struct compositor_event_array *event_array)
+	struct platform_event_array *event_array)
 {
 	xcb_connection_t *connection = window->connection;
 	union x11_event x11_event;
@@ -240,7 +240,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
 
-				struct compositor_event *event = push_event(event_array, COMPOSITOR_KEY);
+				struct platform_event *event = push_event(event_array, PLATFORM_EVENT_KEY);
 				if (event) {
 					event->key.code = keycode - 8;
 					event->key.state = state;
@@ -253,7 +253,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_UP);
 
-				struct compositor_event *event = push_event(event_array, COMPOSITOR_KEY);
+				struct platform_event *event = push_event(event_array, PLATFORM_EVENT_KEY);
 				if (event) {
 					event->key.code = keycode - 8;
 					event->key.state = state;
@@ -271,7 +271,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 					input->mouse.dx = x - input->mouse.x;
 					input->mouse.dy = y - input->mouse.y;
 
-					struct compositor_event *event = push_event(event_array, COMPOSITOR_MOTION);
+					struct platform_event *event = push_event(event_array, PLATFORM_EVENT_MOTION);
 					if (event) {
 						event->motion.x = x;
 						event->motion.y = y;
@@ -291,7 +291,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 
 				u32 state = WL_POINTER_BUTTON_STATE_PRESSED;
 
-				struct compositor_event *event = push_event(event_array, COMPOSITOR_BUTTON);
+				struct platform_event *event = push_event(event_array, PLATFORM_EVENT_BUTTON);
 				if (event) {
 					event->button.code = wl_button[button];
 					event->button.state = state;
@@ -303,7 +303,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				u32 button = x11_event.button_release->detail;
 				u32 state = WL_POINTER_BUTTON_STATE_RELEASED;
 
-				struct compositor_event *event = push_event(event_array, COMPOSITOR_BUTTON);
+				struct platform_event *event = push_event(event_array, PLATFORM_EVENT_BUTTON);
 				if (event) {
 					event->button.code = wl_button[button];
 					event->button.state = state;
@@ -367,7 +367,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 	// NOTE: update the modifiers
 	struct xkb_state *state = window->xkb_state;
 
-	struct compositor_event *event = push_event(event_array, COMPOSITOR_MODIFIERS);
+	struct platform_event *event = push_event(event_array, PLATFORM_EVENT_MODIFIERS);
 	if (event) {
 		event->modifiers.depressed = xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
 		event->modifiers.latched = xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
@@ -517,7 +517,7 @@ x11_main(struct game_code game)
 		return 1;
 	}
 
-	struct compositor_event_array events = {0};
+	struct platform_event_array events = {0};
 	events.max_count = 1024;
 	events.at = calloc(events.max_count, sizeof(*events.at));
 

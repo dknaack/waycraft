@@ -57,6 +57,37 @@ struct game_input {
 	bool alt_down;
 };
 
+enum platform_event_type {
+	PLATFORM_EVENT_NONE,
+	PLATFORM_EVENT_BUTTON,
+	PLATFORM_EVENT_KEY,
+	PLATFORM_EVENT_MODIFIERS,
+	PLATFORM_EVENT_MOTION,
+};
+
+struct platform_event {
+	u32 type;
+
+	union {
+		struct {
+			i32 code;
+			i32 state;
+		} key, button;
+
+		struct {
+			u32 depressed;
+			u32 latched;
+			u32 locked;
+			u32 group;
+		} modifiers;
+
+		struct {
+			i32 x;
+			i32 y;
+		} motion;
+	};
+};
+
 struct platform_memory {
     void *data;
     usize size;
