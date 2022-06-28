@@ -3,7 +3,7 @@
 
 #include <waycraft/types.h>
 #include <waycraft/memory.h>
-#include <waycraft/backend.h>
+#include <waycraft/platform.h>
 #include <waycraft/compositor.h>
 #include <waycraft/gl.h>
 #include <waycraft/log.h>
@@ -17,7 +17,7 @@
 #include "waycraft/compositor.c"
 
 struct game_code {
-	struct backend_memory memory;
+	struct platform_memory memory;
 	char *path;
 	game_update_t *update;
 	ino_t ino;
@@ -46,7 +46,7 @@ game_load(struct game_code *game)
 	}
 }
 
-#include "waycraft/backend_x11.c"
+#include "waycraft/x11.c"
 
 int
 main(void)

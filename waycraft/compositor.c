@@ -503,7 +503,7 @@ xwayland_surface_destroy(struct wl_listener *listener, void *data)
 }
 
 static i32
-compositor_init(struct backend_memory *memory, struct egl *egl,
+compositor_init(struct platform_memory *memory, struct egl *egl,
 		struct game_window_manager *wm, i32 keymap, i32 keymap_size)
 {
 	struct compositor *compositor = memory->data;
@@ -578,7 +578,7 @@ error_display:
 }
 
 static void
-compositor_finish(struct backend_memory *memory)
+compositor_finish(struct platform_memory *memory)
 {
 	struct compositor *compositor = memory->data;
 
@@ -604,7 +604,7 @@ get_time_msec(void)
 }
 
 static struct game_window_manager *
-compositor_update(struct backend_memory *memory,
+compositor_update(struct platform_memory *memory,
 		struct compositor_event *event, u32 event_count)
 {
 	struct compositor *compositor = memory->data;

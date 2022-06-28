@@ -483,8 +483,8 @@ x11_main(struct game_code game)
 	struct game_window_manager window_manager = {0};
 	struct x11_window window = {0};
 	struct game_input input = {0};
-	struct backend_memory game_memory = {0};
-	struct backend_memory compositor_memory = {0};
+	struct platform_memory game_memory = {0};
+	struct platform_memory compositor_memory = {0};
 	struct egl egl = {0};
 
 	/* initialize the window */

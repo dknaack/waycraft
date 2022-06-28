@@ -28,9 +28,9 @@ struct x11_window {
 
 	u32 width;
 	u32 height;
-	u32 is_open;
-	u32 is_focused;
-	u32 lock_cursor;
+	bool is_open;
+	bool is_focused;
+	bool lock_cursor;
 
 	i32 keymap;
 	i32 keymap_size;

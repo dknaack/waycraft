@@ -57,18 +57,15 @@ struct game_input {
 	bool alt_down;
 };
 
-struct backend_memory {
+struct platform_memory {
     void *data;
     usize size;
 
-    u32 is_initialized;
+    bool is_initialized;
 	struct opengl_api *gl;
 };
 
-typedef void game_update_t(struct backend_memory *memory, struct game_input *input,
-	struct game_window_manager *window_manager);
-
-void game_update(struct backend_memory *memory, struct game_input *input,
+typedef void game_update_t(struct platform_memory *memory, struct game_input *input,
 	struct game_window_manager *window_manager);
 
 static inline struct game_window *

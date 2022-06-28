@@ -160,7 +160,7 @@ player_init(struct player *player, struct camera *camera)
 }
 
 static void
-game_init(struct backend_memory *memory)
+game_init(struct platform_memory *memory)
 {
 	struct game_state *game = memory->data;
 	struct memory_arena *arena = &game->arena;
@@ -554,7 +554,7 @@ window_find(struct game_window *window, u32 window_count,
 }
 
 void
-game_update(struct backend_memory *memory, struct game_input *input,
+game_update(struct platform_memory *memory, struct game_input *input,
 		struct game_window_manager *wm)
 {
 	struct game_state *game = memory->data;
@@ -582,7 +582,7 @@ game_update(struct backend_memory *memory, struct game_input *input,
 	u32 max_quad_count = 1024;
 	struct render_command_buffer cmd_buffer = {0};
 	render_command_buffer_init(&cmd_buffer, &game->frame_arena,
-		MB(2), 4 * max_quad_count, 6 * max_quad_count);
+		MB(8), 4 * max_quad_count, 6 * max_quad_count);
 	cmd_buffer.mode = RENDER_3D;
 	cmd_buffer.transform.view = view;
 	cmd_buffer.transform.projection = projection;

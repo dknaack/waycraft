@@ -1,6 +1,6 @@
 #include <waycraft/types.h>
 #include <waycraft/math.h>
-#include <waycraft/backend.h>
+#include <waycraft/platform.h>
 #include <waycraft/block.h>
 #include <waycraft/debug.h>
 #include <waycraft/gl.h>
