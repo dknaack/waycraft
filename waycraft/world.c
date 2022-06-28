@@ -262,7 +262,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	u16 *blocks = chunk->blocks;
 
 	if (chunk->state == CHUNK_UNLOADED) {
-		f32 noise_size = 0.05f;
+		f32 noise_size = 0.03f;
 		f32 tree_noise_size = 0.8f;
 
 		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
@@ -488,8 +488,8 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	struct box player_bounds = {0};
 	v3 target = add(player_pos, mulf(player_dir, 3 * BLOCK_COUNT_X));
 	v3 world_size = V3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
-	player_bounds.min = sub(target, mulf(world_size, 0.5 * BLOCK_COUNT_X));
-	player_bounds.max = add(target, mulf(world_size, 0.5 * BLOCK_COUNT_X));
+	player_bounds.min = sub(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
+	player_bounds.max = add(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
 
 	// NOTE: unload any chunks that are outside the player bounds
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
@@ -507,7 +507,10 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 
 #define MAX_LOAD_PER_FRAME 16
 	struct chunk *chunks_to_load[MAX_LOAD_PER_FRAME] = {0};
-	f32 distances[MAX_LOAD_PER_FRAME] = {0};
+	f32 distances[MAX_LOAD_PER_FRAME];
+	for (u32 i = 0; i < MAX_LOAD_PER_FRAME; i++) {
+		distances[i] = F32_INF;
+	}
 
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		v3i chunk_offset = chunk_index_unpack(i);
@@ -532,30 +535,29 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		u32 chunk_index = chunk_index_pack(chunk_rel_coord);
 		struct chunk *chunk = &world->chunks[chunk_index];
 
-		if (!v3i_equals(chunk->coord, chunk_coord)) {
-			chunk->state = CHUNK_UNLOADED;
-			chunk->coord = chunk_coord;
-		}
-
 		if (chunk->state != CHUNK_READY) {
 			chunk->coord = chunk_coord;
+			v3 chunk_pos = chunk_get_pos(chunk);
+			v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X), 0.5f);
+			chunk_pos = add(chunk_pos, chunk_half_dim);
 
+			// NOTE: find the farthest chunk and if it the current chunk is
+			// closer load the current chunk instead
+			f32 distance = length_sq(sub(target, chunk_pos));
+			f32 max_distance = distance;
+			u32 farthest_chunk_index = LENGTH(chunks_to_load);
 			for (u32 i = 0; i < LENGTH(chunks_to_load); i++) {
-				v3 chunk_pos = chunk_get_pos(chunk);
-				v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X), 0.5f);
-				chunk_pos = add(chunk_pos, chunk_half_dim);
-
-				f32 distance = length_sq(sub(target, chunk_pos));
-
-				if (!chunks_to_load[i] || distance < distances[i]) {
-					chunks_to_load[i] = chunk;
-					distances[i] = distance;
-					break;
+				if (!chunks_to_load[i] || max_distance < distances[i]) {
+					max_distance = distances[i];
+					farthest_chunk_index = i;
 				}
 			}
-		}
 
-		assert(v3i_equals(chunk->coord, chunk_coord));
+			if (farthest_chunk_index < LENGTH(chunks_to_load)) {
+				chunks_to_load[farthest_chunk_index] = chunk;
+				distances[farthest_chunk_index] = distance;
+			}
+		}
 	}
 
 	for (u32 i = 0; chunks_to_load[i] && i < 8; i++) {

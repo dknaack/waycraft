@@ -150,7 +150,7 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 	gl.BindVertexArray(0);
 
 	// NOTE: allocate memory for the meshes
-	u32 max_mesh_count = 32 * 16 * 16;
+	u32 max_mesh_count = 32 * 32 * 32;
 	renderer->meshes = arena_alloc(arena, max_mesh_count, struct mesh);
 	renderer->max_mesh_count = max_mesh_count;
 	// NOTE: we ignore the first mesh
