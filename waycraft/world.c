@@ -55,13 +55,7 @@ chunk_get_pos(struct chunk *chunk)
 static inline f32
 normalize_height(f32 value)
 {
-	f32 x = value + 0.8;
-
-	if (x < 1.0) {
-		x *= MIN(MAX(x, 0.6), 1.0);
-	}
-
-	return x;
+	return 2.f * value;
 }
 
 static u32
@@ -268,36 +262,59 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	u16 *blocks = chunk->blocks;
 
 	if (chunk->state == CHUNK_UNLOADED) {
-		f32 noise_size = 0.1f;
+		f32 noise_size = 0.05f;
+		f32 tree_noise_size = 0.8f;
 
-		memset(blocks, 0, BLOCK_COUNT * sizeof(*blocks));
 		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
 			for (i32 x = 0; x < BLOCK_COUNT_X; x++) {
-				f32 nx = noise_size * (chunk_pos.x + x + 0.5);
-				f32 nz = noise_size * (chunk_pos.z + z + 0.5);
-				i32 height = normalize_height(noise_layered_2d(nx, nz)) * BLOCK_COUNT_X - chunk_pos.y;
+				f32 world_x = chunk_pos.x + x;
+				f32 world_z = chunk_pos.z + z;
 
-				i32 ymax = MAX(0, MIN(BLOCK_COUNT_X, height));
-				for (i32 y = 0; y < ymax; y++) {
-					u32 i = block_index(x, y, z);
+				f32 nx = noise_size * world_x;
+				f32 nz = noise_size * world_z;
+				f32 value = perlin_noise_layered(nx, 0, nz, 6, 0.5f) - 0.3;
+				i32 height = 8.f * value * value * BLOCK_COUNT_X - chunk_pos.y - 1;
 
-					if (y + 1 == height && chunk_pos.y + y > 0) {
-						blocks[i] = BLOCK_GRASS;
-					} else if (y + 2 >= height && chunk_pos.y + ymax <= 2 &&
-							chunk_pos.y + ymax >= -2) {
-						blocks[i] = BLOCK_SAND;
-					} else if (y + 2 >= height) {
-						blocks[i] = BLOCK_DIRT;
-					} else {
-						blocks[i] = BLOCK_STONE;
-					}
+				f32 tree_height = 20.f * perlin_noise(1.0f * world_x, 0, 1.0f * world_z);
+
+				i32 stone_max = CLAMP(height - 3, 0, BLOCK_COUNT_X);
+				i32 dirt_max = CLAMP(height - 1, 0, BLOCK_COUNT_X);
+				i32 grass_max = CLAMP(height, 0, BLOCK_COUNT_X);
+				i32 tree_max = CLAMP(height + tree_height, 0, BLOCK_COUNT_X);
+
+				i32 y = 0;
+				while (y < stone_max) {
+					u32 i = block_index(x, y++, z);
+					blocks[i] = BLOCK_STONE;
 				}
 
+				while (y < dirt_max) {
+					f32 world_y = chunk_pos.y + y;
+					u32 i = block_index(x, y++, z);
+					blocks[i] = world_y < 2 ? BLOCK_SAND : BLOCK_DIRT;
+				}
+
+				while (y < grass_max) {
+					f32 world_y = chunk_pos.y + y;
+					u32 i = block_index(x, y++, z);
+					blocks[i] = world_y < 2 ? BLOCK_SAND : BLOCK_GRASS;
+				}
+
+#if 0
+				while (height + chunk_pos.y >= 3 && y < tree_max) {
+					u32 i = block_index(x, y++, z);
+					blocks[i] = BLOCK_OAK_LOG;
+				}
+#endif
+
+				enum block_type filler = BLOCK_AIR;
 				if (chunk_pos.y < 0) {
-					for (i32 y = ymax; y < BLOCK_COUNT_X; y++) {
-						u32 i = (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
-						blocks[i] = BLOCK_WATER;
-					}
+					filler = BLOCK_WATER;
+				}
+
+				while (y < BLOCK_COUNT_X) {
+					u32 i = block_index(x, y++, z);
+					blocks[i] = filler;
 				}
 			}
 		}
