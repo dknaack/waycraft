@@ -508,7 +508,7 @@ compositor_init(struct platform_memory *memory, struct egl *egl,
 {
 	struct compositor *compositor = memory->data;
 	struct memory_arena *arena = &compositor->arena;
-	struct wl_display *display = 0;
+	struct wl_display *display = NULL;
 
 	if (!(display = wl_display_create())) {
 		log_err("Failed to create wayland display");
@@ -526,8 +526,8 @@ compositor_init(struct platform_memory *memory, struct egl *egl,
 	compositor->display = display;
 	compositor->egl_display = egl->display;
 	compositor->surfaces = arena_alloc(arena, MAX_SURFACE_COUNT, struct surface);
-	compositor->window_manager.windows = arena_alloc(arena, MAX_WINDOW_COUNT,
-		struct game_window);
+	compositor->window_manager.windows = arena_alloc(
+		arena, MAX_WINDOW_COUNT, struct game_window);
 	compositor->surface_count = 1;
 
 	wl_list_init(&compositor->keyboards);
@@ -622,8 +622,6 @@ compositor_update(struct platform_memory *memory,
 				i32 button = event->button.code;
 				i32 state = event->button.state;
 				if (compositor->focused_surface) {
-					log_info("\n-------------------------------------\nsending button");
-
 					u32 time = get_time_msec();
 					u32 serial = wl_display_next_serial(compositor->display);
 
@@ -694,6 +692,8 @@ compositor_update(struct platform_memory *memory,
 				}
 			}
 			break;
+		default:
+			assert(!"Invalid event received");
 		}
 
 		event++;
