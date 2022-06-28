@@ -604,7 +604,8 @@ get_time_msec(void)
 }
 
 static struct game_window_manager *
-compositor_update(struct backend_memory *memory)
+compositor_update(struct backend_memory *memory,
+		struct compositor_event *event, u32 event_count)
 {
 	struct compositor *compositor = memory->data;
 	struct game_window_manager *wm = &compositor->window_manager;
@@ -613,6 +614,90 @@ compositor_update(struct backend_memory *memory)
 
 	wl_event_loop_dispatch(event_loop, 0);
 	wl_display_flush_clients(display);
+
+	while (event_count-- > 0) {
+		switch (event->type) {
+		case COMPOSITOR_BUTTON:
+			{
+				i32 button = event->button.code;
+				i32 state = event->button.state;
+				if (compositor->focused_surface) {
+					log_info("\n-------------------------------------\nsending button");
+
+					u32 time = get_time_msec();
+					u32 serial = wl_display_next_serial(compositor->display);
+
+					struct wl_resource *pointer;
+					wl_resource_for_each(pointer, &compositor->pointers) {
+						wl_pointer_send_button(pointer, serial, time, button, state);
+					}
+				}
+			}
+			break;
+		case COMPOSITOR_KEY:
+			{
+				i32 key = event->key.code;
+				i32 state = event->key.state;
+
+				if (compositor->focused_surface) {
+					u32 time = get_time_msec();
+					u32 serial = wl_display_next_serial(compositor->display);
+
+					struct wl_resource *keyboard;
+					wl_resource_for_each(keyboard, &compositor->keyboards) {
+						wl_keyboard_send_key(keyboard, serial, time, key, state);
+					}
+				}
+			}
+			break;
+		case COMPOSITOR_MODIFIERS:
+			{
+				u32 depressed = event->modifiers.depressed;
+				u32 latched = event->modifiers.latched;
+				u32 locked = event->modifiers.locked;
+				u32 group = event->modifiers.group;
+
+				if (depressed != compositor->modifiers.depressed ||
+						latched != compositor->modifiers.latched ||
+						locked != compositor->modifiers.locked ||
+						group != compositor->modifiers.group) {
+					compositor->modifiers.depressed = depressed;
+					compositor->modifiers.latched = latched;
+					compositor->modifiers.locked = locked;
+					compositor->modifiers.group = group;
+
+					u32 serial = 0;
+
+					// TODO: only send event to the focused window
+					if (compositor->focused_surface) {
+						struct wl_resource *keyboard;
+						wl_resource_for_each(keyboard, &compositor->keyboards) {
+							wl_keyboard_send_modifiers(keyboard, serial, depressed, latched,
+								locked, group);
+						}
+					}
+				}
+			}
+			break;
+		case COMPOSITOR_MOTION:
+			{
+				if (compositor->focused_surface) {
+					u32 time = get_time_msec();
+
+					struct wl_resource *pointer;
+					wl_resource_for_each(pointer, &compositor->pointers) {
+						v2 cursor_pos = compositor->window_manager.cursor.position;
+						wl_fixed_t surface_x = wl_fixed_from_double(cursor_pos.x);
+						wl_fixed_t surface_y = wl_fixed_from_double(cursor_pos.y);
+						wl_pointer_send_motion(pointer, time, surface_x, surface_y);
+					}
+				}
+			}
+			break;
+		}
+
+		event++;
+	}
 
 	u32 focused_surface = 0;
 	u32 surface_count = compositor->surface_count;
@@ -707,86 +792,4 @@ compositor_update(struct backend_memory *memory)
 	}
 
 	return &compositor->window_manager;
-}
-
-static void
-compositor_send_key(struct backend_memory *memory, i32 key, i32 state)
-{
-	struct compositor *compositor = memory->data;
-
-	if (compositor->focused_surface) {
-		u32 time = get_time_msec();
-		u32 serial = wl_display_next_serial(compositor->display);
-
-		struct wl_resource *keyboard;
-		wl_resource_for_each(keyboard, &compositor->keyboards) {
-			wl_keyboard_send_key(keyboard, serial, time, key, state);
-		}
-	}
-}
-
-static void
-compositor_send_modifiers(struct backend_memory *memory, u32 depressed,
-		u32 latched, u32 locked, u32 group)
-{
-	struct compositor *compositor = memory->data;
-
-	if (depressed == compositor->modifiers.depressed &&
-			latched == compositor->modifiers.latched &&
-			locked == compositor->modifiers.locked &&
-			group == compositor->modifiers.group) {
-		return;
-	}
-
-	compositor->modifiers.depressed = depressed;
-	compositor->modifiers.latched = latched;
-	compositor->modifiers.locked = locked;
-	compositor->modifiers.group = group;
-
-	u32 serial = 0;
-
-	// TODO: only send event to the focused window
-	if (compositor->focused_surface) {
-		struct wl_resource *keyboard;
-		wl_resource_for_each(keyboard, &compositor->keyboards) {
-			wl_keyboard_send_modifiers(keyboard, serial, depressed, latched,
-				locked, group);
-		}
-	}
-}
-
-static void
-compositor_send_button(struct backend_memory *memory, i32 button, i32 state)
-{
-	struct compositor *compositor = memory->data;
-
-	if (compositor->focused_surface) {
-		log_info("\n-------------------------------------\nsending button");
-
-		u32 time = get_time_msec();
-		u32 serial = wl_display_next_serial(compositor->display);
-
-		struct wl_resource *pointer;
-		wl_resource_for_each(pointer, &compositor->pointers) {
-			wl_pointer_send_button(pointer, serial, time, button, state);
-		}
-	}
-}
-
-static void
-compositor_send_motion(struct backend_memory *memory, i32 x, i32 y)
-{
-	struct compositor *compositor = memory->data;
-
-	if (compositor->focused_surface) {
-		u32 time = get_time_msec();
-
-		struct wl_resource *pointer;
-		wl_resource_for_each(pointer, &compositor->pointers) {
-			v2 cursor_pos = compositor->window_manager.cursor.position;
-			wl_fixed_t surface_x = wl_fixed_from_double(cursor_pos.x);
-			wl_fixed_t surface_y = wl_fixed_from_double(cursor_pos.y);
-			wl_pointer_send_motion(pointer, time, surface_x, surface_y);
-		}
-	}
 }

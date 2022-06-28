@@ -29,6 +29,24 @@ static const char *x11_atom_names[X11_ATOM_COUNT] = {
 	[X11_UTF8_STRING]      = "UTF8_STRING",
 };
 
+struct compositor_event_array {
+	struct compositor_event *at;
+	u32 max_count;
+	u32 count;
+};
+
+static struct compositor_event *
+push_event(struct compositor_event_array *events, u32 type)
+{
+	struct compositor_event *result = 0;
+
+	if (events->count < events->max_count) {
+		result = &events->at[events->count++];
+	}
+
+	return result;
+}
+
 static void
 randname(char *buf)
 {
@@ -182,24 +200,16 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 
 static void
 x11_window_update_modifiers(struct x11_window *window,
-	struct backend_memory *compositor)
+	struct compositor_event_array *event_array)
 {
-	struct xkb_state *state = window->xkb_state;
-
-	u32 depressed = xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
-	u32 latched = xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
-	u32 locked = xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
-	u32 group = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
-
-	compositor_send_modifiers(compositor, depressed, latched, locked, group);
 }
 
 static void
 x11_window_poll_events(struct x11_window *window, struct game_input *input,
-	struct backend_memory *compositor)
+	struct compositor_event_array *event_array)
 {
 	xcb_connection_t *connection = window->connection;
-	union x11_event event;
+	union x11_event x11_event;
 
 	struct xkb_state *xkb_state = window->xkb_state;
 
@@ -218,32 +228,42 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 
 	xcb_atom_t wm_delete_window = window->atoms[X11_WM_DELETE_WINDOW];
 
-	while ((event.generic = xcb_poll_for_event(connection))) {
-		switch (event.generic->response_type & ~0x80) {
+	while ((x11_event.generic = xcb_poll_for_event(connection))) {
+		switch (x11_event.generic->response_type & ~0x80) {
 		case XCB_CONFIGURE_NOTIFY:
-			input->width = window->width = event.configure_notify->width;
-			input->height = window->height = event.configure_notify->height;
+			input->width = window->width = x11_event.configure_notify->width;
+			input->height = window->height = x11_event.configure_notify->height;
 			break;
 		case XCB_KEY_PRESS:
 			{
-				u32 keycode = event.key_press->detail;
+				u32 keycode = x11_event.key_press->detail;
 				u32 state = WL_KEYBOARD_KEY_STATE_PRESSED;
-				compositor_send_key(compositor, keycode - 8, state);
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_DOWN);
+
+				struct compositor_event *event = push_event(event_array, COMPOSITOR_KEY);
+				if (event) {
+					event->key.code = keycode - 8;
+					event->key.state = state;
+				}
 			}
 			break;
 		case XCB_KEY_RELEASE:
 			{
-				u32 keycode = event.key_press->detail;
+				u32 keycode = x11_event.key_press->detail;
 				u32 state = WL_KEYBOARD_KEY_STATE_RELEASED;
-				compositor_send_key(compositor, keycode - 8, state);
 				xkb_state_update_key(xkb_state, keycode, XKB_KEY_UP);
+
+				struct compositor_event *event = push_event(event_array, COMPOSITOR_KEY);
+				if (event) {
+					event->key.code = keycode - 8;
+					event->key.state = state;
+				}
 			}
 			break;
 		case XCB_MOTION_NOTIFY:
 			{
-				i32 x = event.motion_notify->event_x;
-				i32 y = event.motion_notify->event_y;
+				i32 x = x11_event.motion_notify->event_x;
+				i32 y = x11_event.motion_notify->event_y;
 
 				i32 mouse_was_warped = (x == window->width / 2 &&
 					y == window->height / 2);
@@ -251,7 +271,11 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 					input->mouse.dx = x - input->mouse.x;
 					input->mouse.dy = y - input->mouse.y;
 
-					compositor_send_motion(compositor, x, y);
+					struct compositor_event *event = push_event(event_array, COMPOSITOR_MOTION);
+					if (event) {
+						event->motion.x = x;
+						event->motion.y = y;
+					}
 				}
 
 				input->mouse.x = x;
@@ -260,24 +284,34 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			break;
 		case XCB_BUTTON_PRESS:
 			{
-				u32 button = event.button_press->detail;
+				u32 button = x11_event.button_press->detail;
 				if (button < 8) {
 					input->mouse.buttons[button] |= 1;
 				}
 
 				u32 state = WL_POINTER_BUTTON_STATE_PRESSED;
-				compositor_send_button(compositor, wl_button[button], state);
+
+				struct compositor_event *event = push_event(event_array, COMPOSITOR_BUTTON);
+				if (event) {
+					event->button.code = wl_button[button];
+					event->button.state = state;
+				}
 			}
 			break;
 		case XCB_BUTTON_RELEASE:
 			{
-				u32 button = event.button_release->detail;
+				u32 button = x11_event.button_release->detail;
 				u32 state = WL_POINTER_BUTTON_STATE_RELEASED;
-				compositor_send_button(compositor, wl_button[button], state);
+
+				struct compositor_event *event = push_event(event_array, COMPOSITOR_BUTTON);
+				if (event) {
+					event->button.code = wl_button[button];
+					event->button.state = state;
+				}
 			}
 			break;
 		case XCB_CLIENT_MESSAGE:
-			if (event.client_message->data.data32[0] == wm_delete_window) {
+			if (x11_event.client_message->data.data32[0] == wm_delete_window) {
 				window->is_open = 0;
 			}
 			break;
@@ -291,7 +325,7 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			break;
 		}
 
-		free(event.generic);
+		free(x11_event.generic);
 	}
 
 	if (window->is_focused) {
@@ -330,8 +364,18 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 		input->alt_down = xkb_state_mod_name_is_active(xkb_state, XKB_MOD_NAME_ALT, state);
 	}
 
-	x11_window_update_modifiers(window, compositor);
+	// NOTE: update the modifiers
+	struct xkb_state *state = window->xkb_state;
 
+	struct compositor_event *event = push_event(event_array, COMPOSITOR_MODIFIERS);
+	if (event) {
+		event->modifiers.depressed = xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
+		event->modifiers.latched = xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
+		event->modifiers.locked = xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
+		event->modifiers.group = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+	}
+
+	// NOTE: lock the cursor
 	if (window->is_focused) {
 		xcb_warp_pointer(connection, 0, window->window, 0, 0, 0, 0,
 			window->width / 2, window->height / 2);
@@ -461,6 +505,7 @@ x11_main(struct game_code game)
 
 	game.memory.gl = &gl;
 
+	// NOTE: initialize the compositor
 	compositor_memory.size = MB(64);
 	compositor_memory.data = calloc(compositor_memory.size, 1);
 
@@ -472,12 +517,17 @@ x11_main(struct game_code game)
 		return 1;
 	}
 
-	f64 target_frame_time = 1. / 60.;
+	struct compositor_event_array events = {0};
+	events.max_count = 1024;
+	events.at = calloc(events.max_count, sizeof(*events.at));
+
+	f64 target_frame_time = 1.0f / 60.0f;
 	while (window.is_open) {
 		f64 start_time = get_time_sec();
 
-		x11_window_poll_events(&window, &input, &compositor_memory);
-		struct game_window_manager *wm = compositor_update(&compositor_memory);
+		events.count = 0;
+		x11_window_poll_events(&window, &input, &events);
+		struct game_window_manager *wm = compositor_update(&compositor_memory, events.at, events.count);
 
 		gl.Viewport(0, 0, window.width, window.height);
 		game_load(&game);
