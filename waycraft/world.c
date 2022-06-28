@@ -547,7 +547,12 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 			f32 max_distance = distance;
 			u32 farthest_chunk_index = LENGTH(chunks_to_load);
 			for (u32 i = 0; i < LENGTH(chunks_to_load); i++) {
-				if (!chunks_to_load[i] || max_distance < distances[i]) {
+				if (!chunks_to_load[i]) {
+					farthest_chunk_index = i;
+					break;
+				}
+
+				if (max_distance < distances[i]) {
 					max_distance = distances[i];
 					farthest_chunk_index = i;
 				}
@@ -560,7 +565,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		}
 	}
 
-	for (u32 i = 0; chunks_to_load[i] && i < 8; i++) {
+	for (u32 i = 0; chunks_to_load[i] && i < LENGTH(chunks_to_load); i++) {
 		assert(chunks_to_load[i]->state != CHUNK_READY);
 
 		tmp_buffer.push_buffer_size = 0;
