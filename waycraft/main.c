@@ -151,15 +151,25 @@ main(void)
 		pthread_detach(threads[i]);
 	}
 
+	struct opengl_api gl = {0};
 	struct platform_api platform = {0};
 	platform.add_task = add_task;
 	platform.queue = &queue;
 
+	// NOTE: initialize the game
 	struct game_code game = {0};
 	game.path = "./build/libgame.so";
 	game.memory.size = MB(256);
 	game.memory.data = calloc(game.memory.size, 1);
+	game.memory.gl = &gl;
 	game.memory.platform = &platform;
 
-    return x11_main(game, &platform);
+	// NOTE: initialize the compositor
+	struct platform_memory compositor_memory = {0};
+	compositor_memory.size = MB(64);
+	compositor_memory.data = calloc(compositor_memory.size, 1);
+	compositor_memory.gl = &gl;
+	compositor_memory.platform = &platform;
+
+    return x11_main(&game, &compositor_memory, &gl);
 }

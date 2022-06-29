@@ -473,12 +473,11 @@ get_time_sec(void)
 }
 
 int
-x11_main(struct game_code game, struct platform_api *platform)
+x11_main(struct game_code *game, struct platform_memory *compositor_memory,
+		struct opengl_api *gl)
 {
 	struct x11_window window = {0};
 	struct game_input input = {0};
-	struct platform_memory game_memory = {0};
-	struct platform_memory compositor_memory = {0};
 	struct egl egl = {0};
 
 	/* initialize the window */
@@ -493,22 +492,13 @@ x11_main(struct game_code game, struct platform_api *platform)
 		return 1;
 	}
 
-#define X(name) gl.name = (gl##name##_t *)eglGetProcAddress("gl"#name);
+#define X(name) gl->name = (gl##name##_t *)eglGetProcAddress("gl"#name);
 	OPENGL_MAP_FUNCTIONS();
 #undef X
 
-	game.memory.gl = &gl;
-	game.memory.platform = platform;
-
-	// NOTE: initialize the compositor
-	compositor_memory.size = MB(64);
-	compositor_memory.data = calloc(compositor_memory.size, 1);
-	compositor_memory.gl = &gl;
-	compositor_memory.platform = platform;
-
 	i32 keymap = window.keymap;
 	i32 keymap_size = window.keymap_size;
-	if (compositor_init(&compositor_memory, egl.display, keymap, keymap_size) != 0) {
+	if (compositor_init(compositor_memory, egl.display, keymap, keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
 	}
@@ -523,12 +513,11 @@ x11_main(struct game_code game, struct platform_api *platform)
 
 		events.count = 0;
 		x11_window_poll_events(&window, &input, &events);
-		struct game_window_manager *wm = compositor_update(&compositor_memory, events.at, events.count);
+		struct game_window_manager *wm = compositor_update(compositor_memory, events.at, events.count);
 
-		gl.Viewport(0, 0, window.width, window.height);
-		game_load(&game);
-		if (game.update) {
-			game.update(&game.memory, &input, wm);
+		game_load(game);
+		if (game->update) {
+			game->update(&game->memory, &input, wm);
 		}
 
 		eglSwapBuffers(egl.display, egl.surface);
@@ -545,9 +534,9 @@ x11_main(struct game_code game, struct platform_api *platform)
 		}
 	}
 
-	compositor_finish(&compositor_memory);
-	free(compositor_memory.data);
-	free(game_memory.data);
+	compositor_finish(compositor_memory);
+	free(compositor_memory->data);
+	free(game->memory.data);
 	egl_finish(&egl);
 	x11_window_finish(&window);
 	return 0;
