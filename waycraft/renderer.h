@@ -39,6 +39,7 @@ struct render_transform {
 	m4x4 view;
 	m4x4 projection;
 	v3 camera_pos;
+	v2 viewport;
 };
 
 struct render_command_buffer {

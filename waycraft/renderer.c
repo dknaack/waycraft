@@ -254,7 +254,9 @@ renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buf
 	m4x4 view = cmd_buffer->transform.view;
 	m4x4 projection = cmd_buffer->transform.projection;
 	v3 camera_pos = cmd_buffer->transform.camera_pos;
+	v2 viewport = cmd_buffer->transform.viewport;
 
+	gl.Viewport(0, 0, viewport.width, viewport.height);
 	gl.UseProgram(renderer->shader.program);
 
 	if (cmd_buffer->mode == RENDER_3D) {
