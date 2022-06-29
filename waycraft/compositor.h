@@ -6,20 +6,11 @@
 
 #include <waycraft/xwayland.h>
 
-#define WL_CALLBACK_VERSION 1
 #define WL_COMPOSITOR_VERSION 5
 #define WL_DATA_DEVICE_MANAGER_VERSION 3
-#define WL_DATA_SOURCE_VERSION 3
-#define WL_KEYBOARD_VERSION 7
 #define WL_OUTPUT_VERSION 4
-#define WL_POINTER_VERSION 7
-#define WL_REGION_VERSION 1
 #define WL_SEAT_VERSION 7
 #define WL_SUBCOMPOSITOR_VERSION 1
-#define WL_SUBSURFACE_VERSION 1
-#define WL_SURFACE_VERSION 5
-#define XDG_SURFACE_VERSION 4
-#define XDG_TOPLEVEL_VERSION 4
 #define XDG_WM_BASE_VERSION 4
 
 #define MAX_SURFACE_COUNT 256
@@ -35,7 +26,8 @@ struct egl {
 
 enum surface_role {
 	SURFACE_ROLE_NONE,
-	SURFACE_ROLE_TOPLEVEL,
+	SURFACE_ROLE_XDG_TOPLEVEL,
+	SURFACE_ROLE_XDG_POPUP,
 	SURFACE_ROLE_SUBSURFACE,
 	SURFACE_ROLE_XWAYLAND,
 	SURFACE_ROLE_CURSOR,
@@ -44,29 +36,35 @@ enum surface_role {
 
 enum surface_flags {
 	SURFACE_NEW_BUFFER = 1 << 0,
-	SURFACE_NEW_ROLE   = 1 << 1,
-	SURFACE_NEW_FRAME  = 1 << 2,
+	SURFACE_NEW_FRAME  = 1 << 1,
 };
 
 struct surface_state {
 	u32 flags;
-	u32 role;
-
 	struct wl_resource *buffer;
 	struct wl_resource *frame_callback;
 };
 
 struct surface {
-	u32 texture;
-
+	u32 role;
 	struct wl_resource *resource;
+
 	union {
 		struct {
 			struct wl_resource *surface;
 			struct wl_resource *toplevel;
-		} xdg;
+		} xdg_toplevel;
 
-		struct wl_resource *parent_surface;
+		struct {
+			struct wl_resource *surface;
+			struct wl_resource *parent;
+			struct wl_resource *positioner;
+		} xdg_popup;
+
+		struct {
+			struct wl_resource *parent;
+		} subsurface;
+
 		struct xwayland_surface xwayland_surface;
 
 		struct {
@@ -75,11 +73,11 @@ struct surface {
 		} cursor;
 	};
 
+	u32 texture;
 	u32 width;
 	u32 height;
 
 	struct game_window *window;
-	struct compositor *compositor;
 	struct surface_state pending;
 	struct surface_state current;
 };
@@ -116,3 +114,6 @@ struct compositor {
 	i32 keymap;
 	i32 keymap_size;
 };
+
+static bool surface_set_role(struct surface *surface, u32 role,
+	struct wl_resource *resource, u32 error);

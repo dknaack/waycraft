@@ -39,18 +39,19 @@ xwayland_assign_role(struct wl_resource *resource, xcb_window_t xcb_window, xcb_
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
-	surface->pending.flags |= SURFACE_NEW_ROLE;
-	surface->pending.role = SURFACE_ROLE_XWAYLAND;
-	surface->xwayland_surface.window = xcb_window;
+	surface->role = SURFACE_ROLE_XWAYLAND;
+	if (surface_set_role(surface, SURFACE_ROLE_XWAYLAND, NULL, 0)) {
+		surface->xwayland_surface.window = xcb_window;
 
-	u32 mask = XCB_CW_EVENT_MASK;
-	u32 values[1];
-	values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE;
-	xcb_change_window_attributes(connection, xcb_window, mask, values);
+		u32 mask = XCB_CW_EVENT_MASK;
+		u32 values[1];
+		values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE;
+		xcb_change_window_attributes(connection, xcb_window, mask, values);
 
-	mask = XCB_CONFIG_WINDOW_BORDER_WIDTH;
-	values[0] = 0;
-	xcb_configure_window(connection, xcb_window, mask, values);
+		mask = XCB_CONFIG_WINDOW_BORDER_WIDTH;
+		values[0] = 0;
+		xcb_configure_window(connection, xcb_window, mask, values);
+	}
 }
 
 static void
@@ -246,6 +247,30 @@ xwm_focus(struct xwm *xwm, struct xwayland_surface *surface)
 	xcb_connection_t *connection = xwm->connection;
 	xcb_window_t window = surface->window;
 	assert(window != XCB_WINDOW_NONE);
+
+	log_info("focusing window %d", window);
+	{
+		u32 mask = XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT;
+		u32 values[2];
+		values[0] = 300;
+		values[1] = 300;
+		xcb_configure_window(connection, window, mask, values);
+	}
+
+	{
+		u32 mask = XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y;
+		u32 values[2];
+		values[0] = 0;
+		values[1] = 0;
+		xcb_configure_window(connection, window, mask, values);
+	}
+
+	{
+		u32 mask = XCB_CONFIG_WINDOW_BORDER_WIDTH;
+		u32 values[1];
+		values[0] = 0;
+		xcb_configure_window(connection, window, mask, values);
+	}
 
     uint32_t values[] = { XCB_STACK_MODE_ABOVE };
     xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, values);
@@ -443,7 +468,10 @@ xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
 		*arg++ = wm;
 		*arg++ = 0;
 
-		signal(SIGUSR1, SIG_IGN);
+		struct sigaction sa = {0};
+		sa.sa_handler = SIG_IGN;
+		sigemptyset(&sa.sa_mask);
+		sigaction(SIGUSR1, &sa, NULL);
 		execvp("Xwayland", argv);
 		exit(EXIT_FAILURE);
 	}
@@ -456,7 +484,7 @@ xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
 	return 0;
 }
 
-void
+static void
 xwayland_finish(struct xwayland *xwayland)
 {
 	wl_client_destroy(xwayland->xwm.client);

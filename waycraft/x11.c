@@ -475,7 +475,6 @@ get_time_sec(void)
 int
 x11_main(struct game_code game, struct platform_api *platform)
 {
-	struct game_window_manager window_manager = {0};
 	struct x11_window window = {0};
 	struct game_input input = {0};
 	struct platform_memory game_memory = {0};
@@ -509,8 +508,7 @@ x11_main(struct game_code game, struct platform_api *platform)
 
 	i32 keymap = window.keymap;
 	i32 keymap_size = window.keymap_size;
-	if (compositor_init(&compositor_memory, &egl, &window_manager, keymap,
-			keymap_size) != 0) {
+	if (compositor_init(&compositor_memory, egl.display, keymap, keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
 	}
