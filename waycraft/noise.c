@@ -129,3 +129,36 @@ noise_layered_2d(f32 x, f32 y)
 {
 	return perlin_noise_layered(x, y, 0.0f, 4, 0.5f);
 }
+
+static u32
+xorshift32(u32 *seed)
+{
+	u32 x = *seed;
+
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+
+	return *seed = x;
+}
+
+static f32
+f32_random(u32 *seed)
+{
+	f32 result = ldexp(xorshift32(seed), -32);
+
+	return result;
+}
+
+static u32
+djb2(void *data, usize size)
+{
+	char *at = data;
+	u32 hash = 5381;
+
+	while (size-- > 0) {
+		hash += (hash << 5) + *at++;
+	}
+
+	return hash;
+}

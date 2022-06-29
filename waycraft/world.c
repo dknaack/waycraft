@@ -262,9 +262,15 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	u16 *blocks = chunk->blocks;
 
 	if (chunk->state == CHUNK_UNLOADED) {
+		/*
+		 * NOTE: terrain generation
+		 */
+
+		f32 low_noise_size = 0.001f;
 		f32 noise_size = 0.03f;
 		f32 tree_noise_size = 0.8f;
 
+		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_X];
 		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
 			for (i32 x = 0; x < BLOCK_COUNT_X; x++) {
 				f32 world_x = chunk_pos.x + x;
@@ -273,14 +279,12 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 				f32 nx = noise_size * world_x;
 				f32 nz = noise_size * world_z;
 				f32 value = perlin_noise_layered(nx, 0, nz, 6, 0.5f) - 0.3;
-				i32 height = 8.f * value * value * BLOCK_COUNT_X - chunk_pos.y - 1;
+				//value *= perlin_noise(low_noise_size * world_x, 0, low_noise_size * world_z) + 0.2;
+				height[x][z] = 8.f * value * value * BLOCK_COUNT_X - chunk_pos.y - 1.5;
 
-				f32 tree_height = 20.f * perlin_noise(1.0f * world_x, 0, 1.0f * world_z);
-
-				i32 stone_max = CLAMP(height - 3, 0, BLOCK_COUNT_X);
-				i32 dirt_max = CLAMP(height - 1, 0, BLOCK_COUNT_X);
-				i32 grass_max = CLAMP(height, 0, BLOCK_COUNT_X);
-				i32 tree_max = CLAMP(height + tree_height, 0, BLOCK_COUNT_X);
+				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_X);
+				i32 dirt_max = CLAMP(height[x][z] - 1, 0, BLOCK_COUNT_X);
+				i32 grass_max = CLAMP(height[x][z], 0, BLOCK_COUNT_X);
 
 				i32 y = 0;
 				while (y < stone_max) {
@@ -300,13 +304,6 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 					blocks[i] = world_y < 2 ? BLOCK_SAND : BLOCK_GRASS;
 				}
 
-#if 0
-				while (height + chunk_pos.y >= 3 && y < tree_max) {
-					u32 i = block_index(x, y++, z);
-					blocks[i] = BLOCK_OAK_LOG;
-				}
-#endif
-
 				enum block_type filler = BLOCK_AIR;
 				if (chunk_pos.y < 0) {
 					filler = BLOCK_WATER;
@@ -318,7 +315,37 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 				}
 			}
 		}
+
+		/*
+		 * NOTE: tree generation
+		 */
+
+		v3i coord = chunk->coord;
+		coord.y = 0;
+#if 1
+		u32 seed = djb2(&coord, sizeof(coord));
+#else
+		coord.x *= 0x328401efa;
+		coord.z ^= coord.x << 16 | coord.x >> 16;
+		coord.z *= 0x3820afb8d;
+		coord.x ^= coord.z << 16 | coord.z >> 16;
+		coord.x *= 0x328401efa;
+		u32 seed = coord.x;
+#endif
+
+		u32 x = xorshift32(&seed) % BLOCK_COUNT_X;
+		u32 z = xorshift32(&seed) % BLOCK_COUNT_X;
+		u32 tree_height = (xorshift32(&seed) & 7) + 2;
+
+		for (i32 y = height[x][z]; y < BLOCK_COUNT_X && 2 <= y && y < height[x][z] + tree_height; y++) {
+			u32 i = block_index(x, y, z);
+			blocks[i] = BLOCK_OAK_LOG;
+		}
 	}
+
+	/*
+	 * NOTE: mesh generation
+	 */
 
 	// TODO: fix bug for top faces
 	u16 blocks_empty[BLOCK_COUNT] = {0};
@@ -505,7 +532,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	player_offset.y = floor(target.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
 	player_offset.z = floor(target.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
-#define MAX_LOAD_PER_FRAME 16
+#define MAX_LOAD_PER_FRAME 32
 	struct chunk *chunks_to_load[MAX_LOAD_PER_FRAME] = {0};
 	f32 distances[MAX_LOAD_PER_FRAME];
 	for (u32 i = 0; i < MAX_LOAD_PER_FRAME; i++) {

@@ -9,6 +9,7 @@ enum chunk_state {
 	CHUNK_UNLOADED,
 	// NOTE: a chunk is dirty if the mesh has not been generated for it yet
 	CHUNK_DIRTY,
+	CHUNK_LOADING,
 	CHUNK_READY,
 };
 
