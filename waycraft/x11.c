@@ -38,10 +38,11 @@ struct platform_event_array {
 static struct platform_event *
 push_event(struct platform_event_array *events, u32 type)
 {
-	struct platform_event *result = 0;
+	struct platform_event *result = NULL;
 
 	if (events->count < events->max_count) {
 		result = &events->at[events->count++];
+		result->type = type;
 	}
 
 	return result;
@@ -196,12 +197,6 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 {
 	u32 result = (key_vector[key_code / 8] & (1 << (key_code % 8))) != 0;
 	return result;
-}
-
-static void
-x11_window_update_modifiers(struct x11_window *window,
-	struct platform_event_array *event_array)
-{
 }
 
 static void
@@ -478,7 +473,7 @@ get_time_sec(void)
 }
 
 int
-x11_main(struct game_code game)
+x11_main(struct game_code game, struct platform_api *platform)
 {
 	struct game_window_manager window_manager = {0};
 	struct x11_window window = {0};
@@ -504,10 +499,13 @@ x11_main(struct game_code game)
 #undef X
 
 	game.memory.gl = &gl;
+	game.memory.platform = platform;
 
 	// NOTE: initialize the compositor
 	compositor_memory.size = MB(64);
 	compositor_memory.data = calloc(compositor_memory.size, 1);
+	compositor_memory.gl = &gl;
+	compositor_memory.platform = platform;
 
 	i32 keymap = window.keymap;
 	i32 keymap_size = window.keymap_size;
