@@ -9,16 +9,6 @@ block_index(u32 x, u32 y, u32 z)
 }
 
 static inline u32
-chunk_index(u32 x, u32 y, u32 z)
-{
-	assert(x < CHUNK_COUNT_X);
-	assert(y < CHUNK_COUNT_Y);
-	assert(z < CHUNK_COUNT_Z);
-
-	return (z * CHUNK_COUNT_Y + y) * CHUNK_COUNT_X + x;
-}
-
-static inline u32
 chunk_index_pack(v3i coord)
 {
 	u32 index = (coord.z * CHUNK_COUNT_Y + coord.y) * CHUNK_COUNT_X + coord.x;
@@ -72,18 +62,6 @@ chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 	}
 
 	return result;
-}
-
-static void
-world_unload_chunk(struct world *world, struct chunk *chunk)
-{
-	struct chunk *first_chunk = world->chunks;
-	struct chunk *last_chunk = first_chunk + CHUNK_COUNT;
-	u32 is_valid_chunk = chunk && first_chunk <= chunk && chunk < last_chunk;
-
-	if (is_valid_chunk) {
-		chunk->state = CHUNK_UNLOADED;
-	}
 }
 
 // NOTE: may generate chunk if it has not been initialized
@@ -166,78 +144,6 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 	return result;
 }
 
-static void
-block_generate_mesh(enum block_type block, i32 x, i32 y, i32 z,
-	struct world *world, struct render_command_buffer *mesh,
-	struct game_assets *assets)
-{
-	v3 pos[8];
-	v2 uv[4];
-
-	pos[0] = V3(x + 0.5, y + 0.5, z + 0.5);
-	pos[1] = V3(x - 0.5, y + 0.5, z + 0.5);
-	pos[2] = V3(x + 0.5, y - 0.5, z + 0.5);
-	pos[3] = V3(x - 0.5, y - 0.5, z + 0.5);
-
-	pos[4] = V3(x + 0.5, y + 0.5, z - 0.5);
-	pos[5] = V3(x - 0.5, y + 0.5, z - 0.5);
-	pos[6] = V3(x + 0.5, y - 0.5, z - 0.5);
-	pos[7] = V3(x - 0.5, y - 0.5, z - 0.5);
-
-	u32 (*is_empty)(enum block_type block) = block_is_empty;
-
-	if (block == BLOCK_WATER) {
-		is_empty = block_is_not_water;
-
-		if (world_at(world, x, y + 1, z) == BLOCK_AIR) {
-			f32 offset = 0.1f;
-
-			pos[0].y -= offset;
-			pos[1].y -= offset;
-			pos[4].y -= offset;
-			pos[5].y -= offset;
-		}
-	}
-
-	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
-
-	block_texcoords_bottom(block, uv);
-	if (is_empty(world_at(world, x, y - 1, z))) {
-		render_quad(mesh, pos[7], pos[6], pos[3], pos[2],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-
-	block_texcoords_top(block, uv);
-	if (is_empty(world_at(world, x, y + 1, z))) {
-		render_quad(mesh, pos[4], pos[5], pos[0], pos[1],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-
-	block_texcoords_right(block, uv);
-	if (is_empty(world_at(world, x + 1, y, z))) {
-		render_quad(mesh, pos[4], pos[0], pos[6], pos[2],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-
-	block_texcoords_left(block, uv);
-	if (is_empty(world_at(world, x - 1, y, z))) {
-		render_quad(mesh, pos[1], pos[5], pos[3], pos[7],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-
-	block_texcoords_front(block, uv);
-	if (is_empty(world_at(world, x, y, z + 1))) {
-		render_quad(mesh, pos[0], pos[1], pos[2], pos[3],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-
-	block_texcoords_back(block, uv);
-	if (is_empty(world_at(world, x, y, z - 1))) {
-		render_quad(mesh, pos[5], pos[4], pos[7], pos[6],
-			uv[0], uv[1], uv[2], uv[3], texture);
-	}
-}
-
 static i32
 world_init(struct world *world, struct memory_arena *arena)
 {
@@ -266,9 +172,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		 * NOTE: terrain generation
 		 */
 
-		f32 low_noise_size = 0.001f;
-		f32 noise_size = 0.03f;
-		f32 tree_noise_size = 0.8f;
+		f32 noise_size = 0.025f;
 
 		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_X];
 		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
@@ -276,11 +180,12 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 				f32 world_x = chunk_pos.x + x;
 				f32 world_z = chunk_pos.z + z;
 
+				f32 persistance = perlin_noise(1000.f + 0.01f * world_x, 0, 0.01f * world_z);
+
 				f32 nx = noise_size * world_x;
 				f32 nz = noise_size * world_z;
-				f32 value = perlin_noise_layered(nx, 0, nz, 6, 0.5f) - 0.3;
-				//value *= perlin_noise(low_noise_size * world_x, 0, low_noise_size * world_z) + 0.2;
-				height[x][z] = 8.f * value * value * BLOCK_COUNT_X - chunk_pos.y - 1.5;
+				f32 value = 1.2f * perlin_noise_layered(nx, 0, nz, 8, 0.45f) - 0.5;
+				height[x][z] = 4.f * value * BLOCK_COUNT_X - chunk_pos.y - 1.5;
 
 				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_X);
 				i32 dirt_max = CLAMP(height[x][z] - 1, 0, BLOCK_COUNT_X);
@@ -532,7 +437,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	player_offset.y = floor(target.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
 	player_offset.z = floor(target.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
-#define MAX_LOAD_PER_FRAME 32
+#define MAX_LOAD_PER_FRAME 4
 	struct chunk *chunks_to_load[MAX_LOAD_PER_FRAME] = {0};
 	f32 distances[MAX_LOAD_PER_FRAME];
 	for (u32 i = 0; i < MAX_LOAD_PER_FRAME; i++) {
