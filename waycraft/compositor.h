@@ -117,3 +117,4 @@ struct compositor {
 
 static bool surface_set_role(struct surface *surface, u32 role,
 	struct wl_resource *resource, u32 error);
+static void surface_destroy_resource(struct wl_resource *resource);
