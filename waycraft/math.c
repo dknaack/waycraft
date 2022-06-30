@@ -109,7 +109,7 @@ m4x4_sub(m4x4 a, m4x4 b)
 	return result;
 }
 
-static m4x4
+static inline m4x4
 m4x4_mul(m4x4 a, m4x4 b)
 {
 	m4x4 result = {0};
@@ -125,7 +125,7 @@ m4x4_mul(m4x4 a, m4x4 b)
 	return result;
 }
 
-static m4x4
+static inline m4x4
 m4x4_mulf(m4x4 a, f32 f)
 {
 	m4x4 result = {0};
@@ -138,7 +138,7 @@ m4x4_mulf(m4x4 a, f32 f)
 	return result;
 }
 
-static m4x4
+static inline m4x4
 m4x4_transpose(m4x4 a)
 {
 	m4x4 result = {0};
@@ -165,7 +165,7 @@ m4x4_id(f32 f)
 	return result;
 }
 
-static m4x4
+static inline m4x4
 m4x4_translate(f32 x, f32 y, f32 z)
 {
 	m4x4 result = m4x4_id(1);
@@ -177,7 +177,7 @@ m4x4_translate(f32 x, f32 y, f32 z)
 	return result;
 }
 
-static m4x4
+static inline m4x4
 m4x4_scale(f32 x, f32 y, f32 z)
 {
 	m4x4 result = {0};
