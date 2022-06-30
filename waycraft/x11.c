@@ -513,6 +513,11 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 
 		events.count = 0;
 		x11_window_poll_events(&window, &input, &events);
+		if (!window.is_open) {
+			game->memory.is_done = true;
+			compositor_memory->is_done = true;
+		}
+
 		struct game_window_manager *wm = compositor_update(compositor_memory, events.at, events.count);
 
 		game_load(game);
@@ -534,7 +539,6 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		}
 	}
 
-	compositor_finish(compositor_memory);
 	free(compositor_memory->data);
 	free(game->memory.data);
 	egl_finish(&egl);

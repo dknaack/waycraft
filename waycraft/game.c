@@ -719,6 +719,12 @@ window_find(struct game_window *window, u32 window_count,
 	return 0;
 }
 
+static void
+game_finish(struct game_state *game)
+{
+	renderer_finish(&game->renderer);
+}
+
 void
 game_update(struct platform_memory *memory, struct game_input *input,
 		struct game_window_manager *wm)
@@ -949,10 +955,8 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	renderer_submit(&game->renderer, &ui_cmd_buffer);
 
 	debug_render(view, projection);
-}
 
-static void
-game_finish(struct game_state *game)
-{
-	renderer_finish(&game->renderer);
+	if (memory->is_done) {
+		game_finish(game);
+	}
 }

@@ -105,6 +105,7 @@ struct platform_memory {
     usize size;
 
     bool is_initialized;
+	bool is_done;
 	struct opengl_api *gl;
 	struct platform_api *platform;
 };

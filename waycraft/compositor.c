@@ -884,5 +884,9 @@ compositor_update(struct platform_memory *memory,
 		compositor->focused_surface = focused_surface_index;
 	}
 
+	if (memory->is_done) {
+		compositor_finish(memory);
+	}
+
 	return &compositor->window_manager;
 }
