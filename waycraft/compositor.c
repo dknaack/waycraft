@@ -529,30 +529,6 @@ data_device_manager_bind(struct wl_client *client, void *data, u32 version,
 	wl_resource_set_implementation(resource, &data_device_manager_impl, data, 0);
 }
 
-static void
-xwayland_surface_destroy(struct wl_listener *listener, void *data)
-{
-	struct compositor *compositor = wl_container_of(listener,
-		compositor, xwayland_surface_destroy);
-	xcb_destroy_notify_event_t *event = data;
-
-	struct surface *surface = compositor->surfaces + 1;
-	u32 surface_count = compositor->surface_count - 1;
-	while (surface_count-- > 0) {
-		printf("%d == %d?\n", surface->xwayland_surface.window, event->window);
-		if (surface->role == SURFACE_ROLE_XWAYLAND &&
-				surface->xwayland_surface.window == event->window) {
-			if (surface->window) {
-				surface->window->flags |= WINDOW_DESTROYED;
-			}
-			surface_destroy(surface->resource);
-			break;
-		}
-
-		surface++;
-	}
-}
-
 static i32
 compositor_init(struct platform_memory *memory,
 		EGLDisplay *egl_display, i32 keymap, i32 keymap_size)
