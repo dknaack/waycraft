@@ -1,70 +1,70 @@
-static f32
+static inline f32
 lerp(f32 a, f32 b, f32 t)
 {
 	return a + (b - a) * t;
 }
 
-static f32
+static inline f32
 degrees(f32 radians)
 {
 	return 180.0f * radians / PI;
 }
 
-static f32
+static inline f32
 radians(f32 degrees)
 {
 	return PI * degrees / 180.0f;
 }
 
 /* v2 functions */
-static v2 v2_add(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
-static v2 v2_sub(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
-static v2 v2_mul(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
-static v2 v2_div(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
-static v2 v2_mulf(v2 a, f32 f) { return V2(a.x * f, a.y * f); }
-static v2 v2_divf(v2 a, f32 f) { return V2(a.x / f, a.y / f); }
-static f32 v2_dot(v2 a, v2 b) { return a.x * b.x + a.y * b.y; }
-static f32 v2_len_sq(v2 a) { return v2_dot(a, a); }
-static f32 v2_len(v2 a) { return sqrtf(v2_len_sq(a)); }
-static v2 v2_norm(v2 a) { return v2_divf(a, v2_len(a)); }
+static inline v2 v2_add(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
+static inline v2 v2_sub(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
+static inline v2 v2_mul(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
+static inline v2 v2_div(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
+static inline v2 v2_mulf(v2 a, f32 f) { return V2(a.x * f, a.y * f); }
+static inline v2 v2_divf(v2 a, f32 f) { return V2(a.x / f, a.y / f); }
+static inline f32 v2_dot(v2 a, v2 b) { return a.x * b.x + a.y * b.y; }
+static inline f32 v2_len_sq(v2 a) { return v2_dot(a, a); }
+static inline f32 v2_len(v2 a) { return sqrtf(v2_len_sq(a)); }
+static inline v2 v2_norm(v2 a) { return v2_divf(a, v2_len(a)); }
 
 /* v3 functions */
-static v3 v3_add(v3 a, v3 b) { return V3(a.x + b.x, a.y + b.y, a.z + b.z); }
-static v3 v3_sub(v3 a, v3 b) { return V3(a.x - b.x, a.y - b.y, a.z - b.z); }
-static v3 v3_mul(v3 a, v3 b) { return V3(a.x * b.x, a.y * b.y, a.z * b.z); }
-static v3 v3_div(v3 a, v3 b) { return V3(a.x / b.x, a.y / b.y, a.z / b.z); }
-static v3 v3_mulf(v3 a, f32 f) { return V3(a.x * f, a.y * f, a.z * f); }
-static v3 v3_divf(v3 a, f32 f) { return V3(a.x / f, a.y / f, a.z / f); }
-static f32 v3_dot(v3 a, v3 b) { return (a.x * b.x + a.y * b.y + a.z * b.z); }
-static f32 v3_len_sq(v3 a) { return v3_dot(a, a); }
-static f32 v3_len(v3 a) { return sqrtf(v3_len_sq(a)); }
-static v3 v3_norm(v3 a) { return v3_divf(a, v3_len(a)); }
+static inline v3 v3_add(v3 a, v3 b) { return V3(a.x + b.x, a.y + b.y, a.z + b.z); }
+static inline v3 v3_sub(v3 a, v3 b) { return V3(a.x - b.x, a.y - b.y, a.z - b.z); }
+static inline v3 v3_mul(v3 a, v3 b) { return V3(a.x * b.x, a.y * b.y, a.z * b.z); }
+static inline v3 v3_div(v3 a, v3 b) { return V3(a.x / b.x, a.y / b.y, a.z / b.z); }
+static inline v3 v3_mulf(v3 a, f32 f) { return V3(a.x * f, a.y * f, a.z * f); }
+static inline v3 v3_divf(v3 a, f32 f) { return V3(a.x / f, a.y / f, a.z / f); }
+static inline f32 v3_dot(v3 a, v3 b) { return (a.x * b.x + a.y * b.y + a.z * b.z); }
+static inline f32 v3_len_sq(v3 a) { return v3_dot(a, a); }
+static inline f32 v3_len(v3 a) { return sqrtf(v3_len_sq(a)); }
+static inline v3 v3_norm(v3 a) { return v3_divf(a, v3_len(a)); }
 
-static v3 v3_floor(v3 a) { return V3(floorf(a.x), floorf(a.y), floorf(a.z)); }
-static v3 v3_round(v3 a) { return V3(roundf(a.x), roundf(a.y), roundf(a.z)); }
-static v3 v3_neg(v3 a) { return V3(-a.x, -a.y, -a.z); }
-static v3 v3_lerp(v3 a, v3 b, f32 t) { return v3_add(a, v3_mulf(v3_sub(b, a), t)); }
-static v3 v3_abs(v3 a) { return V3(fabsf(a.x), fabsf(a.y), fabsf(a.z)); }
-static v3 v3_modf(v3 a, f32 f) { return V3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f)); }
+static inline v3 v3_floor(v3 a) { return V3(floorf(a.x), floorf(a.y), floorf(a.z)); }
+static inline v3 v3_round(v3 a) { return V3(roundf(a.x), roundf(a.y), roundf(a.z)); }
+static inline v3 v3_neg(v3 a) { return V3(-a.x, -a.y, -a.z); }
+static inline v3 v3_lerp(v3 a, v3 b, f32 t) { return v3_add(a, v3_mulf(v3_sub(b, a), t)); }
+static inline v3 v3_abs(v3 a) { return V3(fabsf(a.x), fabsf(a.y), fabsf(a.z)); }
+static inline v3 v3_modf(v3 a, f32 f) { return V3(fmodf(a.x, f), fmodf(a.y, f), fmodf(a.z, f)); }
 
 /* v4 function definitions */
-static v4 v4_add(v4 a, v4 b) { return V4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w); }
-static v4 v4_sub(v4 a, v4 b) { return V4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
-static v4 v4_mul(v4 a, v4 b) { return V4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
-static v4 v4_div(v4 a, v4 b) { return V4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w); }
-static v4 v4_mulf(v4 a, f32 f) { return V4(a.x * f, a.y * f, a.z * f, a.w * f); }
-static v4 v4_divf(v4 a, f32 f) { return V4(a.x / f, a.y / f, a.z / f, a.w / f); }
-static f32 v4_dot(v4 a, v4 b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * a.w; }
-static f32 v4_len_sq(v4 a) { return v4_dot(a, a); }
-static f32 v4_len(v4 a) { return sqrtf(v4_len_sq(a)); }
-static v4 v4_norm(v4 a) { return v4_divf(a, v4_len(a)); }
+static inline v4 v4_add(v4 a, v4 b) { return V4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w); }
+static inline v4 v4_sub(v4 a, v4 b) { return V4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
+static inline v4 v4_mul(v4 a, v4 b) { return V4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
+static inline v4 v4_div(v4 a, v4 b) { return V4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w); }
+static inline v4 v4_mulf(v4 a, f32 f) { return V4(a.x * f, a.y * f, a.z * f, a.w * f); }
+static inline v4 v4_divf(v4 a, f32 f) { return V4(a.x / f, a.y / f, a.z / f, a.w / f); }
+static inline f32 v4_dot(v4 a, v4 b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * a.w; }
+static inline f32 v4_len_sq(v4 a) { return v4_dot(a, a); }
+static inline f32 v4_len(v4 a) { return sqrtf(v4_len_sq(a)); }
+static inline v4 v4_norm(v4 a) { return v4_divf(a, v4_len(a)); }
 
-static v3i v3i_add(v3i a, v3i b) { return V3I(a.x + b.x, a.y + b.y, a.z + b.z); }
-static v3i v3i_sub(v3i a, v3i b) { return V3I(a.x - b.x, a.y - b.y, a.z - b.z); }
-static v3i v3i_mul(v3i a, v3i b) { return V3I(a.x * b.x, a.y * b.y, a.z * b.z); }
-static v3i v3i_div(v3i a, v3i b) { return V3I(a.x / b.x, a.y / b.y, a.z / b.z); }
+static inline v3i v3i_add(v3i a, v3i b) { return V3I(a.x + b.x, a.y + b.y, a.z + b.z); }
+static inline v3i v3i_sub(v3i a, v3i b) { return V3I(a.x - b.x, a.y - b.y, a.z - b.z); }
+static inline v3i v3i_mul(v3i a, v3i b) { return V3I(a.x * b.x, a.y * b.y, a.z * b.z); }
+static inline v3i v3i_div(v3i a, v3i b) { return V3I(a.x / b.x, a.y / b.y, a.z / b.z); }
 
-static bool
+static inline bool
 v3i_equals(v3i a, v3i b)
 {
 	bool result = a.x == b.x && a.y == b.y && a.z == b.z;
@@ -72,7 +72,7 @@ v3i_equals(v3i a, v3i b)
 	return result;
 }
 
-static v3
+static inline v3
 v3_cross(v3 a, v3 b)
 {
 	return V3(
@@ -246,42 +246,6 @@ m4x4_look_at(v3 eye, v3 center, v3 up)
 	result.e[3][2] = v3_dot(z, eye);
 
 	return result;
-}
-
-static m4x4
-m4x4_rotate(v3 axis, f32 angle)
-{
-	v3 a = v3_norm(axis);
-	f32 cos = cosf(angle);
-	f32 sin = sinf(angle);
-
-	m4x4 m1 = m4x4_scale(cos, cos, cos);
-
-	m4x4 m2 = M4X4(
-		a.x * a.x, a.x * a.y, a.x * a.z, 0,
-		a.y * a.x, a.y * a.y, a.y * a.z, 0,
-		a.z * a.x, a.z * a.y, a.z * a.z, 0,
-		0,         0,         0,         0);
-
-	m4x4 m3 = M4X4(
-		0, -a.z,  a.y, 0,
-		a.z,    0, -a.x, 0,
-		-a.y,  a.x,    0, 0,
-		0,    0,    0, 0);
-
-	return m4x4_add(m1, m4x4_add(m4x4_mulf(m2, 1.f - cos), m4x4_mulf(m3, sin)));
-}
-
-static m4x4
-m4x4_to_coords(v3 pos, v3 right, v3 up, v3 forward)
-{
-	return m4x4_mul(
-		m4x4_translate(pos.x, pos.y, pos.z),
-		M4X4(
-			right.x,   right.y,   right.z,   0,
-			up.x,      up.y,      up.z,      0,
-			forward.x, forward.y, forward.z, 0,
-			0,         0,         0,         1));
 }
 
 static v4
