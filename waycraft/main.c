@@ -13,8 +13,6 @@
 #include <waycraft/xdg-shell-protocol.h>
 
 #include "waycraft/log.c"
-#include "waycraft/math.c"
-#include "waycraft/memory.c"
 #include "waycraft/compositor.c"
 
 struct game_code {

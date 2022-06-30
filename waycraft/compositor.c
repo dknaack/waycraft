@@ -1,3 +1,4 @@
+#include "waycraft/memory.c"
 #include "waycraft/xwayland.c"
 #include "waycraft/xdg-shell-protocol.c"
 
@@ -48,33 +49,6 @@ surface_set_role(struct surface *surface, u32 role, struct wl_resource *resource
 	return result;
 }
 
-static void
-surface_attach(struct wl_client *client, struct wl_resource *resource,
-		struct wl_resource *buffer, i32 x, i32 y)
-{
-	if (x != 0 || y != 0) {
-		wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_OFFSET,
-			"invalid offset: (%d, %d)\n", x, y);
-		return;
-	}
-
-	struct surface *surface = wl_resource_get_user_data(resource);
-	surface->pending.flags |= SURFACE_NEW_BUFFER;
-	surface->pending.buffer = buffer;
-}
-
-static void
-surface_frame(struct wl_client *client,
-		struct wl_resource *resource, u32 callback)
-{
-	struct wl_resource *frame_callback = wl_resource_create(client,
-		&wl_callback_interface, wl_resource_get_version(resource), callback);
-
-	struct surface *surface = wl_resource_get_user_data(resource);
-	surface->pending.flags |= SURFACE_NEW_FRAME;
-	surface->pending.frame_callback = frame_callback;
-}
-
 static struct game_window *
 window_manager_create_window(struct game_window_manager *wm)
 {
@@ -96,6 +70,60 @@ window_manager_create_window(struct game_window_manager *wm)
 /*
  * NOTE: surface implementation
  */
+
+static void
+surface_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+	// TODO: remove the surface from the compositor
+}
+
+static void
+surface_attach(struct wl_client *client, struct wl_resource *resource,
+		struct wl_resource *buffer, i32 x, i32 y)
+{
+	if (x != 0 || y != 0) {
+		wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_OFFSET,
+			"invalid offset: (%d, %d)\n", x, y);
+		return;
+	}
+
+	struct surface *surface = wl_resource_get_user_data(resource);
+	surface->pending.flags |= SURFACE_NEW_BUFFER;
+	surface->pending.buffer = buffer;
+}
+
+static void
+surface_damage(struct wl_client *client, struct wl_resource *resource,
+		i32 x, i32 y, i32 width, i32 height)
+{
+	// TODO
+}
+
+static void
+surface_frame(struct wl_client *client,
+		struct wl_resource *resource, u32 callback)
+{
+	struct wl_resource *frame_callback = wl_resource_create(client,
+		&wl_callback_interface, wl_resource_get_version(resource), callback);
+
+	struct surface *surface = wl_resource_get_user_data(resource);
+	surface->pending.flags |= SURFACE_NEW_FRAME;
+	surface->pending.frame_callback = frame_callback;
+}
+
+static void
+surface_set_opaque_region(struct wl_client *client,
+		struct wl_resource *resource, struct wl_resource *region)
+{
+	// TODO
+}
+
+static void
+surface_set_input_region(struct wl_client *client,
+		struct wl_resource *resource, struct wl_resource *region)
+{
+	// TODO
+}
 
 static void
 surface_commit(struct wl_client *client, struct wl_resource *resource)
@@ -153,22 +181,58 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 	surface->pending.flags = 0;
 }
 
+static void
+surface_set_buffer_transform(struct wl_client *client,
+		struct wl_resource *resource, i32 transform)
+{
+	if (transform != WL_OUTPUT_TRANSFORM_NORMAL) {
+		wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_TRANSFORM,
+			"Only normal buffer transform is supported");
+	}
+}
+
+static void
+surface_set_buffer_scale(struct wl_client *client,
+		struct wl_resource *resource, i32 scale)
+{
+	if (scale != 1) {
+		wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_SCALE,
+			"Scaling buffers is not supported");
+	}
+}
+
+static void
+surface_damage_buffer(struct wl_client *client, struct wl_resource *resource,
+		i32 x, i32 y, i32 width, i32 height)
+{
+}
+
+static void
+surface_offset(struct wl_client *client,
+		struct wl_resource *resource, i32 x, i32 y)
+{
+	if (x != 0 || y != 0) {
+		wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_OFFSET,
+			"Buffer offset is not supported");
+	}
+}
+
 static const struct wl_surface_interface surface_impl = {
-	.destroy              = do_nothing,
+	.destroy              = surface_destroy,
 	.attach               = surface_attach,
-	.damage               = do_nothing,
+	.damage               = surface_damage,
 	.frame                = surface_frame,
-	.set_opaque_region    = do_nothing,
-	.set_input_region     = do_nothing,
+	.set_opaque_region    = surface_set_opaque_region,
+	.set_input_region     = surface_set_input_region,
 	.commit               = surface_commit,
-	.set_buffer_transform = do_nothing,
-	.set_buffer_scale     = do_nothing,
-	.damage_buffer        = do_nothing,
-	.offset               = do_nothing,
+	.set_buffer_transform = surface_set_buffer_transform,
+	.set_buffer_scale     = surface_set_buffer_scale,
+	.damage_buffer        = surface_damage_buffer,
+	.offset               = surface_offset,
 };
 
 static void
-surface_destroy(struct wl_resource *resource)
+surface_destroy_resource(struct wl_resource *resource)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
@@ -178,6 +242,56 @@ surface_destroy(struct wl_resource *resource)
 		surface->texture = 0;
 	}
 }
+
+/*
+ * NOTE: region implementation
+ */
+#if 0
+static bool
+region_push(struct region *region, u32 mode, i32 x, i32 y, i32 width, i32 height)
+{
+	bool result = false;
+	struct rectangle rect = { x, y, width, height };
+
+	if (region->count < MAX_RECT_COUNT) {
+		region->entries[region->count].mode = mode;
+		region->entries[region->count].rect = rect;
+		region->count++;
+
+		result = true;
+	}
+
+	return result;
+}
+
+static void
+region_destroy()
+{
+	// TODO
+}
+
+static void
+region_add(struct wl_client *client, struct wl_resource *resource,
+		i32 x, i32 y, i32 width, i32 height)
+{
+	struct region *region = wl_resource_get_user_data(resource);
+
+	if (!region_push(region, REGION_ADD, x, y, width, height)) {
+		// TODO: error handling
+	}
+}
+
+static void
+region_subtract(struct wl_client *client, struct wl_resource *resource,
+		i32 x, i32 y, i32 width, i32 height)
+{
+	struct region *region = wl_resource_get_user_data(resource);
+
+	if (!region_push(region, REGION_SUBTRACT, x, y, width, height)) {
+		// TODO: error handling
+	}
+}
+#endif
 
 static const struct wl_region_interface region_impl = {
 	.destroy  = do_nothing,
@@ -199,7 +313,7 @@ compositor_create_surface(struct wl_client *client,
 	struct wl_resource *wl_surface = wl_resource_create(client,
 		&wl_surface_interface, wl_resource_get_version(resource), id);
 	wl_resource_set_implementation(wl_surface, &surface_impl, surface,
-		surface_destroy);
+		surface_destroy_resource);
 
 	surface->resource = wl_surface;
 
@@ -390,9 +504,11 @@ xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
-	surface->role  = SURFACE_ROLE_XDG_POPUP;
-	surface->xdg_popup.parent = parent;
-	surface->xdg_popup.positioner = positioner;
+	if (surface_set_role(surface, SURFACE_ROLE_XDG_POPUP,
+			resource, XDG_WM_BASE_ERROR_ROLE)) {
+		surface->xdg_popup.parent = parent;
+		surface->xdg_popup.positioner = positioner;
+	}
 }
 
 static void
@@ -405,7 +521,7 @@ xdg_surface_set_window_geometry(struct wl_client *client,
 static const struct xdg_surface_interface xdg_surface_impl = {
 	.destroy             = do_nothing,
 	.get_toplevel        = xdg_surface_get_toplevel,
-	.get_popup           = do_nothing,
+	.get_popup           = xdg_surface_get_popup,
 	.set_window_geometry = xdg_surface_set_window_geometry,
 	.ack_configure       = do_nothing,
 };
@@ -489,10 +605,73 @@ subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
 	wl_resource_set_implementation(resource, &subcompositor_impl, data, 0);
 }
 
+/*
+ * NOTE: data source implementation
+ */
+static void
+data_source_offer(struct wl_client *client,
+	struct wl_resource *resource, const char *mime_type)
+{
+	// TODO
+}
+
+static void
+data_source_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+	// TODO
+}
+
+static void
+data_source_set_actions(struct wl_client *client,
+		struct wl_resource *resource, u32 dnd_actions)
+{
+	// TODO
+}
+
+
 static const struct wl_data_source_interface data_source_impl = {
-	.offer       = do_nothing,
-	.destroy     = do_nothing,
-	.set_actions = do_nothing,
+	.offer       = data_source_offer,
+	.destroy     = data_source_destroy,
+	.set_actions = data_source_set_actions,
+};
+
+/*
+ * NOTE: data device implementation
+ */
+
+static void
+data_device_start_drag(struct wl_client *client, struct wl_resource *resource,
+		struct wl_resource *source, struct wl_resource *origin,
+		struct wl_resource *icon, u32 serial)
+{
+	if (icon) {
+		struct surface *icon_surface = wl_resource_get_user_data(icon);
+		if (surface_set_role(icon_surface, SURFACE_ROLE_DRAG_AND_DROP_ICON,
+				resource, WL_DATA_DEVICE_ERROR_ROLE)) {
+			// TODO
+		}
+	} else {
+		// TODO
+	}
+}
+
+static void
+data_device_set_selection(struct wl_client *client,
+		struct wl_resource *resource, struct wl_resource *source, u32 serial)
+{
+	// TODO
+}
+
+static void
+data_device_release(struct wl_client *client, struct wl_resource *resource)
+{
+	// TODO
+}
+
+static const struct wl_data_device_interface data_device_impl = {
+	.start_drag    = data_device_start_drag,
+	.set_selection = data_device_set_selection,
+	.release       = data_device_release,
 };
 
 /*
@@ -505,14 +684,16 @@ data_device_manager_create_data_source(struct wl_client *client,
 {
 	struct wl_resource *data_source = wl_resource_create(client,
 		&wl_data_source_interface, wl_resource_get_version(resource), id);
-	wl_resource_set_implementation(data_source, &data_source_impl, 0, 0);
+	wl_resource_set_implementation(data_source, &data_source_impl, NULL, NULL);
 }
 
 static void
 data_device_manager_get_data_device(struct wl_client *client,
 		struct wl_resource *resource, u32 id, struct wl_resource *seat)
 {
-	// TODO
+	struct wl_resource *data_device = wl_resource_create(client,
+		&wl_data_device_interface, wl_resource_get_version(resource), id);
+	wl_resource_set_implementation(data_device, &data_device_impl, NULL, NULL);
 }
 
 static struct wl_data_device_manager_interface data_device_manager_impl = {
