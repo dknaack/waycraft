@@ -130,14 +130,6 @@ xorshift32(u32 *seed)
 	return *seed = x;
 }
 
-static f32
-f32_random(u32 *seed)
-{
-	f32 result = ldexp(xorshift32(seed), -32);
-
-	return result;
-}
-
 static u32
 djb2(void *data, usize size)
 {
