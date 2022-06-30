@@ -118,18 +118,6 @@ perlin_noise_layered(f32 x, f32 y, f32 z, u32 octave_count, f32 persistance)
 	return result;
 }
 
-static f32
-noise_2d(f32 x, f32 y)
-{
-	return perlin_noise(x, y, 0.0f);
-}
-
-static f32
-noise_layered_2d(f32 x, f32 y)
-{
-	return perlin_noise_layered(x, y, 0.0f, 4, 0.5f);
-}
-
 static u32
 xorshift32(u32 *seed)
 {
