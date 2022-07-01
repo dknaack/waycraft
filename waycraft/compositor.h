@@ -15,6 +15,7 @@
 
 #define MAX_SURFACE_COUNT 256
 #define MAX_WINDOW_COUNT 256
+#define MAX_RECT_COUNT 8
 
 struct wl_resource;
 
@@ -29,6 +30,7 @@ enum surface_role {
 	SURFACE_ROLE_XDG_TOPLEVEL,
 	SURFACE_ROLE_XDG_POPUP,
 	SURFACE_ROLE_SUBSURFACE,
+	SURFACE_ROLE_DRAG_AND_DROP_ICON,
 	SURFACE_ROLE_XWAYLAND,
 	SURFACE_ROLE_CURSOR,
 	SURFACE_ROLE_COUNT
@@ -80,6 +82,19 @@ struct surface {
 	struct game_window *window;
 	struct surface_state pending;
 	struct surface_state current;
+};
+
+enum region_mode {
+	REGION_ADD,
+	REGION_SUBTRACT,
+};
+
+struct region {
+	struct {
+		struct rectangle rect;
+		u8 mode;
+	} entries[MAX_RECT_COUNT];
+	u8 count;
 };
 
 struct compositor {
