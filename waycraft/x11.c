@@ -100,13 +100,6 @@ allocate_shm_file(size_t size)
 	return fd;
 }
 
-static void
-x11_window_hide_cursor(xcb_connection_t *connection, xcb_window_t window)
-{
-	xcb_xfixes_hide_cursor(connection, window);
-	xcb_xfixes_show_cursor(connection, window);
-}
-
 static i32
 x11_window_init(struct x11_window *window)
 {
