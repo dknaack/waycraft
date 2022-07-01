@@ -10,7 +10,6 @@
 
 #include "waycraft/math.c"
 #include "waycraft/memory.c"
-#include "waycraft/log.c"
 #include "waycraft/renderer.c"
 #include "waycraft/block.c"
 #include "waycraft/debug.c"
@@ -102,8 +101,9 @@ item_to_block(enum item_type item, v3 direction)
 
 static void
 item_render(struct inventory_item *item, struct rectangle rect,
-		struct render_command_buffer *cmd_buffer, struct game_assets *assets)
+		struct render_command_buffer *cmd_buffer)
 {
+	struct game_assets *assets = cmd_buffer->assets;
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 
 	if (item->type == ITEM_WINDOW) {
@@ -171,6 +171,28 @@ inventory_render(struct inventory *inventory,
 		inventory_rect.y = 0.5f * (screen_height - inventory_rect.height);
 
 		render_sprite(cmd_buffer, inventory_rect, inventory_texture.id);
+
+		f32 slot_size = 16 * size;
+		f32 column_width = 18 * size;
+		f32 row_height = 18 * size;
+
+		struct inventory_item *item = inventory->items;
+		for (u32 i = 0; i < LENGTH(inventory->items); i++) {
+			u32 x = i % 9;
+			u32 y = i / 9;
+
+			struct rectangle item_rect = {0};
+			item_rect.x = inventory_rect.x + 12 * size + x * column_width;
+			item_rect.y = inventory_rect.y + 10 * size + y * row_height;
+			item_rect.width = slot_size;
+			item_rect.height = slot_size;
+
+			if (y != 0) {
+				item_rect.y += 6 * size;
+			}
+
+			item_render(item++, item_rect, cmd_buffer);
+		}
 	} else {
 		struct texture hotbar_texture = get_texture(assets, TEXTURE_HOTBAR);
 		f32 size = 0.5f * screen_width / hotbar_texture.width;
@@ -203,7 +225,7 @@ inventory_render(struct inventory *inventory,
 			item_rect.width = slot_size;
 			item_rect.height = slot_size;
 
-			item_render(item++, item_rect, cmd_buffer, assets);
+			item_render(item++, item_rect, cmd_buffer);
 		}
 	}
 }
@@ -344,6 +366,9 @@ player_init(struct player *player, struct camera *camera)
 	(*hotbar++).type = ITEM_OAK_LOG_BLOCK;
 	(*hotbar++).type = ITEM_OAK_LEAVES_BLOCK;
 	(*hotbar++).type = ITEM_WATER_BLOCK;
+	hotbar++;
+	(*hotbar++).type = ITEM_DIRT_BLOCK;
+	(*hotbar++).type = ITEM_GRASS_BLOCK;
 }
 
 static void
