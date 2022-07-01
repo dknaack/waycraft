@@ -59,6 +59,7 @@ struct render_command_buffer {
 	u32 max_index_count;
 
 	struct render_command_quads *current_quads;
+	struct game_assets *assets;
 };
 
 struct mesh {
