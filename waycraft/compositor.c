@@ -1,6 +1,6 @@
+#include "xdg-shell-protocol.c"
 #include "waycraft/memory.c"
 #include "waycraft/xwayland.c"
-#include "waycraft/xdg-shell-protocol.c"
 
 static void do_nothing() {}
 
@@ -72,13 +72,13 @@ window_manager_create_window(struct game_window_manager *wm)
  */
 
 static void
-surface_destroy(struct wl_client *client, struct wl_resource *resource)
+surface_handle_destroy(struct wl_client *client, struct wl_resource *resource)
 {
 	// TODO: remove the surface from the compositor
 }
 
 static void
-surface_attach(struct wl_client *client, struct wl_resource *resource,
+surface_handle_attach(struct wl_client *client, struct wl_resource *resource,
 		struct wl_resource *buffer, i32 x, i32 y)
 {
 	if (x != 0 || y != 0) {
@@ -93,14 +93,14 @@ surface_attach(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-surface_damage(struct wl_client *client, struct wl_resource *resource,
+surface_handle_damage(struct wl_client *client, struct wl_resource *resource,
 		i32 x, i32 y, i32 width, i32 height)
 {
 	// TODO
 }
 
 static void
-surface_frame(struct wl_client *client,
+surface_handle_frame(struct wl_client *client,
 		struct wl_resource *resource, u32 callback)
 {
 	struct wl_resource *frame_callback = wl_resource_create(client,
@@ -112,21 +112,21 @@ surface_frame(struct wl_client *client,
 }
 
 static void
-surface_set_opaque_region(struct wl_client *client,
+surface_handle_set_opaque_region(struct wl_client *client,
 		struct wl_resource *resource, struct wl_resource *region)
 {
 	// TODO
 }
 
 static void
-surface_set_input_region(struct wl_client *client,
+surface_handle_set_input_region(struct wl_client *client,
 		struct wl_resource *resource, struct wl_resource *region)
 {
 	// TODO
 }
 
 static void
-surface_commit(struct wl_client *client, struct wl_resource *resource)
+surface_handle_commit(struct wl_client *client, struct wl_resource *resource)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
 
@@ -182,7 +182,7 @@ surface_commit(struct wl_client *client, struct wl_resource *resource)
 }
 
 static void
-surface_set_buffer_transform(struct wl_client *client,
+surface_handle_set_buffer_transform(struct wl_client *client,
 		struct wl_resource *resource, i32 transform)
 {
 	if (transform != WL_OUTPUT_TRANSFORM_NORMAL) {
@@ -192,7 +192,7 @@ surface_set_buffer_transform(struct wl_client *client,
 }
 
 static void
-surface_set_buffer_scale(struct wl_client *client,
+surface_handle_set_buffer_scale(struct wl_client *client,
 		struct wl_resource *resource, i32 scale)
 {
 	if (scale != 1) {
@@ -202,13 +202,13 @@ surface_set_buffer_scale(struct wl_client *client,
 }
 
 static void
-surface_damage_buffer(struct wl_client *client, struct wl_resource *resource,
+surface_handle_damage_buffer(struct wl_client *client, struct wl_resource *resource,
 		i32 x, i32 y, i32 width, i32 height)
 {
 }
 
 static void
-surface_offset(struct wl_client *client,
+surface_handle_offset(struct wl_client *client,
 		struct wl_resource *resource, i32 x, i32 y)
 {
 	if (x != 0 || y != 0) {
@@ -218,17 +218,17 @@ surface_offset(struct wl_client *client,
 }
 
 static const struct wl_surface_interface surface_impl = {
-	.destroy              = surface_destroy,
-	.attach               = surface_attach,
-	.damage               = surface_damage,
-	.frame                = surface_frame,
-	.set_opaque_region    = surface_set_opaque_region,
-	.set_input_region     = surface_set_input_region,
-	.commit               = surface_commit,
-	.set_buffer_transform = surface_set_buffer_transform,
-	.set_buffer_scale     = surface_set_buffer_scale,
-	.damage_buffer        = surface_damage_buffer,
-	.offset               = surface_offset,
+	.destroy              = surface_handle_destroy,
+	.attach               = surface_handle_attach,
+	.damage               = surface_handle_damage,
+	.frame                = surface_handle_frame,
+	.set_opaque_region    = surface_handle_set_opaque_region,
+	.set_input_region     = surface_handle_set_input_region,
+	.commit               = surface_handle_commit,
+	.set_buffer_transform = surface_handle_set_buffer_transform,
+	.set_buffer_scale     = surface_handle_set_buffer_scale,
+	.damage_buffer        = surface_handle_damage_buffer,
+	.offset               = surface_handle_offset,
 };
 
 static void
@@ -304,7 +304,7 @@ static const struct wl_region_interface region_impl = {
  */
 
 static void
-compositor_create_surface(struct wl_client *client,
+compositor_handle_create_surface(struct wl_client *client,
 		struct wl_resource *resource, u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
@@ -321,7 +321,7 @@ compositor_create_surface(struct wl_client *client,
 }
 
 static void
-compositor_create_region(struct wl_client *client,
+compositor_handle_create_region(struct wl_client *client,
 		struct wl_resource *_resource, u32 id)
 {
 	struct wl_resource *resource = wl_resource_create(client,
@@ -330,8 +330,8 @@ compositor_create_region(struct wl_client *client,
 }
 
 static const struct wl_compositor_interface compositor_impl = {
-	.create_surface = compositor_create_surface,
-	.create_region = compositor_create_region,
+	.create_surface = compositor_handle_create_surface,
+	.create_region  = compositor_handle_create_region,
 };
 
 static void
@@ -347,7 +347,7 @@ compositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
  */
 
 static void
-pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
+pointer_handle_set_cursor(struct wl_client *client, struct wl_resource *resource,
 		u32 serial, struct wl_resource *_surface, i32 hotspot_x, i32 hotspot_y)
 {
 	if (_surface) {
@@ -366,7 +366,7 @@ pointer_set_cursor(struct wl_client *client, struct wl_resource *resource,
 }
 
 static const struct wl_pointer_interface pointer_impl = {
-	.set_cursor = pointer_set_cursor,
+	.set_cursor = pointer_handle_set_cursor,
 	.release    = do_nothing,
 };
 
@@ -379,7 +379,7 @@ static const struct wl_keyboard_interface keyboard_impl = {
  */
 
 static void
-seat_get_pointer(struct wl_client *client, struct wl_resource *resource, u32 id)
+seat_handle_get_pointer(struct wl_client *client, struct wl_resource *resource, u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 
@@ -391,7 +391,7 @@ seat_get_pointer(struct wl_client *client, struct wl_resource *resource, u32 id)
 }
 
 static void
-seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id)
+seat_handle_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id)
 {
 	struct compositor *compositor = wl_resource_get_user_data(resource);
 	struct wl_resource *keyboard = wl_resource_create(client,
@@ -403,16 +403,16 @@ seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, u32 id
 }
 
 static void
-seat_get_touch(struct wl_client *client, struct wl_resource *resource, u32 id)
+seat_handle_get_touch(struct wl_client *client, struct wl_resource *resource, u32 id)
 {
 	wl_resource_post_error(resource, WL_SEAT_ERROR_MISSING_CAPABILITY,
 		"missing touch capability");
 }
 
 static const struct wl_seat_interface seat_impl = {
-	.get_pointer  = seat_get_pointer,
-	.get_keyboard = seat_get_keyboard,
-	.get_touch    = seat_get_touch,
+	.get_pointer  = seat_handle_get_pointer,
+	.get_keyboard = seat_handle_get_keyboard,
+	.get_touch    = seat_handle_get_touch,
 	.release      = do_nothing,
 };
 
@@ -481,7 +481,7 @@ xdg_toplevel_unbind(struct wl_resource *resource)
  */
 
 static void
-xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
+xdg_surface_handle_get_toplevel(struct wl_client *client, struct wl_resource *resource,
 		u32 id)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
@@ -499,7 +499,7 @@ xdg_surface_get_toplevel(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
+xdg_surface_handle_get_popup(struct wl_client *client, struct wl_resource *resource,
 		u32 id, struct wl_resource *parent, struct wl_resource *positioner)
 {
 	struct surface *surface = wl_resource_get_user_data(resource);
@@ -512,7 +512,7 @@ xdg_surface_get_popup(struct wl_client *client, struct wl_resource *resource,
 }
 
 static void
-xdg_surface_set_window_geometry(struct wl_client *client,
+xdg_surface_handle_set_window_geometry(struct wl_client *client,
 		struct wl_resource *resource, i32 x, i32 y, i32 width, i32 height)
 {
 	// TODO
@@ -520,9 +520,9 @@ xdg_surface_set_window_geometry(struct wl_client *client,
 
 static const struct xdg_surface_interface xdg_surface_impl = {
 	.destroy             = do_nothing,
-	.get_toplevel        = xdg_surface_get_toplevel,
-	.get_popup           = xdg_surface_get_popup,
-	.set_window_geometry = xdg_surface_set_window_geometry,
+	.get_toplevel        = xdg_surface_handle_get_toplevel,
+	.get_popup           = xdg_surface_handle_get_popup,
+	.set_window_geometry = xdg_surface_handle_set_window_geometry,
 	.ack_configure       = do_nothing,
 };
 
@@ -531,7 +531,7 @@ static const struct xdg_surface_interface xdg_surface_impl = {
  */
 
 static void
-xdg_wm_base_get_xdg_surface(struct wl_client *client,
+xdg_wm_base_handle_get_xdg_surface(struct wl_client *client,
 		struct wl_resource *resource, u32 id,
 		struct wl_resource *wl_surface)
 {
@@ -546,7 +546,7 @@ xdg_wm_base_get_xdg_surface(struct wl_client *client,
 static const struct xdg_wm_base_interface xdg_wm_base_impl = {
 	.destroy           = do_nothing,
 	.create_positioner = do_nothing,
-	.get_xdg_surface   = xdg_wm_base_get_xdg_surface,
+	.get_xdg_surface   = xdg_wm_base_handle_get_xdg_surface,
 	.pong              = do_nothing,
 };
 
@@ -571,13 +571,13 @@ static const struct wl_subsurface_interface subsurface_impl = {
  * NOTE: subcompositor implementation
  */
 static void
-subcompositor_destroy(struct wl_client *client, struct wl_resource *resource)
+subcompositor_handle_destroy(struct wl_client *client, struct wl_resource *resource)
 {
 	wl_resource_destroy(resource);
 }
 
 static void
-subcompositor_get_subsurface(struct wl_client *client,
+subcompositor_handle_get_subsurface(struct wl_client *client,
 		struct wl_resource *resource, u32 id, struct wl_resource *_surface,
 		struct wl_resource *parent)
 {
@@ -593,8 +593,8 @@ subcompositor_get_subsurface(struct wl_client *client,
 }
 
 static const struct wl_subcompositor_interface subcompositor_impl = {
-	.destroy        = subcompositor_destroy,
-	.get_subsurface = subcompositor_get_subsurface,
+	.destroy        = subcompositor_handle_destroy,
+	.get_subsurface = subcompositor_handle_get_subsurface,
 };
 
 static void
@@ -609,20 +609,20 @@ subcompositor_bind(struct wl_client *client, void *data, u32 version, u32 id)
  * NOTE: data source implementation
  */
 static void
-data_source_offer(struct wl_client *client,
+data_source_handle_offer(struct wl_client *client,
 	struct wl_resource *resource, const char *mime_type)
 {
 	// TODO
 }
 
 static void
-data_source_destroy(struct wl_client *client, struct wl_resource *resource)
+data_source_handle_destroy(struct wl_client *client, struct wl_resource *resource)
 {
 	// TODO
 }
 
 static void
-data_source_set_actions(struct wl_client *client,
+data_source_handle_set_actions(struct wl_client *client,
 		struct wl_resource *resource, u32 dnd_actions)
 {
 	// TODO
@@ -630,9 +630,9 @@ data_source_set_actions(struct wl_client *client,
 
 
 static const struct wl_data_source_interface data_source_impl = {
-	.offer       = data_source_offer,
-	.destroy     = data_source_destroy,
-	.set_actions = data_source_set_actions,
+	.offer       = data_source_handle_offer,
+	.destroy     = data_source_handle_destroy,
+	.set_actions = data_source_handle_set_actions,
 };
 
 /*

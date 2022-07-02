@@ -1,5 +1,6 @@
 #include <EGL/egl.h>
 #include <wayland-server.h>
+#include <xdg-shell-server-protocol.h>
 #include <xcb/xcb.h>
 #include <xcb/composite.h>
 #include <xcb/xfixes.h>

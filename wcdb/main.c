@@ -6,9 +6,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <xdg-shell-client-protocol.h>
 
 #include <waycraft/types.h>
-#include <wcdb/xdg-shell-protocol.h>
 
 #include "xdg-shell-protocol.c"
 
