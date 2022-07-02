@@ -29,25 +29,6 @@ static const char *x11_atom_names[X11_ATOM_COUNT] = {
 	[X11_UTF8_STRING]      = "UTF8_STRING",
 };
 
-struct platform_event_array {
-	struct platform_event *at;
-	u32 max_count;
-	u32 count;
-};
-
-static struct platform_event *
-push_event(struct platform_event_array *events, u32 type)
-{
-	struct platform_event *result = NULL;
-
-	if (events->count < events->max_count) {
-		result = &events->at[events->count++];
-		result->type = type;
-	}
-
-	return result;
-}
-
 static void
 randname(char *buf)
 {
@@ -380,82 +361,6 @@ x11_window_finish(struct x11_window *window)
 	xcb_disconnect(window->connection);
 }
 
-static i32
-x11_egl_init(struct egl *egl, struct x11_window *window)
-{
-	egl->display = eglGetDisplay(0);
-	if (egl->display == EGL_NO_DISPLAY) {
-		fprintf(stderr, "Failed to get the egl display\n");
-		goto error_get_display;
-	}
-
-	i32 major, minor;
-	if (!eglInitialize(egl->display, &major, &minor)) {
-		fprintf(stderr, "Failed to initialize egl\n");
-		goto error_initialize;
-	}
-
-	EGLint config_attributes[] = {
-		EGL_RED_SIZE, 8,
-		EGL_GREEN_SIZE, 8,
-		EGL_BLUE_SIZE, 8,
-		EGL_DEPTH_SIZE, 24,
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-		EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-		EGL_NONE
-	};
-
-	EGLConfig config;
-	EGLint config_count;
-	if (!eglChooseConfig(egl->display, config_attributes, &config, 1, &config_count)) {
-		fprintf(stderr, "Failed to choose config\n");
-		goto error_choose_config;
-	}
-
-	if (config_count != 1) {
-		goto error_choose_config;
-	}
-
-	egl->surface = eglCreateWindowSurface(egl->display,
-		config, window->window, 0);
-
-	if (!eglBindAPI(EGL_OPENGL_API)) {
-		goto error_bind_api;
-	}
-
-	EGLint context_attributes[] = {
-		EGL_CONTEXT_MAJOR_VERSION, 3,
-		EGL_CONTEXT_MINOR_VERSION, 3,
-		EGL_NONE
-	};
-
-	egl->context = eglCreateContext(egl->display, config, EGL_NO_CONTEXT,
-		context_attributes);
-	if (egl->context == EGL_NO_CONTEXT) {
-		goto error_context;
-	}
-
-	eglMakeCurrent(egl->display, egl->surface, egl->surface, egl->context);
-
-	return 0;
-error_context:
-	eglDestroySurface(egl->display, egl->surface);
-error_bind_api:
-error_choose_config:
-error_initialize:
-	eglTerminate(egl->display);
-error_get_display:
-	return -1;
-}
-
-void
-egl_finish(struct egl *egl)
-{
-	eglDestroyContext(egl->display, egl->context);
-	eglDestroySurface(egl->display, egl->surface);
-	eglTerminate(egl->display);
-}
-
 static f64
 get_time_sec(void)
 {
@@ -471,7 +376,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 {
 	struct x11_window window = {0};
 	struct game_input input = {0};
-	struct egl egl = {0};
+	struct egl_context egl = {0};
 
 	/* initialize the window */
 	if (x11_window_init(&window) != 0) {
@@ -480,7 +385,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	}
 
 	/* initialize egl */
-	if (x11_egl_init(&egl, &window) != 0) {
+	if (egl_init(&egl, window.window) != 0) {
 		fprintf(stderr, "Failed to initialize egl\n");
 		return 1;
 	}

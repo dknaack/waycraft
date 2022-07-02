@@ -19,12 +19,6 @@
 
 struct wl_resource;
 
-struct egl {
-	EGLDisplay *display;
-	EGLSurface *surface;
-	EGLContext *context;
-};
-
 enum surface_role {
 	SURFACE_ROLE_NONE,
 	SURFACE_ROLE_XDG_TOPLEVEL,

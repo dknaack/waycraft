@@ -2,43 +2,11 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
-#include <waycraft/types.h>
-#include <waycraft/memory.h>
-#include <waycraft/platform.h>
-#include <waycraft/compositor.h>
-#include <waycraft/gl.h>
-#include <waycraft/log.h>
-#include <waycraft/stb_image.h>
-#include <waycraft/timer.h>
-#include <waycraft/xdg-shell-protocol.h>
+#include <waycraft/main.h>
 
 #include "waycraft/log.c"
 #include "waycraft/compositor.c"
-
-struct game_code {
-	struct platform_memory memory;
-	char *path;
-	game_update_t *update;
-	ino_t ino;
-	void *handle;
-};
-
-typedef void platform_task_callback_t(void *data);
-
-struct task {
-	platform_task_callback_t *callback;
-	void *data;
-};
-
-struct platform_task_queue {
-	struct task tasks[256];
-	pthread_mutex_t lock;
-	pthread_cond_t new_task;
-	u32 completed_task_count;
-	u32 task_count;
-	u32 next_read;
-	u32 next_write;
-};
+#include "waycraft/x11.c"
 
 static void
 game_load(struct game_code *game)
@@ -62,6 +30,19 @@ game_load(struct game_code *game)
 	}
 }
 
+static struct platform_event *
+push_event(struct platform_event_array *events, u32 type)
+{
+	struct platform_event *result = NULL;
+
+	if (events->count < events->max_count) {
+		result = &events->at[events->count++];
+		result->type = type;
+	}
+
+	return result;
+}
+
 static bool
 execute_task(struct platform_task_queue *queue)
 {
@@ -71,7 +52,7 @@ execute_task(struct platform_task_queue *queue)
 		executed_task = true;
 
 		pthread_mutex_lock(&queue->lock);
-		struct task task = queue->tasks[queue->next_read];
+		struct platform_task task = queue->tasks[queue->next_read];
 		queue->next_read = (queue->next_read + 1) % queue->task_count;
 		pthread_mutex_unlock(&queue->lock);
 
@@ -110,7 +91,7 @@ add_task(struct platform_task_queue *queue, platform_task_callback_t *callback, 
 	pthread_mutex_lock(&queue->lock);
 	assert(queue->next_write + 1 != queue->next_read);
 
-	struct task *task = &queue->tasks[queue->next_write];
+	struct platform_task *task = &queue->tasks[queue->next_write];
 	task->callback = callback;
 	task->data = data;
 
@@ -121,7 +102,82 @@ add_task(struct platform_task_queue *queue, platform_task_callback_t *callback, 
 	pthread_mutex_unlock(&queue->lock);
 }
 
-#include "waycraft/x11.c"
+static i32
+egl_init(struct egl_context *egl, usize window)
+{
+	egl->display = eglGetDisplay(0);
+	if (egl->display == EGL_NO_DISPLAY) {
+		log_err("Failed to get the EGL display");
+		goto error_get_display;
+	}
+
+	i32 major, minor;
+	if (!eglInitialize(egl->display, &major, &minor)) {
+		log_err("Failed to initialize EGL");
+		goto error_initialize;
+	}
+
+	EGLint config_attributes[] = {
+		EGL_RED_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_BLUE_SIZE, 8,
+		EGL_DEPTH_SIZE, 24,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+		EGL_NONE
+	};
+
+	EGLConfig config;
+	EGLint config_count;
+	if (!eglChooseConfig(egl->display, config_attributes, &config, 1, &config_count)) {
+		log_err("Failed to choose config");
+		goto error_choose_config;
+	}
+
+	if (config_count != 1) {
+		goto error_choose_config;
+	}
+
+	egl->surface = eglCreateWindowSurface(egl->display, config, window, 0);
+
+	if (!eglBindAPI(EGL_OPENGL_API)) {
+		log_err("Failed to bind the opengl api");
+		goto error_bind_api;
+	}
+
+	EGLint context_attributes[] = {
+		EGL_CONTEXT_MAJOR_VERSION, 3,
+		EGL_CONTEXT_MINOR_VERSION, 3,
+		EGL_NONE
+	};
+
+	egl->context = eglCreateContext(egl->display, config, EGL_NO_CONTEXT,
+		context_attributes);
+	if (egl->context == EGL_NO_CONTEXT) {
+		log_err("Failed to create the EGL context");
+		goto error_context;
+	}
+
+	eglMakeCurrent(egl->display, egl->surface, egl->surface, egl->context);
+
+	return 0;
+error_context:
+	eglDestroySurface(egl->display, egl->surface);
+error_bind_api:
+error_choose_config:
+error_initialize:
+	eglTerminate(egl->display);
+error_get_display:
+	return -1;
+}
+
+static void
+egl_finish(struct egl_context *egl)
+{
+	eglDestroyContext(egl->display, egl->context);
+	eglDestroySurface(egl->display, egl->surface);
+	eglTerminate(egl->display);
+}
 
 int
 main(void)
