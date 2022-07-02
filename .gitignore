@@ -2,5 +2,6 @@ build/
 etc/
 tags
 xdg-shell-protocol.c
-xdg-shell-protocol.h
+xdg-shell-client-protocol.h
+xdg-shell-server-protocol.h
 *.o
