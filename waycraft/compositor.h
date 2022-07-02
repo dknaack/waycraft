@@ -130,6 +130,8 @@ struct compositor {
 	i32 keymap_size;
 };
 
+static struct opengl_api gl;
+
 static bool surface_set_role(struct surface *surface, u32 role,
 	struct wl_resource *resource, u32 error);
 static void surface_destroy_resource(struct wl_resource *resource);

@@ -815,6 +815,8 @@ static struct game_window_manager *
 compositor_update(struct platform_memory *memory,
 		struct platform_event *event, u32 event_count)
 {
+	gl = *memory->gl;
+
 	struct compositor *compositor = memory->data;
 	struct game_window_manager *wm = &compositor->window_manager;
 	struct wl_display *display = compositor->display;
