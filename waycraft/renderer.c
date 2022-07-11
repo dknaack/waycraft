@@ -453,6 +453,7 @@ render_textured_quad(struct render_command_buffer *cmd_buffer,
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
+#endif
 
 static void
 render_mesh(struct render_command_buffer *cmd_buffer,
