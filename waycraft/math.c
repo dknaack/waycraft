@@ -27,6 +27,7 @@ static inline f32 v2_dot(v2 a, v2 b) { return a.x * b.x + a.y * b.y; }
 static inline f32 v2_len_sq(v2 a) { return v2_dot(a, a); }
 static inline f32 v2_len(v2 a) { return sqrtf(v2_len_sq(a)); }
 static inline v2 v2_norm(v2 a) { return v2_divf(a, v2_len(a)); }
+static inline v2 v2_neg(v2 a) { return V2(-a.x, -a.y); }
 
 /* v3 functions */
 static inline v3 v3_add(v3 a, v3 b) { return V3(a.x + b.x, a.y + b.y, a.z + b.z); }
@@ -58,6 +59,7 @@ static inline f32 v4_dot(v4 a, v4 b) { return a.x * b.x + a.y * b.y + a.z * b.z 
 static inline f32 v4_len_sq(v4 a) { return v4_dot(a, a); }
 static inline f32 v4_len(v4 a) { return sqrtf(v4_len_sq(a)); }
 static inline v4 v4_norm(v4 a) { return v4_divf(a, v4_len(a)); }
+static inline v4 v4_neg(v4 a) { return V4(-a.x, -a.y, -a.z, -a.w); }
 
 static inline v3i v3i_add(v3i a, v3i b) { return V3I(a.x + b.x, a.y + b.y, a.z + b.z); }
 static inline v3i v3i_sub(v3i a, v3i b) { return V3I(a.x - b.x, a.y - b.y, a.z - b.z); }
