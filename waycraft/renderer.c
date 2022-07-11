@@ -428,14 +428,15 @@ render_sprite(struct render_command_buffer *cmd_buffer,
 	v3 pos2 = V3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
 	v3 pos3 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
 
-	v2 uv0 = V2(0, 0);
-	v2 uv1 = V2(1, 0);
-	v2 uv2 = V2(0, 1);
-	v2 uv3 = V2(1, 1);
+	v2 uv0 = V2(0, 1);
+	v2 uv1 = V2(1, 1);
+	v2 uv2 = V2(0, 0);
+	v2 uv3 = V2(1, 0);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
 
+#if 0
 static void
 render_textured_quad(struct render_command_buffer *cmd_buffer,
 		m4x4 transform, struct texture_id texture)
