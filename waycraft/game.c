@@ -349,7 +349,7 @@ camera_get_projection(struct camera *camera)
 static void
 player_init(struct player *player, struct camera *camera)
 {
-	f32 player_speed = 150.f;
+	f32 player_speed = 200.f;
 	f32 camera_fov = 75.f;
 	v3 player_position = V3(0, 20, 0);
 
