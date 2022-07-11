@@ -161,18 +161,19 @@ world_init(struct world *world, struct memory_arena *arena)
 
 static void
 world_load_chunk(struct world *world, struct chunk *chunk,
-		struct render_command_buffer *mesh, struct renderer *renderer,
-		struct game_assets *assets)
+		struct render_command_buffer *mesh, struct renderer *renderer)
 {
+	struct game_assets *assets = mesh->assets;
+
 	v3 chunk_pos = chunk_get_pos(chunk);
 	u16 *blocks = chunk->blocks;
-
 	if (chunk->state == CHUNK_UNLOADED) {
 		/*
 		 * NOTE: terrain generation
 		 */
 
-		f32 noise_size = 0.025f;
+		f32 noise_size = 0.02f;
+		f32 low_noise_size = 0.0005f;
 
 		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_X];
 		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
@@ -180,12 +181,12 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 				f32 world_x = chunk_pos.x + x;
 				f32 world_z = chunk_pos.z + z;
 
-				f32 persistance = perlin_noise(1000.f + 0.01f * world_x, 0, 0.01f * world_z);
-
 				f32 nx = noise_size * world_x;
 				f32 nz = noise_size * world_z;
-				f32 value = 1.2f * perlin_noise_layered(nx, 0, nz, 8, 0.45f) - 0.5;
-				height[x][z] = 4.f * value * BLOCK_COUNT_X - chunk_pos.y - 1.5;
+				f32 value = 2.0f * perlin_noise_layered(nx, 0, nz, 8, 0.5f) - 1.0f;
+				f32 low_value = 2.0f * perlin_noise_layered(low_noise_size * world_x,
+					0, low_noise_size * world_z, 8, 0.8f) - 1.0f;
+				height[x][z] = 8.0f * (value + 0.2f) * (2.0f * low_value + 0.3f) * BLOCK_COUNT_X - chunk_pos.y;
 
 				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_X);
 				i32 dirt_max = CLAMP(height[x][z] - 1, 0, BLOCK_COUNT_X);
@@ -238,13 +239,21 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		u32 seed = coord.x;
 #endif
 
-		u32 x = xorshift32(&seed) % BLOCK_COUNT_X;
-		u32 z = xorshift32(&seed) % BLOCK_COUNT_X;
-		u32 tree_height = (xorshift32(&seed) & 7) + 2;
+		f32 tree_noise_size = 100.f;
+		f32 density = 9.f * perlin_noise(chunk_pos.x / tree_noise_size, 0, chunk_pos.z / tree_noise_size) - 2.f;
+		u32 tree_count = CLAMP(density, 0, 7);
+		for (u32 i = 0; i < tree_count; i++) {
+			u32 x = xorshift32(&seed) % BLOCK_COUNT_X;
+			u32 z = xorshift32(&seed) % BLOCK_COUNT_X;
+			u32 tree_height = (xorshift32(&seed) & 7) + 2;
 
-		for (i32 y = height[x][z]; y < BLOCK_COUNT_X && 2 <= y && y < height[x][z] + tree_height; y++) {
-			u32 i = block_index(x, y, z);
-			blocks[i] = BLOCK_OAK_LOG;
+			if (height[x][z] + chunk_pos.y > 2) {
+				for (i32 y = height[x][z]; y < BLOCK_COUNT_X && 2 <= y &&
+						y < height[x][z] + tree_height; y++) {
+					u32 i = block_index(x, y, z);
+					blocks[i] = BLOCK_OAK_LOG;
+				}
+			}
 		}
 	}
 
@@ -411,14 +420,15 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		struct renderer *renderer, struct render_command_buffer *cmd_buffer,
 		struct memory_arena *frame_arena, struct game_assets *assets)
 {
-	struct render_command_buffer tmp_buffer;
-	u32 max_vertex_count = CHUNK_COUNT * 64;
-	u32 max_index_count = CHUNK_COUNT * 128;
+	struct render_command_buffer tmp_buffer = {0};
+	u32 max_vertex_count = BLOCK_COUNT * 4 * 6;
+	u32 max_index_count = BLOCK_COUNT * 6 * 6;
 	render_command_buffer_init(&tmp_buffer, frame_arena, KB(1),
 		max_vertex_count, max_index_count);
+	tmp_buffer.assets = cmd_buffer->assets;
 
 	struct box player_bounds = {0};
-	v3 target = add(player_pos, mulf(player_dir, 3 * BLOCK_COUNT_X));
+	v3 target = add(player_pos, mulf(player_dir, 3.0f * BLOCK_COUNT_X));
 	v3 world_size = V3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
 	player_bounds.min = sub(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
 	player_bounds.max = add(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
@@ -437,7 +447,6 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	player_offset.y = floor(target.y / BLOCK_COUNT_X - CHUNK_COUNT_Y / 2.0f);
 	player_offset.z = floor(target.z / BLOCK_COUNT_X - CHUNK_COUNT_Z / 2.0f);
 
-#define MAX_LOAD_PER_FRAME 4
 	struct chunk *chunks_to_load[MAX_LOAD_PER_FRAME] = {0};
 	f32 distances[MAX_LOAD_PER_FRAME];
 	for (u32 i = 0; i < MAX_LOAD_PER_FRAME; i++) {
@@ -497,24 +506,21 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		}
 	}
 
-	for (u32 i = 0; chunks_to_load[i] && i < LENGTH(chunks_to_load); i++) {
+	for (u32 i = 0; i < LENGTH(chunks_to_load) && chunks_to_load[i]; i++) {
 		assert(chunks_to_load[i]->state != CHUNK_READY);
 
 		tmp_buffer.push_buffer_size = 0;
 		tmp_buffer.index_count = 0;
 		tmp_buffer.vertex_count = 0;
 		tmp_buffer.current_quads = 0;
-		world_load_chunk(world, chunks_to_load[i], &tmp_buffer, renderer, assets);
+		world_load_chunk(world, chunks_to_load[i], &tmp_buffer, renderer);
 	}
 
 	// NOTE: draw the loaded chunks
 	m4x4 transform = m4x4_id(1);
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
-		v3 chunk_pos = chunk_get_pos(&world->chunks[i]);
-		v3 chunk_dir = sub(chunk_pos, player_pos);
-
-		if (world->chunks[i].mesh != 0 && (length_sq(chunk_dir) < 1024 || dot(player_dir, chunk_dir)) > 0) {
+		if (world->chunks[i].mesh != 0) {
 			render_mesh(cmd_buffer, world->chunks[i].mesh, transform, texture);
 		}
 	}
