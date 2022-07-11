@@ -7,13 +7,13 @@ lerp(f32 a, f32 b, f32 t)
 static inline f32
 degrees(f32 radians)
 {
-	return 180.0f * radians / PI;
+	return 360.0f * radians / F32_TAU;
 }
 
 static inline f32
 radians(f32 degrees)
 {
-	return PI * degrees / 180.0f;
+	return F32_TAU * degrees / 360.0f;
 }
 
 /* v2 functions */

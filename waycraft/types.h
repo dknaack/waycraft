@@ -92,8 +92,6 @@ struct box {
 #define V2(x, y)       (v2){{ (x), (y) }}
 #define V3I(x, y, z)   (v3i){{ (x), (y), (z) }}
 
-#define PI 3.14159265359f
-
 #define U64_MAX 0xffffffffffffffffl
 #define U32_MAX 0xffffffff
 #define U16_MAX 0xffff
@@ -109,5 +107,7 @@ struct box {
 #define I16_MIN (i16)0x8000
 #define I8_MIN  (i8)0x80
 
+#define F32_PI 3.14159265358979323846f
+#define F32_TAU (2.0f * F32_PI)
 #define F32_INF INFINITY
 #define F32_EPSILON 1e-5f
