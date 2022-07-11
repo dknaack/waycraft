@@ -328,7 +328,7 @@ camera_rotate(struct camera *camera, f32 dx, f32 dy)
 static m4x4
 camera_get_view(struct camera *camera)
 {
-	v3 target = v3_add(camera->position, camera->direction);
+	v3 target = add(camera->position, camera->direction);
 	m4x4 result = m4x4_look_at(camera->position, target, V3(0, 1, 0));
 
 	return result;
@@ -390,8 +390,8 @@ box_from_center(v3 center, v3 size)
 {
 	struct box box;
 
-	box.min = v3_sub(center, size);
-	box.max = v3_add(center, size);
+	box.min = sub(center, size);
+	box.max = add(center, size);
 	return box;
 }
 
@@ -405,11 +405,11 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 		button_is_down(input->controller.move_down);
 
 	if (haxis || vaxis) {
-		front = v3_mulf(front, vaxis);
-		right = v3_mulf(right, haxis);
+		front = mulf(front, vaxis);
+		right = mulf(right, haxis);
 		front.y = right.y = 0;
 
-		direction = v3_mulf(v3_norm(v3_add(front, right)), speed);
+		direction = mulf(normalize(add(front, right)), speed);
 	}
 
 	return direction;
@@ -446,7 +446,7 @@ ray_box_intersection(struct box box, v3 start, v3 direction,
 
 		if (tmax > t1.e[i]) {
 			tmax = t1.e[i];
-			*normal_max = v3_neg(normal);
+			*normal_max = neg(normal);
 		}
 	}
 
@@ -477,7 +477,7 @@ player_move(struct game_state *game, struct game_input *input)
 	v3 position = player->position;
 	v3 velocity = player->velocity;
 	v3 acceleration = player_direction_from_input(input, forward, right, speed);
-	acceleration = v3_sub(acceleration, v3_mulf(velocity, 15.f));
+	acceleration = sub(acceleration, mulf(velocity, 15.f));
 	acceleration.y = -100.f;
 
 	if (button_is_down(input->controller.jump) && player->frames_since_jump < 5) {
@@ -486,21 +486,17 @@ player_move(struct game_state *game, struct game_input *input)
 		player->is_jumping = 1;
 	}
 
-	v3 position_delta = v3_add(
-		v3_mulf(velocity, dt),
-		v3_mulf(acceleration, dt * dt * 0.5f)
-	);
-
-	velocity = v3_add(velocity, v3_mulf(acceleration, dt));
+	v3 position_delta = add(mulf(velocity, dt), mulf(acceleration, dt * dt * 0.5f));
+	velocity = add(velocity, mulf(acceleration, dt));
 
 	v3 old_player_pos = player->position;
-	v3 new_player_pos = v3_add(old_player_pos, position_delta);
+	v3 new_player_pos = add(old_player_pos, position_delta);
 
 	v3 player_size = V3(0.25, 0.99f, 0.25f);
-	v3 old_player_min = v3_sub(old_player_pos, player_size);
-	v3 old_player_max = v3_add(old_player_pos, player_size);
-	v3 new_player_min = v3_sub(new_player_pos, player_size);
-	v3 new_player_max = v3_add(new_player_pos, player_size);
+	v3 old_player_min = sub(old_player_pos, player_size);
+	v3 old_player_max = add(old_player_pos, player_size);
+	v3 new_player_min = sub(new_player_pos, player_size);
+	v3 new_player_max = add(new_player_pos, player_size);
 
 	i32 min_block_x = floorf(MIN(old_player_min.x, new_player_min.x) + 0.4);
 	i32 min_block_y = floorf(MIN(old_player_min.y, new_player_min.y) + 0.4);
@@ -515,11 +511,11 @@ player_move(struct game_state *game, struct game_input *input)
 	assert(min_block_z <= max_block_z);
 
 	v3 block_size = V3(0.5, 0.5, 0.5);
-	v3 block_offset = v3_add(player_size, block_size);
+	v3 block_offset = add(player_size, block_size);
 
 	struct box block_bounds;
-	block_bounds.min = v3_mulf(block_offset, -1.f);
-	block_bounds.max = v3_mulf(block_offset,  1.f);
+	block_bounds.min = mulf(block_offset, -1.f);
+	block_bounds.max = mulf(block_offset,  1.f);
 
 	f32 t_remaining = 1.f;
 	for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
@@ -530,9 +526,9 @@ player_move(struct game_state *game, struct game_input *input)
 			for (i32 y = min_block_y; y <= max_block_y; y++) {
 				for (i32 x = min_block_x; x <= max_block_x; x++) {
 					v3 block = V3(x, y, z);
-					v3 relative_old_pos = v3_sub(position, block);
+					v3 relative_old_pos = sub(position, block);
 
-					v3 new_position = v3_add(relative_old_pos, position_delta);
+					v3 new_position = add(relative_old_pos, position_delta);
 					if (!block_is_empty(world_at(world, x, y, z)) &&
 							box_contains_point(block_bounds, new_position))
 					{
@@ -561,12 +557,10 @@ player_move(struct game_state *game, struct game_input *input)
 			player->frames_since_jump = 0;
 		}
 
-		position = v3_add(position, v3_mulf(position_delta, t_min));
-		velocity = v3_sub(velocity, v3_mulf(normal, v3_dot(normal, velocity)));
-		position_delta = v3_sub(
-			position_delta,
-			v3_mulf(normal, v3_dot(normal, position_delta))
-		);
+		position = add(position, mulf(position_delta, t_min));
+		velocity = sub(velocity, mulf(normal, dot(normal, velocity)));
+		position_delta = sub(position_delta,
+			mulf(normal, dot(normal, position_delta)));
 
 		t_remaining -= t_min * t_remaining;
 	}
@@ -787,9 +781,17 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		memory->is_initialized = 1;
 	}
 
+	printf("updating the game...\n");
+
 	// NOTE: reset the frame arena
 	game->frame_arena.used = 0;
 	debug_update(&game->debug_state, &game->frame_arena);
+
+	static f32 t;
+	t += 0.1f;
+
+	camera->yaw = cos(t);
+	camera->pitch = sin(t);
 
 	m4x4 projection = camera_get_projection(camera);
 	m4x4 view = camera_get_view(camera);
@@ -940,10 +942,10 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	if (focused_window) {
 		v3 camera_right, camera_up, camera_forward;
 		camera_axes(camera, &camera_right, &camera_up, &camera_forward);
-		v3 mouse_dx = v3_mulf(camera_right, input->mouse.dx * 0.001f);
-		v3 mouse_dy = v3_mulf(camera_up, -input->mouse.dy * 0.001f);
-		v3 mouse_pos = v3_add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
-		v3 camera_pos = v3_add(camera->position, mouse_pos);
+		v3 mouse_dx = mulf(camera_right, input->mouse.dx * 0.001f);
+		v3 mouse_dy = mulf(camera_up, -input->mouse.dy * 0.001f);
+		v3 mouse_pos = add(game->mouse_pos, v3_add(mouse_dx, mouse_dy));
+		v3 camera_pos = add(camera->position, mouse_pos);
 
 		// draw the cursor
 		v3 window_x, window_y, window_z;
@@ -955,11 +957,11 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 		v3 window_pos = focused_window->position;
 		v2 window_scale = focused_window->scale;
-		v2 cursor_offset = v2_mulf(wm->cursor.offset, 1./VIRTUAL_SCREEN_SIZE);
-		v3 cursor_world_pos = v3_add(window_pos, v3_add(v3_add(
-			v3_mulf(window_x, cursor_pos.x / window_scale.x + cursor_offset.x),
-			v3_mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
-			v3_mulf(window_z, -0.01f)));
+		v2 cursor_offset = mulf(wm->cursor.offset, 1./VIRTUAL_SCREEN_SIZE);
+		v3 cursor_world_pos = add(window_pos, v3_add(v3_add(
+			mulf(window_x, cursor_pos.x / window_scale.x + cursor_offset.x),
+			mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
+			mulf(window_z, -0.01f)));
 
 		struct texture_id cursor_texture = {wm->cursor.texture};
 		v2 uv[4];
@@ -968,15 +970,15 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		uv[2] = V2(1, 0);
 		uv[3] = V2(1, 1);
 
-		v2 cursor_scale = v2_mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
-		v3 cursor_x = v3_mulf(v3_norm(window_x), cursor_scale.x);
-		v3 cursor_y = v3_mulf(v3_norm(window_y), cursor_scale.y);
+		v2 cursor_scale = mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
+		v3 cursor_x = mulf(normalize(window_x), cursor_scale.x);
+		v3 cursor_y = mulf(normalize(window_y), cursor_scale.y);
 
 		v3 pos[4];
 		pos[0] = cursor_world_pos;
-		pos[1] = v3_add(cursor_world_pos, cursor_y);
-		pos[2] = v3_add(cursor_world_pos, cursor_x);
-		pos[3] = v3_add(pos[2], cursor_y);
+		pos[1] = add(cursor_world_pos, cursor_y);
+		pos[2] = add(cursor_world_pos, cursor_x);
+		pos[3] = add(pos[2], cursor_y);
 
 		render_quad(&cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			uv[0], uv[1], uv[2], uv[3], cursor_texture);
