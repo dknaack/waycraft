@@ -10,7 +10,7 @@
 #define add(a, b)  (generic_matrix_vector_func(add, (a))(a, b))
 #define sub(a, b)  (generic_matrix_vector_func(sub, (a))(a, b))
 #define div(a, b)  (generic_vector_func(div, (a))(a, b))
-#define dot(a, b)  (generic_vector_func(dot, (a))(a, b))
+#define dot(a, b)  (generic_float_vector_func(dot, (a))(a, b))
 #define mulf(a, b) (generic_float_matrix_vector_func(mulf, (a))(a, b))
 #define divf(a, b) (generic_float_matrix_vector_func(divf, (a))(a, b))
 #define mul(a, b)  (_Generic((a), v2: v2_mul, v3: v3_mul, v4: v4_mul, \
