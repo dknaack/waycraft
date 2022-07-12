@@ -7,6 +7,7 @@
 #include "waycraft/log.c"
 #include "waycraft/compositor.c"
 #include "waycraft/x11.c"
+#include "waycraft/drm.c"
 
 static void
 game_load(struct game_code *game)
@@ -225,5 +226,21 @@ main(void)
 	compositor_memory.gl = &gl;
 	compositor_memory.platform = &platform;
 
-    return x11_main(&game, &compositor_memory, &gl);
+	(void)arena_suballoc;
+#if 0
+	if ((result = drm_main(&game, &compositor_memory, &gl)) >= 0) {
+	} else if ((result = wayland_main(&game, &compositor_memory, &gl)) >= 0) {
+		// NOTE: successfully initialized wayland backend
+	} else
+#endif
+		if ((result = x11_main(&game, &compositor_memory, &gl)) >= 0) {
+		// NOTE: successfully initialized x11 backend
+	} else {
+		log_err("Failed to find backend");
+		result = 1;
+	}
+
+	free(game.memory.data);
+	free(compositor_memory.data);
+	return result;
 }
