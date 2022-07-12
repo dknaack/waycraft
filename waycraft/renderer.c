@@ -106,6 +106,7 @@ gl_program_error(u32 program, char *buffer, u32 size)
 {
 	gl.GetProgramInfoLog(program, size - 1, 0, buffer);
 }
+
 static void
 renderer_init(struct renderer *renderer, struct memory_arena *arena)
 {
@@ -241,7 +242,11 @@ renderer_build_command_buffer(struct renderer *renderer,
 static void
 renderer_bind_texture(struct renderer *renderer, u32 texture_id)
 {
-	gl.BindTexture(GL_TEXTURE_2D, texture_id);
+	if (texture_id != 0) {
+		gl.BindTexture(GL_TEXTURE_2D, texture_id);
+	} else {
+		gl.BindTexture(GL_TEXTURE_2D, renderer->white_texture);
+	}
 }
 
 static void
@@ -434,6 +439,14 @@ render_sprite(struct render_command_buffer *cmd_buffer,
 	v2 uv3 = V2(1, 0);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
+}
+
+static void
+render_rect(struct render_command_buffer *cmd_buffer, struct rectangle rect)
+{
+	struct texture_id texture_id = {0};
+
+	render_sprite(cmd_buffer, rect, texture_id);
 }
 
 #if 0

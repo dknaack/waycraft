@@ -19,6 +19,19 @@
 
 #define VIRTUAL_SCREEN_SIZE 400
 
+static struct rectangle
+rectangle_init(v2 center, v2 size)
+{
+	struct rectangle result;
+
+	result.x = center.x - 0.5f * size.x;
+	result.y = center.y - 0.5f * size.y;
+	result.width = size.x;
+	result.height = size.y;
+
+	return result;
+}
+
 static void
 texture_init(struct texture *texture, char *path)
 {
@@ -781,17 +794,9 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		memory->is_initialized = 1;
 	}
 
-	printf("updating the game...\n");
-
 	// NOTE: reset the frame arena
 	game->frame_arena.used = 0;
 	debug_update(&game->debug_state, &game->frame_arena);
-
-	static f32 t;
-	t += 0.1f;
-
-	camera->yaw = cos(t);
-	camera->pitch = sin(t);
 
 	m4x4 projection = camera_get_projection(camera);
 	m4x4 view = camera_get_view(camera);
@@ -1000,6 +1005,13 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	}
 
 	inventory_render(&player->inventory, &ui_cmd_buffer);
+
+	// NOTE: render a crosshair in the center of the screen
+	{
+		v2 viewport = ui_cmd_buffer.transform.viewport;
+		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), V2(16, 2)));
+		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), V2(2, 16)));
+	}
 
 	renderer_submit(&game->renderer, &cmd_buffer);
 	renderer_submit(&game->renderer, &ui_cmd_buffer);
