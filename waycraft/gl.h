@@ -50,6 +50,7 @@ typedef void glEGLImageTargetTexture2DOES_t(GLenum target, EGLImage image);
 typedef void glBlendFunc_t(GLenum sfactor, GLenum dfactor);
 typedef void glPolygonMode_t(GLenum face, GLenum mode);
 typedef void glLineWidth_t(GLfloat width);
+typedef GLenum glGetError_t(void);
 
 #define OPENGL_MAP_FUNCTIONS() \
 	X(Viewport) \
@@ -100,7 +101,8 @@ typedef void glLineWidth_t(GLfloat width);
 	X(EGLImageTargetTexture2DOES) \
 	X(BlendFunc) \
 	X(PolygonMode) \
-	X(LineWidth)
+	X(LineWidth) \
+	X(GetError)
 
 struct opengl_api {
 #define X(name) gl##name##_t *name;
