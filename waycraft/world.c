@@ -2,10 +2,10 @@ static inline u32
 block_index(u32 x, u32 y, u32 z)
 {
 	assert(x < BLOCK_COUNT_X);
-	assert(y < BLOCK_COUNT_X);
-	assert(z < BLOCK_COUNT_X);
+	assert(y < BLOCK_COUNT_Y);
+	assert(z < BLOCK_COUNT_Z);
 
-	return (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
+	return (z * BLOCK_COUNT_Y + y) * BLOCK_COUNT_X + x;
 }
 
 static inline u32
@@ -37,7 +37,8 @@ static inline v3
 chunk_get_pos(struct chunk *chunk)
 {
 	v3 offset = V3(chunk->coord.x, chunk->coord.y, chunk->coord.z);
-	v3 result = mulf(offset, BLOCK_COUNT_X);
+	v3 block_count = V3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z);
+	v3 result = mul(offset, block_count);
 
 	return result;
 }
@@ -53,10 +54,10 @@ chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
 	u32 result = 0;
 	u32 is_inside_chunk = (0 <= x && x < BLOCK_COUNT_X)
-		&& (0 <= y && y < BLOCK_COUNT_X)
-		&& (0 <= z && z < BLOCK_COUNT_X);
+		&& (0 <= y && y < BLOCK_COUNT_Y)
+		&& (0 <= z && z < BLOCK_COUNT_Z);
 	if (is_inside_chunk) {
-		u32 index = (z * BLOCK_COUNT_X + y) * BLOCK_COUNT_X + x;
+		u32 index = (z * BLOCK_COUNT_Y + y) * BLOCK_COUNT_X + x;
 
 		result = chunk->blocks[index];
 	}
@@ -72,8 +73,8 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 
 	v3i chunk_coord = {0};
 	chunk_coord.x = floor(x / BLOCK_COUNT_X);
-	chunk_coord.y = floor(y / BLOCK_COUNT_X);
-	chunk_coord.z = floor(z / BLOCK_COUNT_X);
+	chunk_coord.y = floor(y / BLOCK_COUNT_Y);
+	chunk_coord.z = floor(z / BLOCK_COUNT_Z);
 
 	v3i chunk_rel_coord = chunk_coord;
 	chunk_rel_coord.x %= CHUNK_COUNT_X;
@@ -107,21 +108,24 @@ world_get_chunk(struct world *world, f32 x, f32 y, f32 z)
 static v3
 world_get_block_pos(const struct world *world, f32 x, f32 y, f32 z)
 {
-	v3 block_pos = v3_modf(V3(x + 1e-3, y + 1e-3, z + 1e-3), BLOCK_COUNT_X);
+	v3 result = {0};
 
-	if (block_pos.x < 0) {
-		block_pos.x += BLOCK_COUNT_X;
+	result.x = fmodf(x, BLOCK_COUNT_X);
+	if (result.x < 0) {
+		result.x += BLOCK_COUNT_X;
 	}
 
-	if (block_pos.y < 0) {
-		block_pos.y += BLOCK_COUNT_X;
+	result.y = fmodf(y, BLOCK_COUNT_Y);
+	if (result.y < 0) {
+		result.y += BLOCK_COUNT_Y;
 	}
 
-	if (block_pos.z < 0) {
-		block_pos.z += BLOCK_COUNT_X;
+	result.z = fmodf(z, BLOCK_COUNT_Z);
+	if (result.z < 0) {
+		result.z += BLOCK_COUNT_Z;
 	}
 
-	return block_pos;
+	return result;
 }
 
 static u32
@@ -175,8 +179,8 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		f32 noise_size = 0.02f;
 		f32 low_noise_size = 0.0005f;
 
-		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_X];
-		for (i32 z = 0; z < BLOCK_COUNT_X; z++) {
+		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_Z];
+		for (i32 z = 0; z < BLOCK_COUNT_Z; z++) {
 			for (i32 x = 0; x < BLOCK_COUNT_X; x++) {
 				f32 world_x = chunk_pos.x + x;
 				f32 world_z = chunk_pos.z + z;
@@ -188,9 +192,9 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 					0, low_noise_size * world_z, 8, 0.8f) - 1.0f;
 				height[x][z] = 8.0f * (value + 0.2f) * (2.0f * low_value + 0.3f) * BLOCK_COUNT_X - chunk_pos.y;
 
-				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_X);
-				i32 dirt_max = CLAMP(height[x][z] - 1, 0, BLOCK_COUNT_X);
-				i32 grass_max = CLAMP(height[x][z], 0, BLOCK_COUNT_X);
+				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_Y);
+				i32 dirt_max = CLAMP(height[x][z] - 1, 0, BLOCK_COUNT_Y);
+				i32 grass_max = CLAMP(height[x][z], 0, BLOCK_COUNT_Y);
 
 				i32 y = 0;
 				while (y < stone_max) {
@@ -215,7 +219,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 					filler = BLOCK_WATER;
 				}
 
-				while (y < BLOCK_COUNT_X) {
+				while (y < BLOCK_COUNT_Y) {
 					u32 i = block_index(x, y++, z);
 					blocks[i] = filler;
 				}
@@ -244,11 +248,11 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		u32 tree_count = CLAMP(density, 0, 7);
 		for (u32 i = 0; i < tree_count; i++) {
 			u32 x = xorshift32(&seed) % BLOCK_COUNT_X;
-			u32 z = xorshift32(&seed) % BLOCK_COUNT_X;
+			u32 z = xorshift32(&seed) % BLOCK_COUNT_Z;
 			u32 tree_height = (xorshift32(&seed) & 7) + 2;
 
 			if (height[x][z] + chunk_pos.y > 2) {
-				for (i32 y = height[x][z]; y < BLOCK_COUNT_X && 2 <= y &&
+				for (i32 y = height[x][z]; y < BLOCK_COUNT_Y && 2 <= y &&
 						y < height[x][z] + tree_height; y++) {
 					u32 i = block_index(x, y, z);
 					blocks[i] = BLOCK_OAK_LOG;
@@ -312,15 +316,15 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 	assert(blocks);
 
-	for (u32 i = 0; i < BLOCK_COUNT_X * BLOCK_COUNT_X * BLOCK_COUNT_X; i++) {
+	for (u32 i = 0; i < BLOCK_COUNT; i++) {
 		u32 block = blocks[i];
 		if (block == BLOCK_AIR) {
 			continue;
 		}
 
 		i32 x = i % BLOCK_COUNT_X;
-		i32 y = i / BLOCK_COUNT_X % BLOCK_COUNT_X;
-		i32 z = i / BLOCK_COUNT_X / BLOCK_COUNT_X % BLOCK_COUNT_X;
+		i32 y = i / BLOCK_COUNT_X % BLOCK_COUNT_Y;
+		i32 z = i / BLOCK_COUNT_X / BLOCK_COUNT_Y % BLOCK_COUNT_Z;
 
 		v3 pos[8];
 		v2 uv[4];
@@ -345,20 +349,20 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 			blocks_left[block_index(x - 1 + BLOCK_COUNT_X, y, z)] :
 			blocks[block_index(x - 1, y, z)];
 
-		u16 block_top = y + 1 >= BLOCK_COUNT_X ?
-			blocks_top[block_index(x, y + 1 - BLOCK_COUNT_X, z)] :
+		u16 block_top = y + 1 >= BLOCK_COUNT_Y ?
+			blocks_top[block_index(x, y + 1 - BLOCK_COUNT_Y, z)] :
 			blocks[block_index(x, y + 1, z)];
 
 		u16 block_bottom = y - 1 < 0 ?
-			blocks_bottom[block_index(x, y - 1 + BLOCK_COUNT_X, z)] :
+			blocks_bottom[block_index(x, y - 1 + BLOCK_COUNT_Y, z)] :
 			blocks[block_index(x, y - 1, z)];
 
-		u16 block_front = z + 1 >= BLOCK_COUNT_X ?
-			blocks_front[block_index(x, y, z + 1 - BLOCK_COUNT_X)] :
+		u16 block_front = z + 1 >= BLOCK_COUNT_Z ?
+			blocks_front[block_index(x, y, z + 1 - BLOCK_COUNT_Z)] :
 			blocks[block_index(x, y, z + 1)];
 
 		u16 block_back = z - 1 < 0 ?
-			blocks_back[block_index(x, y, z - 1 + BLOCK_COUNT_X)] :
+			blocks_back[block_index(x, y, z - 1 + BLOCK_COUNT_Z)] :
 			blocks[block_index(x, y, z - 1)];
 
 		if (block == BLOCK_WATER) {
@@ -479,7 +483,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		if (chunk->state != CHUNK_READY) {
 			chunk->coord = chunk_coord;
 			v3 chunk_pos = chunk_get_pos(chunk);
-			v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_X, BLOCK_COUNT_X), 0.5f);
+			v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z), 0.5f);
 			chunk_pos = add(chunk_pos, chunk_half_dim);
 
 			// NOTE: find the farthest chunk and if it the current chunk is
