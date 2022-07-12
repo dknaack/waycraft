@@ -48,8 +48,12 @@ static u8 perlin_noise_hash[] = {
 };
 
 static f32
-perlin_noise(f32 x, f32 y, f32 z)
+perlin_noise(v3 point)
 {
+	f32 x = point.x;
+	f32 y = point.y;
+	f32 z = point.z;
+
 	i32 ix = (i32)floor(x) & 255;
 	i32 iy = (i32)floor(y) & 255;
 	i32 iz = (i32)floor(z) & 255;
@@ -97,7 +101,7 @@ perlin_noise(f32 x, f32 y, f32 z)
 }
 
 static f32
-perlin_noise_layered(f32 x, f32 y, f32 z, u32 octave_count, f32 persistance)
+perlin_noise_layered(v3 point, u32 octave_count, f32 persistance)
 {
 	f32 result = 0.0f;
 	f32 max_value = 0.0f;
@@ -105,8 +109,7 @@ perlin_noise_layered(f32 x, f32 y, f32 z, u32 octave_count, f32 persistance)
 	f32 frequency = 1.0f;
 
 	while (octave_count-- > 0) {
-		result += amplitude * perlin_noise(
-			x * frequency, y * frequency, z * frequency);
+		result += amplitude * perlin_noise(mulf(point, frequency));
 
 		max_value += amplitude;
 		amplitude *= persistance;

@@ -182,14 +182,14 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		i32 height[BLOCK_COUNT_X][BLOCK_COUNT_Z];
 		for (i32 z = 0; z < BLOCK_COUNT_Z; z++) {
 			for (i32 x = 0; x < BLOCK_COUNT_X; x++) {
-				f32 world_x = chunk_pos.x + x;
-				f32 world_z = chunk_pos.z + z;
+				v3 point = {0};
+				point.x = chunk_pos.x + x;
+				point.z = chunk_pos.z + z;
 
-				f32 nx = noise_size * world_x;
-				f32 nz = noise_size * world_z;
-				f32 value = 2.0f * perlin_noise_layered(nx, 0, nz, 8, 0.5f) - 1.0f;
-				f32 low_value = 2.0f * perlin_noise_layered(low_noise_size * world_x,
-					0, low_noise_size * world_z, 8, 0.8f) - 1.0f;
+				v3 high_point = mulf(point, noise_size);
+				v3 low_point = mulf(point, low_noise_size);
+				f32 value = 2.0f * perlin_noise_layered(high_point, 8, 0.5f) - 1.0f;
+				f32 low_value = 2.0f * perlin_noise_layered(low_point, 8, 0.8f) - 1.0f;
 				height[x][z] = 8.0f * (value + 0.2f) * (2.0f * low_value + 0.3f) * BLOCK_COUNT_X - chunk_pos.y;
 
 				i32 stone_max = CLAMP(height[x][z] - 3, 0, BLOCK_COUNT_Y);
@@ -244,7 +244,10 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 #endif
 
 		f32 tree_noise_size = 100.f;
-		f32 density = 9.f * perlin_noise(chunk_pos.x / tree_noise_size, 0, chunk_pos.z / tree_noise_size) - 2.f;
+		v3 density_point = mulf(chunk_pos, tree_noise_size);
+		density_point.y = 0;
+
+		f32 density = 9.f * perlin_noise(density_point) - 2.f;
 		u32 tree_count = CLAMP(density, 0, 7);
 		for (u32 i = 0; i < tree_count; i++) {
 			u32 x = xorshift32(&seed) % BLOCK_COUNT_X;
