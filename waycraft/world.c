@@ -36,8 +36,8 @@ chunk_index_unpack(u32 index)
 static inline v3
 chunk_get_pos(struct chunk *chunk)
 {
-	v3 offset = V3(chunk->coord.x, chunk->coord.y, chunk->coord.z);
-	v3 block_count = V3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z);
+	v3 offset = v3(chunk->coord.x, chunk->coord.y, chunk->coord.z);
+	v3 block_count = v3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z);
 	v3 result = mul(offset, block_count);
 
 	return result;
@@ -329,15 +329,15 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		v3 pos[8];
 		v2 uv[4];
 
-		pos[0] = v3_add(chunk_pos, V3(x + 0.5, y + 0.5, z + 0.5));
-		pos[1] = v3_add(chunk_pos, V3(x - 0.5, y + 0.5, z + 0.5));
-		pos[2] = v3_add(chunk_pos, V3(x + 0.5, y - 0.5, z + 0.5));
-		pos[3] = v3_add(chunk_pos, V3(x - 0.5, y - 0.5, z + 0.5));
+		pos[0] = v3_add(chunk_pos, v3(x + 0.5, y + 0.5, z + 0.5));
+		pos[1] = v3_add(chunk_pos, v3(x - 0.5, y + 0.5, z + 0.5));
+		pos[2] = v3_add(chunk_pos, v3(x + 0.5, y - 0.5, z + 0.5));
+		pos[3] = v3_add(chunk_pos, v3(x - 0.5, y - 0.5, z + 0.5));
 
-		pos[4] = v3_add(chunk_pos, V3(x + 0.5, y + 0.5, z - 0.5));
-		pos[5] = v3_add(chunk_pos, V3(x - 0.5, y + 0.5, z - 0.5));
-		pos[6] = v3_add(chunk_pos, V3(x + 0.5, y - 0.5, z - 0.5));
-		pos[7] = v3_add(chunk_pos, V3(x - 0.5, y - 0.5, z - 0.5));
+		pos[4] = v3_add(chunk_pos, v3(x + 0.5, y + 0.5, z - 0.5));
+		pos[5] = v3_add(chunk_pos, v3(x - 0.5, y + 0.5, z - 0.5));
+		pos[6] = v3_add(chunk_pos, v3(x + 0.5, y - 0.5, z - 0.5));
+		pos[7] = v3_add(chunk_pos, v3(x - 0.5, y - 0.5, z - 0.5));
 
 		u32 (*is_empty)(enum block_type block) = block_is_empty;
 
@@ -433,7 +433,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 
 	struct box player_bounds = {0};
 	v3 target = add(player_pos, mulf(player_dir, 3.0f * BLOCK_COUNT_X));
-	v3 world_size = V3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
+	v3 world_size = v3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
 	player_bounds.min = sub(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
 	player_bounds.max = add(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
 
@@ -483,7 +483,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 		if (chunk->state != CHUNK_READY) {
 			chunk->coord = chunk_coord;
 			v3 chunk_pos = chunk_get_pos(chunk);
-			v3 chunk_half_dim = mulf(V3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z), 0.5f);
+			v3 chunk_half_dim = mulf(v3(BLOCK_COUNT_X, BLOCK_COUNT_Y, BLOCK_COUNT_Z), 0.5f);
 			chunk_pos = add(chunk_pos, chunk_half_dim);
 
 			// NOTE: find the farthest chunk and if it the current chunk is
@@ -534,7 +534,7 @@ static void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
 		enum block_type block_type)
 {
-	v3 point = V3(x, y, z);
+	v3 point = v3(x, y, z);
 
 	struct chunk *chunk = world_get_chunk(world, x, y, z);
 	if (chunk) {
@@ -546,7 +546,7 @@ world_place_block(struct world *world, f32 x, f32 y, f32 z,
 		chunk->state = CHUNK_DIRTY;
 
 		for (u32 i = 0; i < 3; i++) {
-			v3 offset = V3(i == 0, i == 1, i == 2);
+			v3 offset = v3(i == 0, i == 1, i == 2);
 			v3 next = add(point, offset);
 			struct chunk *next_chunk = world_get_chunk(world, next.x, next.y, next.z);
 			next_chunk->state = CHUNK_DIRTY;

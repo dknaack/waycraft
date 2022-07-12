@@ -22,3 +22,10 @@
 #define normalize(x) (generic_float_vector_func(norm, (x))(x))
 
 #define cross(a, b) v3_cross(a, b)
+
+#define m4x4(...)      (m4x4){{ __VA_ARGS__ }}
+#define m3x3(...)      (m3x3){{ __VA_ARGS__ }}
+#define v2(x, y)       (v2){{ (x), (y) }}
+#define v3(x, y, z)    (v3){{ (x), (y), (z) }}
+#define v4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
+#define v3i(x, y, z)   (v3i){{ (x), (y), (z) }}

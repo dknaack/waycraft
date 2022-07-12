@@ -1,10 +1,10 @@
 static void
 block_texcoords(enum block_type block, v2 *uv)
 {
-	uv[0] = v2_mulf(v2_add(V2(block, 0), V2(0, 0)), 1 / 16.f);
-	uv[1] = v2_mulf(v2_add(V2(block, 0), V2(1, 0)), 1 / 16.f);
-	uv[2] = v2_mulf(v2_add(V2(block, 0), V2(0, 1)), 1 / 16.f);
-	uv[3] = v2_mulf(v2_add(V2(block, 0), V2(1, 1)), 1 / 16.f);
+	uv[0] = v2_mulf(v2_add(v2(block, 0), v2(0, 0)), 1 / 16.f);
+	uv[1] = v2_mulf(v2_add(v2(block, 0), v2(1, 0)), 1 / 16.f);
+	uv[2] = v2_mulf(v2_add(v2(block, 0), v2(0, 1)), 1 / 16.f);
+	uv[3] = v2_mulf(v2_add(v2(block, 0), v2(1, 1)), 1 / 16.f);
 }
 
 static void

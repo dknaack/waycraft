@@ -120,43 +120,43 @@ item_render(struct inventory_item *item, struct rectangle rect,
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 
 	if (item->type == ITEM_WINDOW) {
-		v3 pos0 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
-		v3 pos1 = V3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
-		v3 pos2 = V3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
-		v3 pos3 = V3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
+		v3 pos0 = v3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
+		v3 pos1 = v3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
+		v3 pos2 = v3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
+		v3 pos3 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
 
 		v2 uv[4] = {0};
 		block_texcoords_right(BLOCK_AIR, uv);
 		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
 			uv[0], uv[1], uv[2], uv[3], texture);
 	} else {
-		enum block_type block = item_to_block(item->type, V3(1, 0, 0));
+		enum block_type block = item_to_block(item->type, v3(1, 0, 0));
 		if (block != BLOCK_AIR) {
 			v3 pos[4] = {0};
 			v2 uv[4] = {0};
 
-			pos[0] = V3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
-			pos[1] = V3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[2] = V3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
-			pos[3] = V3(rect.x + 0.06f * rect.width, rect.y + 0.25f * rect.height, 0);
+			pos[0] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
+			pos[1] = v3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
+			pos[2] = v3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
+			pos[3] = v3(rect.x + 0.06f * rect.width, rect.y + 0.25f * rect.height, 0);
 
 			block_texcoords_left(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 				uv[0], uv[1], uv[2], uv[3], texture);
 
-			pos[0] = V3(rect.x + 0.50f * rect.width, rect.y + 1.00f * rect.height, 0);
-			pos[1] = V3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[2] = V3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[3] = V3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
+			pos[0] = v3(rect.x + 0.50f * rect.width, rect.y + 1.00f * rect.height, 0);
+			pos[1] = v3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
+			pos[2] = v3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
+			pos[3] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
 
 			block_texcoords_top(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 				uv[0], uv[1], uv[2], uv[3], texture);
 
-			pos[0] = V3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[1] = V3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
-			pos[2] = V3(rect.x + 0.96f * rect.width, rect.y + 0.25f * rect.height, 0);
-			pos[3] = V3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
+			pos[0] = v3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
+			pos[1] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
+			pos[2] = v3(rect.x + 0.96f * rect.width, rect.y + 0.25f * rect.height, 0);
+			pos[3] = v3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
 
 			block_texcoords_right(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
@@ -311,7 +311,7 @@ camera_axes(struct camera *camera, v3 *out_right, v3 *out_up, v3 *out_forward)
 	forward.z = sinf(radians(camera->yaw)) * cosf(radians(camera->pitch));
 
 	forward = normalize(forward);
-	right = normalize(cross(forward, V3(0, 1, 0)));
+	right = normalize(cross(forward, v3(0, 1, 0)));
 	up = normalize(cross(right, forward));
 
 	*out_right   = right;
@@ -342,7 +342,7 @@ static m4x4
 camera_get_view(struct camera *camera)
 {
 	v3 target = add(camera->position, camera->direction);
-	m4x4 result = m4x4_look_at(camera->position, target, V3(0, 1, 0));
+	m4x4 result = m4x4_look_at(camera->position, target, v3(0, 1, 0));
 
 	return result;
 }
@@ -364,7 +364,7 @@ player_init(struct player *player, struct camera *camera)
 {
 	f32 player_speed = 200.f;
 	f32 camera_fov = 75.f;
-	v3 player_position = V3(0, 20, 0);
+	v3 player_position = v3(0, 20, 0);
 
 	camera_init(camera, player_position, camera_fov);
 	player->position = player_position;
@@ -411,7 +411,7 @@ box_from_center(v3 center, v3 size)
 static v3
 player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 speed)
 {
-	v3 direction = V3(0, 0, 0);
+	v3 direction = v3(0, 0, 0);
 	f32 haxis = button_is_down(input->controller.move_right) -
 		button_is_down(input->controller.move_left);
 	f32 vaxis = button_is_down(input->controller.move_up) -
@@ -450,7 +450,7 @@ ray_box_intersection(struct box box, v3 start, v3 direction,
 			sign = -1;
 		}
 
-		v3 normal = V3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
+		v3 normal = v3(sign * (i == 0), sign * (i == 1), sign * (i == 2));
 
 		if (tmin < t0.e[i]) {
 			tmin = t0.e[i];
@@ -505,7 +505,7 @@ player_move(struct game_state *game, struct game_input *input)
 	v3 old_player_pos = player->position;
 	v3 new_player_pos = add(old_player_pos, position_delta);
 
-	v3 player_size = V3(0.25, 0.99f, 0.25f);
+	v3 player_size = v3(0.25, 0.99f, 0.25f);
 	v3 old_player_min = sub(old_player_pos, player_size);
 	v3 old_player_max = add(old_player_pos, player_size);
 	v3 new_player_min = sub(new_player_pos, player_size);
@@ -523,7 +523,7 @@ player_move(struct game_state *game, struct game_input *input)
 	assert(min_block_y <= max_block_y);
 	assert(min_block_z <= max_block_z);
 
-	v3 block_size = V3(0.5, 0.5, 0.5);
+	v3 block_size = v3(0.5, 0.5, 0.5);
 	v3 block_offset = add(player_size, block_size);
 
 	struct box block_bounds;
@@ -532,13 +532,13 @@ player_move(struct game_state *game, struct game_input *input)
 
 	f32 t_remaining = 1.f;
 	for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
-		v3 normal = V3(0, 0, 0);
+		v3 normal = v3(0, 0, 0);
 		f32 t_min = 1.f;
 
 		for (i32 z = min_block_z; z <= max_block_z; z++) {
 			for (i32 y = min_block_y; y <= max_block_y; y++) {
 				for (i32 x = min_block_x; x <= max_block_x; x++) {
-					v3 block = V3(x, y, z);
+					v3 block = v3(x, y, z);
 					v3 relative_old_pos = sub(position, block);
 
 					v3 new_position = add(relative_old_pos, position_delta);
@@ -664,7 +664,7 @@ window_move(struct game_window *window, v3 new_position, v3 normal, v3 up)
 {
 	v3 right = v3_cross(up, normal);
 
-	m3x3 transform = M3X3(
+	m3x3 transform = m3x3(
 		right.x,  right.y,  right.z,
 		up.x,     up.y,     up.z,
 		normal.x, normal.y, normal.z);
@@ -681,9 +681,9 @@ window_axes(struct game_window *window, v3 *x_axis, v3 *y_axis, v3 *z_axis)
 	f32 window_width = window->scale.x / VIRTUAL_SCREEN_SIZE;
 	f32 window_height = window->scale.y / VIRTUAL_SCREEN_SIZE;
 
-	*x_axis = m3x3_mulv(rotation, V3(window_width, 0, 0));
-	*y_axis = m3x3_mulv(rotation, V3(0, -window_height, 0));
-	*z_axis = m3x3_mulv(rotation, V3(0, 0, -1));
+	*x_axis = m3x3_mulv(rotation, v3(window_width, 0, 0));
+	*y_axis = m3x3_mulv(rotation, v3(0, -window_height, 0));
+	*z_axis = m3x3_mulv(rotation, v3(0, 0, -1));
 }
 
 static void
@@ -695,10 +695,10 @@ window_manager_render(struct game_window_manager *wm, m4x4 view,
 
 	v3 pos[4] = {0};
 	v2 uv[4] = {
-		V2(0, 0),
-		V2(0, 1),
-		V2(1, 0),
-		V2(1, 1),
+		v2(0, 0),
+		v2(0, 1),
+		v2(1, 0),
+		v2(1, 1),
 	};
 
 	while (window_count-- > 0) {
@@ -813,7 +813,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	cmd_buffer.transform.view = view;
 	cmd_buffer.transform.projection = projection;
 	cmd_buffer.transform.camera_pos = camera_pos;
-	cmd_buffer.transform.viewport = V2(input->width, input->height);
+	cmd_buffer.transform.viewport = v2(input->width, input->height);
 
 	struct render_command_buffer ui_cmd_buffer = {0};
 	render_command_buffer_init(&ui_cmd_buffer, &game->frame_arena,
@@ -822,10 +822,10 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	ui_cmd_buffer.assets = &game->assets;
 	ui_cmd_buffer.transform.view = m4x4_id(1);
 	ui_cmd_buffer.transform.projection = m4x4_ortho(0, input->height, 0, input->width, -1, 1);
-	ui_cmd_buffer.transform.camera_pos = V3(0, 0, 0);
-	ui_cmd_buffer.transform.viewport = V2(input->width, input->height);
+	ui_cmd_buffer.transform.camera_pos = v3(0, 0, 0);
+	ui_cmd_buffer.transform.viewport = v2(input->width, input->height);
 
-	render_clear(&cmd_buffer, V4(0.45, 0.65, 0.85, 1.0));
+	render_clear(&cmd_buffer, v4(0.45, 0.65, 0.85, 1.0));
 
 	u32 window_count = wm->window_count;
 	struct game_window *windows = wm->windows;
@@ -843,7 +843,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 	if (!focused_window && !inventory_is_active) {
 		player_move(game, input);
-		camera->position = v3_add(player->position, V3(0, 0.75, 0));
+		camera->position = v3_add(player->position, v3(0, 0.75, 0));
 		camera_resize(&game->camera, input->width, input->height);
 		camera_rotate(&game->camera, input->mouse.dx, input->mouse.dy);
 
@@ -856,12 +856,12 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		struct game_window *hot_window = game->hot_window;
 		if (hot_window) {
 			if (has_selected_block) {
-				v3 relative_up = V3(0, 1, 0);
+				v3 relative_up = v3(0, 1, 0);
 				if (block_normal.y > 0.5) {
 					if (fabsf(camera_front.x) < fabsf(camera_front.z)) {
-						relative_up = V3(0, 0, SIGN(camera_front.z));
+						relative_up = v3(0, 0, SIGN(camera_front.z));
 					} else {
-						relative_up = V3(SIGN(camera_front.x), 0, 0);
+						relative_up = v3(SIGN(camera_front.x), 0, 0);
 					}
 				}
 
@@ -906,9 +906,9 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 				u32 selected_block = item_to_block(selected_item->type, camera_front);
 				v3 new_block_pos = v3_add(block_pos, block_normal);
-				v3 player_size = V3(0.25, 0.99f, 0.25f);
+				v3 player_size = v3(0.25, 0.99f, 0.25f);
 				v3 player_pos = player->position;
-				v3 block_size = V3(0.5, 0.5, 0.5);
+				v3 block_size = v3(0.5, 0.5, 0.5);
 				struct box block_bounds = box_from_center(new_block_pos,
 					v3_add(block_size, player_size));
 
@@ -970,10 +970,10 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 		struct texture_id cursor_texture = {wm->cursor.texture};
 		v2 uv[4];
-		uv[0] = V2(0, 0);
-		uv[1] = V2(0, 1);
-		uv[2] = V2(1, 0);
-		uv[3] = V2(1, 1);
+		uv[0] = v2(0, 0);
+		uv[1] = v2(0, 1);
+		uv[2] = v2(1, 0);
+		uv[3] = v2(1, 1);
 
 		v2 cursor_scale = mulf(wm->cursor.scale, 1./VIRTUAL_SCREEN_SIZE);
 		v3 cursor_x = mulf(normalize(window_x), cursor_scale.x);
@@ -1009,8 +1009,8 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	// NOTE: render a crosshair in the center of the screen
 	{
 		v2 viewport = ui_cmd_buffer.transform.viewport;
-		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), V2(16, 2)));
-		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), V2(2, 16)));
+		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), v2(16, 2)));
+		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), v2(2, 16)));
 	}
 
 	renderer_submit(&game->renderer, &cmd_buffer);

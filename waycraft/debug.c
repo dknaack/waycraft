@@ -57,7 +57,7 @@ debug_update(struct debug_state *debug_state, struct memory_arena *frame_arena)
 static void
 debug_set_color(f32 r, f32 g, f32 b)
 {
-	debug->color = V3(r, g, b);
+	debug->color = v3(r, g, b);
 }
 
 static void
@@ -81,14 +81,14 @@ debug_line(v3 start, v3 end)
 static void
 debug_cube(v3 min, v3 max)
 {
-	v3 pos0 = V3(min.x, min.y, min.z);
-	v3 pos1 = V3(max.x, min.y, min.z);
-	v3 pos2 = V3(min.x, max.y, min.z);
-	v3 pos3 = V3(max.x, max.y, min.z);
-	v3 pos4 = V3(min.x, min.y, max.z);
-	v3 pos5 = V3(max.x, min.y, max.z);
-	v3 pos6 = V3(min.x, max.y, max.z);
-	v3 pos7 = V3(max.x, max.y, max.z);
+	v3 pos0 = v3(min.x, min.y, min.z);
+	v3 pos1 = v3(max.x, min.y, min.z);
+	v3 pos2 = v3(min.x, max.y, min.z);
+	v3 pos3 = v3(max.x, max.y, min.z);
+	v3 pos4 = v3(min.x, min.y, max.z);
+	v3 pos5 = v3(max.x, min.y, max.z);
+	v3 pos6 = v3(min.x, max.y, max.z);
+	v3 pos7 = v3(max.x, max.y, max.z);
 
 	debug_line(pos0, pos1);
 	debug_line(pos0, pos2);

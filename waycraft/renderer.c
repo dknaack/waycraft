@@ -428,15 +428,15 @@ static void
 render_sprite(struct render_command_buffer *cmd_buffer,
 		struct rectangle rect, struct texture_id texture)
 {
-	v3 pos0 = V3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
-	v3 pos1 = V3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
-	v3 pos2 = V3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
-	v3 pos3 = V3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
+	v3 pos0 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
+	v3 pos1 = v3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
+	v3 pos2 = v3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
+	v3 pos3 = v3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
 
-	v2 uv0 = V2(0, 1);
-	v2 uv1 = V2(1, 1);
-	v2 uv2 = V2(0, 0);
-	v2 uv3 = V2(1, 0);
+	v2 uv0 = v2(0, 1);
+	v2 uv1 = v2(1, 1);
+	v2 uv2 = v2(0, 0);
+	v2 uv3 = v2(1, 0);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }
@@ -454,15 +454,15 @@ static void
 render_textured_quad(struct render_command_buffer *cmd_buffer,
 		m4x4 transform, struct texture_id texture)
 {
-	v3 pos0 = m4x4_mulv(transform, V4(+1, +1, 0, 1)).xyz;
-	v3 pos1 = m4x4_mulv(transform, V4(-1, +1, 0, 1)).xyz;
-	v3 pos2 = m4x4_mulv(transform, V4(+1, -1, 0, 1)).xyz;
-	v3 pos3 = m4x4_mulv(transform, V4(-1, -1, 0, 1)).xyz;
+	v3 pos0 = m4x4_mulv(transform, v4(+1, +1, 0, 1)).xyz;
+	v3 pos1 = m4x4_mulv(transform, v4(-1, +1, 0, 1)).xyz;
+	v3 pos2 = m4x4_mulv(transform, v4(+1, -1, 0, 1)).xyz;
+	v3 pos3 = m4x4_mulv(transform, v4(-1, -1, 0, 1)).xyz;
 
-	v2 uv0 = V2(1, 0);
-	v2 uv1 = V2(0, 0);
-	v2 uv2 = V2(1, 1);
-	v2 uv3 = V2(0, 1);
+	v2 uv0 = v2(1, 0);
+	v2 uv1 = v2(0, 0);
+	v2 uv2 = v2(1, 1);
+	v2 uv3 = v2(0, 1);
 
 	render_quad(cmd_buffer, pos0, pos1, pos2, pos3, uv0, uv1, uv2, uv3, texture);
 }

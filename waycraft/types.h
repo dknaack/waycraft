@@ -86,13 +86,6 @@ struct box {
 #define CONTAINER_OF(ptr, type, member) \
 	((type *)((char *)(ptr) - offsetof(type, member)))
 
-#define M4X4(...)      (m4x4){{ __VA_ARGS__ }}
-#define M3X3(...)      (m3x3){{ __VA_ARGS__ }}
-#define V4(x, y, z, w) (v4){{ (x), (y), (z), (w) }}
-#define V3(x, y, z)    (v3){{ (x), (y), (z) }}
-#define V2(x, y)       (v2){{ (x), (y) }}
-#define V3I(x, y, z)   (v3i){{ (x), (y), (z) }}
-
 #define U64_MAX 0xffffffffffffffffl
 #define U32_MAX 0xffffffff
 #define U16_MAX 0xffff
