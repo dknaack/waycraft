@@ -437,9 +437,8 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		}
 	}
 
-	free(compositor_memory->data);
-	free(game->memory.data);
 	egl_finish(&egl);
 	x11_window_finish(&window);
+
 	return 0;
 }
