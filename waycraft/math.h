@@ -14,7 +14,7 @@
 #define mulf(a, b) (generic_float_matrix_vector_func(mulf, (a))(a, b))
 #define divf(a, b) (generic_float_matrix_vector_func(divf, (a))(a, b))
 #define mul(a, b)  (_Generic((a), v2: v2_mul, v3: v3_mul, v4: v4_mul, \
-		m4x4: _Generic((b), m4x4: m4x4_mul, v4: m4x4_mulv))(a, b))
+		m4x4: _Generic((b), m4x4: m4x4_mul, v4: m4x4_mulv, default: 0))(a, b))
 
 #define neg(x)       (generic_float_vector_func(neg, (x))(x))
 #define length(x)    (generic_float_vector_func(len, (x))(x))
