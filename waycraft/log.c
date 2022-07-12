@@ -1,3 +1,5 @@
+#include <string.h>
+
 static const char *log_str[LOG_LEVEL_COUNT] = {
 	[LOG_INFO] = "info",
 	[LOG_DEBUG] = "debug",
@@ -29,5 +31,10 @@ log_(enum log_level level, const char *file, u32 line, const char *func,
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 
-	fputc('\n', stderr);
+	if (fmt[0] && fmt[strlen(fmt) - 1] == ':') {
+		fputc(' ', stderr);
+		perror(NULL);
+	} else {
+		fputc('\n', stderr);
+	}
 }
