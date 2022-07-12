@@ -81,6 +81,7 @@ struct box {
 #define SIGN(x)   ((x) < 0? -1 : 1)
 #define LENGTH(x) (sizeof(x)/sizeof((x)[0]))
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
+#define CLAMP01(x) CLAMP(x, 0, 1)
 
 #define CONTAINER_OF(ptr, type, member) \
 	((type *)((char *)(ptr) - offsetof(type, member)))
