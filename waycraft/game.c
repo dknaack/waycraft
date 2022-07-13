@@ -60,10 +60,10 @@ get_texture(struct game_assets *assets, u32 texture_id)
 {
 	static char *texture_filenames[TEXTURE_COUNT] = {
 		[TEXTURE_NONE]        = "",
-		[TEXTURE_BLOCK_ATLAS] = "res/block_atlas.png",
-		[TEXTURE_INVENTORY]   = "res/inventory.png",
-		[TEXTURE_HOTBAR]      = "res/hotbar.png",
-		[TEXTURE_ACTIVE_SLOT] = "res/active_slot.png",
+		[TEXTURE_BLOCK_ATLAS] = "assets/block_atlas.png",
+		[TEXTURE_INVENTORY]   = "assets/inventory.png",
+		[TEXTURE_HOTBAR]      = "assets/hotbar.png",
+		[TEXTURE_ACTIVE_SLOT] = "assets/active_slot.png",
 	};
 
 	assert(texture_id < TEXTURE_COUNT);
