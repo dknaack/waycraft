@@ -2,7 +2,7 @@
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
 
-#include <waycraft/main.h>
+#include <waycraft/waycraft.h>
 
 #include "waycraft/log.c"
 #include "waycraft/compositor.c"

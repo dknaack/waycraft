@@ -20,12 +20,10 @@ cflags() {
 [ ! -d "build" ] && mkdir build
 [ ! -f "build/stb_image.o" ] && cc $(cflags) -c waycraft/stb_image.c -o build/stb_image.o
 
-echo "Generating headers and code..."
 wayland_scanner private-code  stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
 wayland_scanner server-header stable/xdg-shell/xdg-shell.xml xdg-shell-server-protocol.h
 wayland_scanner client-header stable/xdg-shell/xdg-shell.xml xdg-shell-client-protocol.h
 
-echo "Building waycraft..."
-cc $(cflags) -o build/waycraft waycraft/main.c $(waycraft_libs) -lm &
+cc $(cflags) -o build/waycraft waycraft/waycraft.c $(waycraft_libs) &
 cc $(cflags) -shared -o build/libgame.so build/stb_image.o waycraft/game.c -lm &
 wait
