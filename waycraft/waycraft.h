@@ -1,11 +1,9 @@
 #include <waycraft/types.h>
-#include <waycraft/memory.h>
+#include <waycraft/util.h>
 #include <waycraft/platform.h>
 #include <waycraft/compositor.h>
 #include <waycraft/gl.h>
-#include <waycraft/log.h>
 #include <waycraft/stb_image.h>
-#include <waycraft/timer.h>
 
 struct game_code {
 	struct platform_memory memory;

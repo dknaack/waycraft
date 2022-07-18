@@ -9,12 +9,11 @@
 #include <waycraft/stb_image.h>
 
 #include "waycraft/math.c"
-#include "waycraft/memory.c"
+#include "waycraft/util.c"
 #include "waycraft/renderer.c"
 #include "waycraft/block.c"
 #include "waycraft/debug.c"
 #include "waycraft/noise.c"
-#include "waycraft/timer.c"
 #include "waycraft/world.c"
 
 #define VIRTUAL_SCREEN_SIZE 400

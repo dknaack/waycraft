@@ -4,10 +4,8 @@
 #include <waycraft/block.h>
 #include <waycraft/debug.h>
 #include <waycraft/gl.h>
-#include <waycraft/log.h>
-#include <waycraft/memory.h>
+#include <waycraft/util.h>
 #include <waycraft/renderer.h>
-#include <waycraft/timer.h>
 #include <waycraft/world.h>
 
 struct camera {

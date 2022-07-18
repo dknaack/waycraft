@@ -1,5 +1,4 @@
 #include "xdg-shell-protocol.c"
-#include "waycraft/memory.c"
 #include "waycraft/xwayland.c"
 
 static void do_nothing() {}

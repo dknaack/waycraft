@@ -4,7 +4,7 @@
 
 #include <waycraft/waycraft.h>
 
-#include "waycraft/log.c"
+#include "waycraft/util.c"
 #include "waycraft/compositor.c"
 #include "waycraft/x11.c"
 #include "waycraft/drm.c"
