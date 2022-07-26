@@ -81,90 +81,6 @@ allocate_shm_file(size_t size)
 	return fd;
 }
 
-static i32
-x11_state_init(struct x11_state *state)
-{
-	xcb_connection_t *connection = xcb_connect(0, 0);
-	if (xcb_connection_has_error(connection)) {
-		fprintf(stderr, "Failed to connect to X display\n");
-		return -1;
-	}
-
-	xcb_screen_t *screen =
-		xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-
-	xcb_window_t window = xcb_generate_id(connection);
-	u32 values[2];
-	u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-	values[0] = screen->black_pixel;
-	values[1] = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
-		XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
-		XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
-		XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
-		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
-
-	xcb_create_window(connection, screen->root_depth, window, screen->root,
-		0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
-		mask, values);
-	xcb_map_window(connection, window);
-
-	xcb_intern_atom_cookie_t cookies[X11_ATOM_COUNT] = {0};
-	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
-		cookies[i] = xcb_intern_atom(connection, 0, strlen(x11_atom_names[i]),
-			x11_atom_names[i]);
-	}
-
-	xcb_atom_t *atoms = state->atoms;
-	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
-		xcb_intern_atom_reply_t *reply =
-			xcb_intern_atom_reply(connection, cookies[i], 0);
-		atoms[i] = reply->atom;
-		free(reply);
-	}
-
-	const char *title = "Waycraft";
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
-		atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
-		strlen(title), title);
-
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
-		atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
-		&atoms[X11_WM_DELETE_WINDOW]);
-
-	xcb_xfixes_query_version(connection, 4, 0);
-	xcb_xfixes_hide_cursor(connection, window);
-
-	xcb_flush(connection);
-
-	// initialize xkb
-	struct xkb_context *xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-	xkb_x11_setup_xkb_extension(connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
-		XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
-	i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(connection);
-	struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
-		xkb_context, connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
-	char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
-	i32 keymap_size = strlen(keymap_string) + 1;
-	i32 keymap_file = allocate_shm_file(keymap_size);
-
-	i32 prot = PROT_READ | PROT_WRITE;
-	i32 flags = MAP_SHARED;
-	char *contents = mmap(0, keymap_size, prot, flags, keymap_file, 0);
-	memcpy(contents, keymap_string, keymap_size);
-	munmap(contents, keymap_size);
-
-	state->keymap = keymap_file;
-	state->keymap_size = keymap_size;
-	state->xkb_state = xkb_x11_state_new_from_device(
-		keymap, connection, keyboard_device_id);
-	state->connection = connection;
-	state->screen = screen;
-	state->window = window;
-	state->is_open = 1;
-
-	return 0;
-}
-
 static u32
 x11_get_key_state(u8 *key_vector, u8 key_code)
 {
@@ -350,14 +266,6 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 	xcb_flush(connection);
 }
 
-static void
-x11_state_finish(struct x11_state *state)
-{
-	xkb_state_unref(state->xkb_state);
-	xcb_destroy_window(state->connection, state->window);
-	xcb_disconnect(state->connection);
-}
-
 static f64
 get_time_sec(void)
 {
@@ -367,22 +275,94 @@ get_time_sec(void)
 	return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-int
+static int
 x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		struct opengl_api *gl)
 {
-	struct x11_state state = {0};
-	struct game_input input = {0};
-	struct egl_context egl = {0};
-
-	/* initialize the state */
-	if (x11_state_init(&state) != 0) {
-		fprintf(stderr, "Failed to initialize state\n");
-		return 1;
+	/*
+	 * NOTE: open the x11 window
+	 */
+	struct x11_state x11 = {0};
+	xcb_connection_t *connection = xcb_connect(0, 0);
+	if (xcb_connection_has_error(connection)) {
+		fprintf(stderr, "Failed to connect to X display\n");
+		return -1;
 	}
 
-	/* initialize egl */
-	if (egl_init(&egl, state.window) != 0) {
+	xcb_screen_t *screen = xcb_setup_roots_iterator(
+		xcb_get_setup(connection)).data;
+
+	// create the window
+	x11.window = xcb_generate_id(connection);
+	u32 values[2];
+	u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+	values[0] = screen->black_pixel;
+	values[1] = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+		XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
+		XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+		XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
+		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
+	xcb_create_window(x11.connection, x11.screen->root_depth, x11.window,
+		x11.screen->root, 0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+		x11.screen->root_visual, mask, values);
+	xcb_map_window(x11.connection, x11.window);
+
+	xcb_intern_atom_cookie_t cookies[X11_ATOM_COUNT] = {0};
+	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
+		cookies[i] = xcb_intern_atom(x11.connection,
+			0, strlen(x11_atom_names[i]), x11_atom_names[i]);
+	}
+
+	xcb_atom_t *atoms = x11.atoms;
+	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
+		xcb_intern_atom_reply_t *reply =
+			xcb_intern_atom_reply(connection, cookies[i], 0);
+		atoms[i] = reply->atom;
+		free(reply);
+	}
+
+	// set the window title
+	const char *title = "Waycraft";
+	xcb_change_property(x11.connection, XCB_PROP_MODE_REPLACE, x11.window,
+		atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
+		strlen(title), title);
+
+	// enable closing the window
+	xcb_change_property(x11.connection, XCB_PROP_MODE_REPLACE, x11.window,
+		atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
+		&atoms[X11_WM_DELETE_WINDOW]);
+
+	xcb_xfixes_query_version(x11.connection, 4, 0);
+	xcb_xfixes_hide_cursor(x11.connection, x11.window);
+	xcb_flush(x11.connection);
+
+	/*
+	 * NOTE: initialize xkb
+	 */
+	struct xkb_context *xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+	xkb_x11_setup_xkb_extension(x11.connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
+		XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
+	i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(x11.connection);
+	struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
+		xkb_context, x11.connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
+	i32 keymap_size = strlen(keymap_string) + 1;
+	i32 keymap_file = allocate_shm_file(keymap_size);
+
+	i32 prot = PROT_READ | PROT_WRITE;
+	i32 flags = MAP_SHARED;
+	char *contents = mmap(0, keymap_size, prot, flags, keymap_file, 0);
+	memcpy(contents, keymap_string, keymap_size);
+	munmap(contents, keymap_size);
+
+	x11.xkb_state = xkb_x11_state_new_from_device(
+		keymap, x11.connection, keyboard_device_id);
+
+	/*
+	 * NOTE: initialize EGL
+	 */
+	struct egl_context egl = {0};
+	if (egl_init(&egl, x11.window) != 0) {
 		fprintf(stderr, "Failed to initialize egl\n");
 		return 1;
 	}
@@ -391,24 +371,23 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	OPENGL_MAP_FUNCTIONS();
 #undef X
 
-	i32 keymap = state.keymap;
-	i32 keymap_size = state.keymap_size;
-	if (compositor_init(compositor_memory, egl.display, keymap, keymap_size) != 0) {
+	if (compositor_init(compositor_memory, egl.display, keymap_file, keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
 	}
 
+	struct game_input input = {0};
 	struct platform_event_array events = {0};
 	events.max_count = 1024;
 	events.at = calloc(events.max_count, sizeof(*events.at));
 
 	f64 target_frame_time = 1.0f / 60.0f;
-	while (state.is_open) {
+	while (x11.is_open) {
 		f64 start_time = get_time_sec();
 
 		events.count = 0;
-		x11_state_poll_events(&state, &input, &events);
-		if (!state.is_open) {
+		x11_state_poll_events(&x11, &input, &events);
+		if (!x11.is_open) {
 			game->memory.is_done = true;
 			compositor_memory->is_done = true;
 		}
@@ -435,8 +414,11 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		}
 	}
 
+	// NOTE: cleanup
+	close(keymap_file);
 	egl_finish(&egl);
-	x11_state_finish(&state);
-
+	xkb_state_unref(x11.xkb_state);
+	xcb_destroy_window(x11.connection, x11.window);
+	xcb_disconnect(x11.connection);
 	return 0;
 }

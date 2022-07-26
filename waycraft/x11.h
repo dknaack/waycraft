@@ -31,7 +31,5 @@ struct x11_state {
 	bool is_focused;
 	bool lock_cursor;
 
-	i32 keymap;
-	i32 keymap_size;
 	struct xkb_state *xkb_state;
 };
