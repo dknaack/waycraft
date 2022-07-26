@@ -82,7 +82,7 @@ allocate_shm_file(size_t size)
 }
 
 static i32
-x11_window_init(struct x11_window *window)
+x11_state_init(struct x11_state *state)
 {
 	xcb_connection_t *connection = xcb_connect(0, 0);
 	if (xcb_connection_has_error(connection)) {
@@ -93,7 +93,7 @@ x11_window_init(struct x11_window *window)
 	xcb_screen_t *screen =
 		xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
 
-	xcb_window_t xcb_window = xcb_generate_id(connection);
+	xcb_window_t window = xcb_generate_id(connection);
 	u32 values[2];
 	u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 	values[0] = screen->black_pixel;
@@ -103,10 +103,10 @@ x11_window_init(struct x11_window *window)
 		XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
 		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
 
-	xcb_create_window(connection, screen->root_depth, xcb_window, screen->root,
+	xcb_create_window(connection, screen->root_depth, window, screen->root,
 		0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT, screen->root_visual,
 		mask, values);
-	xcb_map_window(connection, xcb_window);
+	xcb_map_window(connection, window);
 
 	xcb_intern_atom_cookie_t cookies[X11_ATOM_COUNT] = {0};
 	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
@@ -114,7 +114,7 @@ x11_window_init(struct x11_window *window)
 			x11_atom_names[i]);
 	}
 
-	xcb_atom_t *atoms = window->atoms;
+	xcb_atom_t *atoms = state->atoms;
 	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
 		xcb_intern_atom_reply_t *reply =
 			xcb_intern_atom_reply(connection, cookies[i], 0);
@@ -123,20 +123,20 @@ x11_window_init(struct x11_window *window)
 	}
 
 	const char *title = "Waycraft";
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window,
+	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
 		atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
 		strlen(title), title);
 
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, xcb_window,
+	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
 		atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
 		&atoms[X11_WM_DELETE_WINDOW]);
 
 	xcb_xfixes_query_version(connection, 4, 0);
-	xcb_xfixes_hide_cursor(connection, xcb_window);
+	xcb_xfixes_hide_cursor(connection, window);
 
 	xcb_flush(connection);
 
-	/* initialize xkb */
+	// initialize xkb
 	struct xkb_context *xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	xkb_x11_setup_xkb_extension(connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
 		XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
@@ -153,15 +153,14 @@ x11_window_init(struct x11_window *window)
 	memcpy(contents, keymap_string, keymap_size);
 	munmap(contents, keymap_size);
 
-	window->keymap = keymap_file;
-	window->keymap_size = keymap_size;
-	window->xkb_state = xkb_x11_state_new_from_device(keymap, connection,
-		keyboard_device_id);
-
-	window->connection = connection;
-	window->screen = screen;
-	window->window = xcb_window;
-	window->is_open = 1;
+	state->keymap = keymap_file;
+	state->keymap_size = keymap_size;
+	state->xkb_state = xkb_x11_state_new_from_device(
+		keymap, connection, keyboard_device_id);
+	state->connection = connection;
+	state->screen = screen;
+	state->window = window;
+	state->is_open = 1;
 
 	return 0;
 }
@@ -174,18 +173,18 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 }
 
 static void
-x11_window_poll_events(struct x11_window *window, struct game_input *input,
+x11_state_poll_events(struct x11_state *state, struct game_input *input,
 	struct platform_event_array *event_array)
 {
-	xcb_connection_t *connection = window->connection;
+	xcb_connection_t *connection = state->connection;
 	union x11_event x11_event;
 
-	struct xkb_state *xkb_state = window->xkb_state;
+	struct xkb_state *xkb_state = state->xkb_state;
 
 	memset(&input->mouse.buttons, 0, sizeof(input->mouse.buttons));
 	input->dt = 0.01;
-	input->width = window->width;
-	input->height = window->height;
+	input->width = state->width;
+	input->height = state->height;
 	input->mouse.dx = input->mouse.dy = 0;
 
 	static const u32 wl_button[8] = {
@@ -195,13 +194,13 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 		BTN_RIGHT,
 	};
 
-	xcb_atom_t wm_delete_window = window->atoms[X11_WM_DELETE_WINDOW];
+	xcb_atom_t wm_delete_state = state->atoms[X11_WM_DELETE_WINDOW];
 
 	while ((x11_event.generic = xcb_poll_for_event(connection))) {
 		switch (x11_event.generic->response_type & ~0x80) {
 		case XCB_CONFIGURE_NOTIFY:
-			input->width = window->width = x11_event.configure_notify->width;
-			input->height = window->height = x11_event.configure_notify->height;
+			input->width = state->width = x11_event.configure_notify->width;
+			input->height = state->height = x11_event.configure_notify->height;
 			break;
 		case XCB_KEY_PRESS:
 			{
@@ -234,8 +233,8 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 				i32 x = x11_event.motion_notify->event_x;
 				i32 y = x11_event.motion_notify->event_y;
 
-				i32 mouse_was_warped = (x == window->width / 2 &&
-					y == window->height / 2);
+				i32 mouse_was_warped = (x == state->width / 2 &&
+					y == state->height / 2);
 				if (!mouse_was_warped) {
 					input->mouse.dx = x - input->mouse.x;
 					input->mouse.dy = y - input->mouse.y;
@@ -280,24 +279,24 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 			}
 			break;
 		case XCB_CLIENT_MESSAGE:
-			if (x11_event.client_message->data.data32[0] == wm_delete_window) {
-				window->is_open = 0;
+			if (x11_event.client_message->data.data32[0] == wm_delete_state) {
+				state->is_open = 0;
 			}
 			break;
 		case XCB_FOCUS_IN:
-			window->is_focused = 1;
-			xcb_xfixes_hide_cursor(connection, window->window);
+			state->is_focused = 1;
+			xcb_xfixes_hide_cursor(connection, state->window);
 			break;
 		case XCB_FOCUS_OUT:
-			window->is_focused = 0;
-			xcb_xfixes_show_cursor(connection, window->window);
+			state->is_focused = 0;
+			xcb_xfixes_show_cursor(connection, state->window);
 			break;
 		}
 
 		free(x11_event.generic);
 	}
 
-	if (window->is_focused) {
+	if (state->is_focused) {
 		struct {
 			xkb_keycode_t keycode;
 			u8 *pressed;
@@ -334,31 +333,29 @@ x11_window_poll_events(struct x11_window *window, struct game_input *input,
 	}
 
 	// NOTE: update the modifiers
-	struct xkb_state *state = window->xkb_state;
-
 	struct platform_event *event = push_event(event_array, PLATFORM_EVENT_MODIFIERS);
 	if (event) {
-		event->modifiers.depressed = xkb_state_serialize_mods(state, XKB_STATE_MODS_DEPRESSED);
-		event->modifiers.latched = xkb_state_serialize_mods(state, XKB_STATE_MODS_LATCHED);
-		event->modifiers.locked = xkb_state_serialize_mods(state, XKB_STATE_MODS_LOCKED);
-		event->modifiers.group = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+		event->modifiers.depressed = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_DEPRESSED);
+		event->modifiers.latched = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LATCHED);
+		event->modifiers.locked = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LOCKED);
+		event->modifiers.group = xkb_state_serialize_layout(xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 	}
 
 	// NOTE: lock the cursor
-	if (window->is_focused) {
-		xcb_warp_pointer(connection, 0, window->window, 0, 0, 0, 0,
-			window->width / 2, window->height / 2);
+	if (state->is_focused) {
+		xcb_warp_pointer(connection, 0, state->window, 0, 0, 0, 0,
+			state->width / 2, state->height / 2);
 	}
 
 	xcb_flush(connection);
 }
 
 static void
-x11_window_finish(struct x11_window *window)
+x11_state_finish(struct x11_state *state)
 {
-	xkb_state_unref(window->xkb_state);
-	xcb_destroy_window(window->connection, window->window);
-	xcb_disconnect(window->connection);
+	xkb_state_unref(state->xkb_state);
+	xcb_destroy_window(state->connection, state->window);
+	xcb_disconnect(state->connection);
 }
 
 static f64
@@ -374,18 +371,18 @@ int
 x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		struct opengl_api *gl)
 {
-	struct x11_window window = {0};
+	struct x11_state state = {0};
 	struct game_input input = {0};
 	struct egl_context egl = {0};
 
-	/* initialize the window */
-	if (x11_window_init(&window) != 0) {
-		fprintf(stderr, "Failed to initialize window\n");
+	/* initialize the state */
+	if (x11_state_init(&state) != 0) {
+		fprintf(stderr, "Failed to initialize state\n");
 		return 1;
 	}
 
 	/* initialize egl */
-	if (egl_init(&egl, window.window) != 0) {
+	if (egl_init(&egl, state.window) != 0) {
 		fprintf(stderr, "Failed to initialize egl\n");
 		return 1;
 	}
@@ -394,8 +391,8 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	OPENGL_MAP_FUNCTIONS();
 #undef X
 
-	i32 keymap = window.keymap;
-	i32 keymap_size = window.keymap_size;
+	i32 keymap = state.keymap;
+	i32 keymap_size = state.keymap_size;
 	if (compositor_init(compositor_memory, egl.display, keymap, keymap_size) != 0) {
 		fprintf(stderr, "Failed to initialize the compositor\n");
 		return 1;
@@ -406,17 +403,18 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	events.at = calloc(events.max_count, sizeof(*events.at));
 
 	f64 target_frame_time = 1.0f / 60.0f;
-	while (window.is_open) {
+	while (state.is_open) {
 		f64 start_time = get_time_sec();
 
 		events.count = 0;
-		x11_window_poll_events(&window, &input, &events);
-		if (!window.is_open) {
+		x11_state_poll_events(&state, &input, &events);
+		if (!state.is_open) {
 			game->memory.is_done = true;
 			compositor_memory->is_done = true;
 		}
 
-		struct game_window_manager *wm = compositor_update(compositor_memory, events.at, events.count);
+		struct game_window_manager *wm = compositor_update(
+			compositor_memory, events.at, events.count);
 
 		game_load(game);
 		if (game->update) {
@@ -438,7 +436,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	}
 
 	egl_finish(&egl);
-	x11_window_finish(&window);
+	x11_state_finish(&state);
 
 	return 0;
 }

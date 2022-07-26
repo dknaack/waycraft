@@ -19,11 +19,10 @@ union x11_event {
 	xcb_property_notify_event_t *property_notify;
 };
 
-struct x11_window {
+struct x11_state {
 	xcb_connection_t *connection;
 	xcb_screen_t *screen;
 	xcb_window_t window;
-
 	xcb_atom_t atoms[X11_ATOM_COUNT];
 
 	u32 width;
