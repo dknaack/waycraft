@@ -283,20 +283,20 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	 * NOTE: open the x11 window
 	 */
 	struct x11_state x11 = {0};
-	xcb_connection_t *connection = xcb_connect(0, 0);
-	if (xcb_connection_has_error(connection)) {
+	x11.connection = xcb_connect(0, 0);
+	if (xcb_connection_has_error(x11.connection)) {
 		fprintf(stderr, "Failed to connect to X display\n");
 		return -1;
 	}
 
-	xcb_screen_t *screen = xcb_setup_roots_iterator(
-		xcb_get_setup(connection)).data;
+	x11.screen = xcb_setup_roots_iterator(
+		xcb_get_setup(x11.connection)).data;
 
 	// create the window
-	x11.window = xcb_generate_id(connection);
+	x11.window = xcb_generate_id(x11.connection);
 	u32 values[2];
 	u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-	values[0] = screen->black_pixel;
+	values[0] = x11.screen->black_pixel;
 	values[1] = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
 		XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
 		XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
@@ -316,7 +316,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	xcb_atom_t *atoms = x11.atoms;
 	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
 		xcb_intern_atom_reply_t *reply =
-			xcb_intern_atom_reply(connection, cookies[i], 0);
+			xcb_intern_atom_reply(x11.connection, cookies[i], 0);
 		atoms[i] = reply->atom;
 		free(reply);
 	}
@@ -381,6 +381,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	events.max_count = 1024;
 	events.at = calloc(events.max_count, sizeof(*events.at));
 
+	x11.is_open = true;
 	f64 target_frame_time = 1.0f / 60.0f;
 	while (x11.is_open) {
 		f64 start_time = get_time_sec();
