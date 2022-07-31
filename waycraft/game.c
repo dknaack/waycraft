@@ -6,7 +6,7 @@
 #include <time.h>
 
 #include <waycraft/game.h>
-#include <waycraft/stb_image.h>
+#include <stb_image.h>
 
 #include "waycraft/math.c"
 #include "waycraft/util.c"

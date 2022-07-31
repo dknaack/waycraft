@@ -3,7 +3,7 @@
 #include <waycraft/platform.h>
 #include <waycraft/compositor.h>
 #include <waycraft/gl.h>
-#include <waycraft/stb_image.h>
+#include <stb_image.h>
 
 struct game_code {
 	struct platform_memory memory;
