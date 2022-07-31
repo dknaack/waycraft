@@ -381,13 +381,13 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 			}
 		}
 
-		if (is_empty(block_right)) {
+		if (block != BLOCK_WATER && is_empty(block_right)) {
 			block_texcoords_right(block, uv);
 			render_quad(mesh, pos[4], pos[0], pos[6], pos[2],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
-		if (is_empty(block_left)) {
+		if (block != BLOCK_WATER && is_empty(block_left)) {
 			block_texcoords_left(block, uv);
 			render_quad(mesh, pos[1], pos[5], pos[3], pos[7],
 				uv[0], uv[1], uv[2], uv[3], texture);
@@ -405,13 +405,13 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
-		if (is_empty(block_front)) {
+		if (block != BLOCK_WATER && is_empty(block_front)) {
 			block_texcoords_front(block, uv);
 			render_quad(mesh, pos[0], pos[1], pos[2], pos[3],
 				uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
-		if (is_empty(block_back)) {
+		if (block != BLOCK_WATER && is_empty(block_back)) {
 			block_texcoords_back(block, uv);
 			render_quad(mesh, pos[5], pos[4], pos[7], pos[6],
 				uv[0], uv[1], uv[2], uv[3], texture);
