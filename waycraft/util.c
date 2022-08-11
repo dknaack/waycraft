@@ -1,6 +1,15 @@
 #include <time.h>
 #include <string.h>
 
+static f64
+get_time_sec(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
 static void
 arena_init(struct memory_arena *arena, void *data, u64 size)
 {

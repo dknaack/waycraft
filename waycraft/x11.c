@@ -266,15 +266,6 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 	xcb_flush(connection);
 }
 
-static f64
-get_time_sec(void)
-{
-	struct timespec ts;
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return ts.tv_sec + ts.tv_nsec * 1e-9;
-}
-
 static int
 x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		struct opengl_api *gl)
