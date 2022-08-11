@@ -1,3 +1,4 @@
+#include <EGL/eglext.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
@@ -353,7 +354,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	 * NOTE: initialize EGL
 	 */
 	struct egl_context egl = {0};
-	if (egl_init(&egl, x11.window) != 0) {
+	if (egl_init(&egl, EGL_PLATFORM_XCB_EXT, x11.connection, x11.window) != 0) {
 		fprintf(stderr, "Failed to initialize egl\n");
 		return 1;
 	}

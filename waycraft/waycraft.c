@@ -104,71 +104,73 @@ add_task(struct platform_task_queue *queue, platform_task_callback_t *callback, 
 }
 
 static i32
-egl_init(struct egl_context *egl, usize window)
+egl_init(struct egl_context *egl, EGLenum platform,
+		EGLNativeDisplayType native_display, EGLNativeWindowType native_window)
 {
-	egl->display = eglGetDisplay(0);
-	if (egl->display == EGL_NO_DISPLAY) {
-		log_err("Failed to get the EGL display");
-		goto error_get_display;
-	}
+	PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
+		(PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+	assert(eglGetPlatformDisplayEXT);
 
-	i32 major, minor;
+	egl->display = eglGetPlatformDisplayEXT(platform, native_display, NULL);
+
+	EGLint major, minor;
 	if (!eglInitialize(egl->display, &major, &minor)) {
 		log_err("Failed to initialize EGL");
-		goto error_initialize;
+		goto error_init;
 	}
-
-	EGLint config_attributes[] = {
-		EGL_RED_SIZE, 8,
-		EGL_GREEN_SIZE, 8,
-		EGL_BLUE_SIZE, 8,
-		EGL_DEPTH_SIZE, 24,
-		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-		EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-		EGL_NONE
-	};
-
-	EGLConfig config;
-	EGLint config_count;
-	if (!eglChooseConfig(egl->display, config_attributes, &config, 1, &config_count)) {
-		log_err("Failed to choose config");
-		goto error_choose_config;
-	}
-
-	if (config_count != 1) {
-		goto error_choose_config;
-	}
-
-	egl->surface = eglCreateWindowSurface(egl->display, config, window, 0);
 
 	if (!eglBindAPI(EGL_OPENGL_API)) {
 		log_err("Failed to bind the opengl api");
 		goto error_bind_api;
 	}
 
-	EGLint context_attributes[] = {
+	static const EGLint config_attributes[] = {
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+		EGL_RED_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_BLUE_SIZE, 8,
+		EGL_ALPHA_SIZE, 8,
+		EGL_DEPTH_SIZE, 24,
+		EGL_STENCIL_SIZE, 8,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+		EGL_NONE
+	};
+
+	EGLConfig config;
+	EGLint config_count = 0;
+	if (!eglChooseConfig(egl->display, config_attributes, &config, 1, &config_count) || config_count != 1) {
+		log_err("Failed to choose config");
+		goto error_choose_config;
+	}
+
+	static const EGLint context_attributes[] = {
 		EGL_CONTEXT_MAJOR_VERSION, 3,
 		EGL_CONTEXT_MINOR_VERSION, 3,
 		EGL_NONE
 	};
 
-	egl->context = eglCreateContext(egl->display, config, EGL_NO_CONTEXT,
-		context_attributes);
-	if (egl->context == EGL_NO_CONTEXT) {
-		log_err("Failed to create the EGL context");
-		goto error_context;
+	egl->context = eglCreateContext(egl->display, config, EGL_NO_CONTEXT, context_attributes);
+	if (!egl->context) {
+		log_err("Failed to create EGL context");
+		goto error_create_context;
+	}
+
+	egl->surface = eglCreateWindowSurface(egl->display, config, native_window, NULL);
+	if (egl->surface == EGL_NO_SURFACE) {
+		log_err("Failed to crreate an EGL surface");
+		goto error_create_window_surface;
 	}
 
 	eglMakeCurrent(egl->display, egl->surface, egl->surface, egl->context);
 
 	return 0;
-error_context:
-	eglDestroySurface(egl->display, egl->surface);
-error_bind_api:
+error_create_window_surface:
+	eglDestroyContext(egl->display, egl->context);
+error_create_context:
 error_choose_config:
-error_initialize:
+error_bind_api:
 	eglTerminate(egl->display);
-error_get_display:
+error_init:
 	return -1;
 }
 
