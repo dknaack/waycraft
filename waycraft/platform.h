@@ -40,13 +40,17 @@ struct game_input {
 		u8 buttons[8];
 	} mouse;
 
-	struct {
-		u8 move_up;
-		u8 move_down;
-		u8 move_left;
-		u8 move_right;
-		u8 jump;
-		u8 toggle_inventory;
+	union {
+		struct {
+			u8 move_up;
+			u8 move_down;
+			u8 move_left;
+			u8 move_right;
+			u8 jump;
+			u8 toggle_inventory;
+		};
+
+		u8 buttons[8];
 	} controller;
 
 	f32 dt;
