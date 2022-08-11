@@ -874,7 +874,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 			}
 		}
 
-		if (input->mouse.buttons[1]) {
+		if (button_was_pressed(input->mouse.buttons[1])) {
 			u32 is_pressing_alt = input->alt_down;
 			struct game_window *window = 0;
 
