@@ -529,8 +529,9 @@ player_move(struct game_state *game, struct game_input *input)
 	block_bounds.min = mulf(block_offset, -1.f);
 	block_bounds.max = mulf(block_offset,  1.f);
 
+	// NOTE: collision detection
 	f32 t_remaining = 1.f;
-	for (u32 i = 0; i < 4 && t_remaining > 0.f; i++) {
+	for (u32 i = 0; i < 4 && t_remaining > 0.001f; i++) {
 		v3 normal = v3(0, 0, 0);
 		f32 t_min = 1.f;
 
