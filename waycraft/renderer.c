@@ -261,6 +261,8 @@ renderer_submit(struct renderer *renderer, struct render_command_buffer *cmd_buf
 	v3 camera_pos = cmd_buffer->transform.camera_pos;
 	v2 viewport = cmd_buffer->transform.viewport;
 
+	assert(viewport.width != 0);
+	assert(viewport.height != 0);
 	gl.Viewport(0, 0, viewport.width, viewport.height);
 	gl.UseProgram(renderer->shader.program);
 
