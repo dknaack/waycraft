@@ -94,7 +94,6 @@ struct game_state {
 	struct game_window *hot_window;
 	struct game_assets assets;
 	struct player player;
-	struct debug_state debug_state;
 
 	u32 window_vertex_array;
 	u32 window_vertex_buffer;
