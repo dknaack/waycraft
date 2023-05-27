@@ -1,6 +1,6 @@
 struct vertex {
-    v3 position;
-    v2 texcoord;
+	v3 position;
+	v2 texcoord;
 };
 
 enum render_mode {

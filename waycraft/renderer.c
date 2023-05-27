@@ -4,37 +4,37 @@
 #define PUSH_BUFFER_SIZE MB(8)
 
 static char *vert_shader_source =
-	"#version 330 core\n"
-	"layout (location = 0) in vec3 pos;\n"
-	"layout (location = 1) in vec2 in_coords;\n"
-	"out vec2 coords;\n"
-	"out vec3 frag_pos;\n"
-	"uniform mat4 model;\n"
-	"uniform mat4 view;\n"
-	"uniform mat4 projection;\n"
-	"void main() {\n"
-	"    gl_Position = projection * view * model * vec4(pos, 1.);\n"
-	"    frag_pos = pos;\n"
-	"    coords = in_coords;\n"
-	"}\n";
+    "#version 330 core\n"
+    "layout (location = 0) in vec3 pos;\n"
+    "layout (location = 1) in vec2 in_coords;\n"
+    "out vec2 coords;\n"
+    "out vec3 frag_pos;\n"
+    "uniform mat4 model;\n"
+    "uniform mat4 view;\n"
+    "uniform mat4 projection;\n"
+    "void main() {\n"
+    "    gl_Position = projection * view * model * vec4(pos, 1.);\n"
+    "    frag_pos = pos;\n"
+    "    coords = in_coords;\n"
+    "}\n";
 
 static char *frag_shader_source =
-	"#version 330 core\n"
-	"in vec2 coords;\n"
-	"in vec3 frag_pos;\n"
-	"out vec4 frag_color;\n"
-	"uniform int enable_fog;\n"
-	"uniform sampler2D tex;\n"
-	"uniform vec3 camera_pos;\n"
-	"void main() {\n"
-	"	frag_color = texture(tex, coords);\n"
-	""
-	"	if (enable_fog != 0) {\n"
-	"		float dist = distance(camera_pos, frag_pos);\n"
-	"		float alpha = clamp(0.1 * (256 - dist), 0, 1);\n"
-	"		frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, alpha);\n"
-	"	}\n"
-	"}\n";
+    "#version 330 core\n"
+    "in vec2 coords;\n"
+    "in vec3 frag_pos;\n"
+    "out vec4 frag_color;\n"
+    "uniform int enable_fog;\n"
+    "uniform sampler2D tex;\n"
+    "uniform vec3 camera_pos;\n"
+    "void main() {\n"
+    "	frag_color = texture(tex, coords);\n"
+    ""
+    "	if (enable_fog != 0) {\n"
+    "		float dist = distance(camera_pos, frag_pos);\n"
+    "		float alpha = clamp(0.1 * (256 - dist), 0, 1);\n"
+    "		frag_color = mix(vec4(0.45, 0.65, 0.85, 1.0), frag_color, alpha);\n"
+    "	}\n"
+    "}\n";
 
 static const u32 render_cmd_size[RENDER_COMMAND_COUNT] = {
 	[RENDER_CLEAR] = sizeof(struct render_cmd_clear),
@@ -144,10 +144,10 @@ renderer_init(struct memory_arena *arena)
 	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer.index_buffer);
 
 	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-		(const void *)offsetof(struct vertex, position));
+	    (const void *)offsetof(struct vertex, position));
 	gl.EnableVertexAttribArray(0);
 	gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-		(const void *)offsetof(struct vertex, texcoord));
+	    (const void *)offsetof(struct vertex, texcoord));
 	gl.EnableVertexAttribArray(1);
 
 	gl.BindVertexArray(0);
@@ -204,7 +204,7 @@ render_cmdbuf_init(struct memory_arena *arena, u32 max_push_buffer_size,
 
 static void
 renderer_build_command_buffer(struct renderer *renderer,
-		struct render_cmdbuf *cmd_buffer, u32 *cmd_buffer_id)
+    struct render_cmdbuf *cmd_buffer, u32 *cmd_buffer_id)
 {
 	assert(renderer->mesh_count < renderer->max_mesh_count);
 
@@ -218,16 +218,16 @@ renderer_build_command_buffer(struct renderer *renderer,
 	gl.BindVertexArray(vertex_array);
 	gl.BindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
 	gl.BufferData(GL_ARRAY_BUFFER, cmd_buffer->vertex_count * sizeof(struct vertex),
-		cmd_buffer->vertex_buffer, GL_STATIC_DRAW);
+	    cmd_buffer->vertex_buffer, GL_STATIC_DRAW);
 	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
 	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(u32),
-		cmd_buffer->index_buffer, GL_STATIC_DRAW);
+	    cmd_buffer->index_buffer, GL_STATIC_DRAW);
 
 	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-		(const void *)offsetof(struct vertex, position));
+	    (const void *)offsetof(struct vertex, position));
 	gl.EnableVertexAttribArray(0);
 	gl.VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
-		(const void *)offsetof(struct vertex, texcoord));
+	    (const void *)offsetof(struct vertex, texcoord));
 	gl.EnableVertexAttribArray(1);
 
 	gl.BindVertexArray(0);
@@ -286,12 +286,12 @@ renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 	gl.BindVertexArray(renderer->vertex_array);
 	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
 	gl.BufferData(GL_ARRAY_BUFFER,
-		cmd_buffer->vertex_count * sizeof(*cmd_buffer->vertex_buffer),
-		cmd_buffer->vertex_buffer, GL_STREAM_DRAW);
+	    cmd_buffer->vertex_count * sizeof(*cmd_buffer->vertex_buffer),
+	    cmd_buffer->vertex_buffer, GL_STREAM_DRAW);
 	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
 	gl.BufferData(GL_ELEMENT_ARRAY_BUFFER,
-		cmd_buffer->index_count * sizeof(*cmd_buffer->index_buffer),
-		cmd_buffer->index_buffer, GL_STREAM_DRAW);
+	    cmd_buffer->index_count * sizeof(*cmd_buffer->index_buffer),
+	    cmd_buffer->index_buffer, GL_STREAM_DRAW);
 
 	while (command_count-- > 0) {
 		struct render_cmd *base_command = (struct render_cmd *)push_buffer;
@@ -301,7 +301,7 @@ renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 		case RENDER_CLEAR:
 			{
 				struct render_cmd_clear *clear =
-					(struct render_cmd_clear *)push_buffer;
+				    (struct render_cmd_clear *)push_buffer;
 
 				v4 color = clear->color;
 				gl.ClearColor(color.r, color.g, color.b, color.a);
@@ -314,14 +314,14 @@ renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 		case RENDER_QUADS:
 			{
 				struct render_cmd_quads *command =
-					(struct render_cmd_quads *)push_buffer;
+				    (struct render_cmd_quads *)push_buffer;
 
 				usize index_offset = sizeof(u32) * command->index_offset;
 
 				gl.BindVertexArray(renderer->vertex_array);
 				renderer_bind_texture(renderer, command->texture);
 				gl.DrawElements(GL_TRIANGLES, command->quad_count * 6,
-					GL_UNSIGNED_INT, (void *)index_offset);
+				    GL_UNSIGNED_INT, (void *)index_offset);
 
 				push_buffer += sizeof(*command);
 			}
@@ -330,7 +330,7 @@ renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 		case RENDER_MESH:
 			{
 				struct render_cmd_mesh *command =
-					(struct render_cmd_mesh *)push_buffer;
+				    (struct render_cmd_mesh *)push_buffer;
 
 				struct mesh *mesh = &renderer->meshes[command->mesh];
 
@@ -338,7 +338,7 @@ renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 				renderer_bind_texture(renderer, command->texture);
 				gl_uniform_m4x4(renderer->shader.model, command->transform);
 				gl.DrawElements(GL_TRIANGLES, mesh->index_count,
-					GL_UNSIGNED_INT, 0);
+				    GL_UNSIGNED_INT, 0);
 
 				push_buffer += sizeof(*command);
 			}
@@ -354,7 +354,7 @@ static void *
 push_command(struct render_cmdbuf *cmd_buffer, u32 type)
 {
 	struct render_cmd *command = (struct render_cmd *)
-		(cmd_buffer->push_buffer + cmd_buffer->push_buffer_size);
+	    (cmd_buffer->push_buffer + cmd_buffer->push_buffer_size);
 
 	u32 command_size = render_cmd_size[type];
 
@@ -374,15 +374,15 @@ static void
 render_clear(struct render_cmdbuf *cmd_buffer, v4 color)
 {
 	struct render_cmd_clear *clear =
-		push_command(cmd_buffer, RENDER_CLEAR);
+	    push_command(cmd_buffer, RENDER_CLEAR);
 
 	clear->color = color;
 }
 
 static void
 render_quad(struct render_cmdbuf *cmd_buffer,
-		v3 pos0, v3 pos1, v3 pos2, v3 pos3,
-		v2 uv0, v2 uv1, v2 uv2, v2 uv3, struct texture_id texture)
+    v3 pos0, v3 pos1, v3 pos2, v3 pos3,
+    v2 uv0, v2 uv1, v2 uv2, v2 uv3, struct texture_id texture)
 {
 	struct render_cmd_quads *command = cmd_buffer->current_quads;
 
@@ -432,7 +432,7 @@ render_quad(struct render_cmdbuf *cmd_buffer,
 
 static void
 render_sprite(struct render_cmdbuf *cmd_buffer,
-		struct rectangle rect, struct texture_id texture)
+    struct rectangle rect, struct texture_id texture)
 {
 	v3 pos0 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
 	v3 pos1 = v3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
@@ -458,7 +458,7 @@ render_rect(struct render_cmdbuf *cmd_buffer, struct rectangle rect)
 #if 0
 static void
 render_textured_quad(struct render_cmdbuf *cmd_buffer,
-		m4x4 transform, struct texture_id texture)
+    m4x4 transform, struct texture_id texture)
 {
 	v3 pos0 = m4x4_mulv(transform, v4(+1, +1, 0, 1)).xyz;
 	v3 pos1 = m4x4_mulv(transform, v4(-1, +1, 0, 1)).xyz;
@@ -476,7 +476,7 @@ render_textured_quad(struct render_cmdbuf *cmd_buffer,
 
 static void
 render_mesh(struct render_cmdbuf *cmd_buffer,
-		u32 mesh, m4x4 transform, struct texture_id texture)
+    u32 mesh, m4x4 transform, struct texture_id texture)
 {
 	struct render_cmd_mesh *command = push_command(cmd_buffer, RENDER_MESH);
 

@@ -78,9 +78,9 @@ static inline v3
 v3_cross(v3 a, v3 b)
 {
 	return v3(
-		a.y * b.z - a.z * b.y,
-		a.z * b.x - a.x * b.z,
-		a.x * b.y - a.y * b.x);
+	    a.y * b.z - a.z * b.y,
+	    a.z * b.x - a.x * b.z,
+	    a.x * b.y - a.y * b.x);
 }
 
 
@@ -212,13 +212,13 @@ m4x4_ortho(f32 bottom, f32 top, f32 left, f32 right, f32 near, f32 far)
 {
 	m4x4 result = m4x4_id(1);
 
-    result.e[0][0] = 2 / (right - left);
-    result.e[1][1] = 2 / (top - bottom);
-    result.e[2][2] = -2 / (far - near);
+	result.e[0][0] = 2 / (right - left);
+	result.e[1][1] = 2 / (top - bottom);
+	result.e[2][2] = -2 / (far - near);
 
-    result.e[3][0] = -(right + left) / (right - left);
-    result.e[3][1] = -(top + bottom) / (top - bottom);
-    result.e[3][2] = -(far + near) / (far - near);
+	result.e[3][0] = -(right + left) / (right - left);
+	result.e[3][1] = -(top + bottom) / (top - bottom);
+	result.e[3][2] = -(far + near) / (far - near);
 
 	return result;
 }
@@ -267,9 +267,9 @@ static v3
 m3x3_mulv(m3x3 m, v3 v)
 {
 	return v3(
-		m.e[0] * v.x + m.e[3] * v.y + m.e[6] * v.z,
-		m.e[1] * v.x + m.e[4] * v.y + m.e[7] * v.z,
-		m.e[2] * v.x + m.e[5] * v.y + m.e[8] * v.z);
+	    m.e[0] * v.x + m.e[3] * v.y + m.e[6] * v.z,
+	    m.e[1] * v.x + m.e[4] * v.y + m.e[7] * v.z,
+	    m.e[2] * v.x + m.e[5] * v.y + m.e[8] * v.z);
 }
 
 static v3i

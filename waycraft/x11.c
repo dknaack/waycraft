@@ -90,8 +90,8 @@ x11_get_key_state(u8 *key_vector, u8 key_code)
 }
 
 static void
-x11_state_poll_events(struct x11_state *state, struct game_input *input,
-	struct platform_event_array *event_array)
+x11_poll_events(struct x11_state *state, struct game_input *input,
+    struct platform_event_array *event_array)
 {
 	xcb_connection_t *connection = state->connection;
 	union x11_event x11_event;
@@ -151,7 +151,7 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 				i32 y = x11_event.motion_notify->event_y;
 
 				i32 mouse_was_warped = (x == state->width / 2 &&
-					y == state->height / 2);
+				    y == state->height / 2);
 				if (!mouse_was_warped) {
 					input->mouse.dx = x - input->mouse.x;
 					input->mouse.dy = y - input->mouse.y;
@@ -228,7 +228,7 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 
 		xcb_query_keymap_cookie_t cookie = xcb_query_keymap(connection);
 		xcb_query_keymap_reply_t *reply = xcb_query_keymap_reply(
-			connection, cookie, 0);
+		    connection, cookie, 0);
 		if (reply) {
 			u8 *keys = reply->keys;
 
@@ -261,7 +261,7 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 	// NOTE: lock the cursor
 	if (state->is_focused) {
 		xcb_warp_pointer(connection, 0, state->window, 0, 0, 0, 0,
-			state->width / 2, state->height / 2);
+		    state->width / 2, state->height / 2);
 	}
 
 	xcb_flush(connection);
@@ -269,7 +269,7 @@ x11_state_poll_events(struct x11_state *state, struct game_input *input,
 
 static int
 x11_main(struct game_code *game, struct platform_memory *compositor_memory,
-		struct opengl_api *gl)
+    struct opengl_api *gl)
 {
 	/*
 	 * NOTE: open the x11 window
@@ -282,7 +282,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	}
 
 	x11.screen = xcb_setup_roots_iterator(
-		xcb_get_setup(x11.connection)).data;
+	    xcb_get_setup(x11.connection)).data;
 
 	// create the window
 	x11.window = xcb_generate_id(x11.connection);
@@ -290,25 +290,25 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	u32 mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 	values[0] = x11.screen->black_pixel;
 	values[1] = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
-		XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
-		XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
-		XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
-		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
+	    XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
+	    XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+	    XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_EXPOSURE |
+	    XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_FOCUS_CHANGE;
 	xcb_create_window(x11.connection, x11.screen->root_depth, x11.window,
-		x11.screen->root, 0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT,
-		x11.screen->root_visual, mask, values);
+	    x11.screen->root, 0, 0, 640, 480, 1, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+	    x11.screen->root_visual, mask, values);
 	xcb_map_window(x11.connection, x11.window);
 
 	xcb_intern_atom_cookie_t cookies[X11_ATOM_COUNT] = {0};
 	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
 		cookies[i] = xcb_intern_atom(x11.connection,
-			0, strlen(x11_atom_names[i]), x11_atom_names[i]);
+		    0, strlen(x11_atom_names[i]), x11_atom_names[i]);
 	}
 
 	xcb_atom_t *atoms = x11.atoms;
 	for (u32 i = 0; i < X11_ATOM_COUNT; i++) {
 		xcb_intern_atom_reply_t *reply =
-			xcb_intern_atom_reply(x11.connection, cookies[i], 0);
+		    xcb_intern_atom_reply(x11.connection, cookies[i], 0);
 		atoms[i] = reply->atom;
 		free(reply);
 	}
@@ -316,13 +316,13 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	// set the window title
 	const char *title = "Waycraft";
 	xcb_change_property(x11.connection, XCB_PROP_MODE_REPLACE, x11.window,
-		atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
-		strlen(title), title);
+	    atoms[X11_WM_NAME], atoms[X11_UTF8_STRING], 8,
+	    strlen(title), title);
 
 	// enable closing the window
 	xcb_change_property(x11.connection, XCB_PROP_MODE_REPLACE, x11.window,
-		atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
-		&atoms[X11_WM_DELETE_WINDOW]);
+	    atoms[X11_WM_PROTOCOLS], XCB_ATOM_ATOM, 32, 1,
+	    &atoms[X11_WM_DELETE_WINDOW]);
 
 	xcb_xfixes_query_version(x11.connection, 4, 0);
 	xcb_xfixes_hide_cursor(x11.connection, x11.window);
@@ -333,10 +333,10 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	 */
 	struct xkb_context *xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	xkb_x11_setup_xkb_extension(x11.connection, XKB_X11_MIN_MAJOR_XKB_VERSION,
-		XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
+	    XKB_X11_MIN_MINOR_XKB_VERSION, 0, 0, 0, 0, 0);
 	i32 keyboard_device_id = xkb_x11_get_core_keyboard_device_id(x11.connection);
 	struct xkb_keymap *keymap = xkb_x11_keymap_new_from_device(
-		xkb_context, x11.connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	    xkb_context, x11.connection, keyboard_device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	char *keymap_string = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
 	i32 keymap_size = strlen(keymap_string) + 1;
 	i32 keymap_file = allocate_shm_file(keymap_size);
@@ -348,7 +348,7 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 	munmap(contents, keymap_size);
 
 	x11.xkb_state = xkb_x11_state_new_from_device(
-		keymap, x11.connection, keyboard_device_id);
+	    keymap, x11.connection, keyboard_device_id);
 
 	/*
 	 * NOTE: initialize EGL
@@ -379,14 +379,14 @@ x11_main(struct game_code *game, struct platform_memory *compositor_memory,
 		f64 start_time = get_time_sec();
 
 		events.count = 0;
-		x11_state_poll_events(&x11, &input, &events);
+		x11_poll_events(&x11, &input, &events);
 		if (!x11.is_open) {
 			game->memory.is_done = true;
 			compositor_memory->is_done = true;
 		}
 
 		struct game_window_manager *wm = compositor_update(
-			compositor_memory, events.at, events.count);
+		    compositor_memory, events.at, events.count);
 
 		game_load(game);
 		if (game->update) {

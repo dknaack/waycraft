@@ -23,12 +23,10 @@ arena_init(void *data, u64 size)
 static void *
 arena_alloc_(struct memory_arena *arena, usize size)
 {
-    assert(arena->used + size < arena->size);
-
-    void *ptr = arena->data + arena->used;
-    arena->used += size;
-
-    return ptr;
+	assert(arena->used + size < arena->size);
+	void *ptr = arena->data + arena->used;
+	arena->used += size;
+	return ptr;
 }
 
 static void
@@ -79,15 +77,15 @@ timer_end_(struct timer *timer)
 	f64 duration = current_time - start_time;
 
 	fprintf(timer_output, "{"
-		"\"ph\": \"X\","
-		"\"cat\": \"PERF\","
-		"\"tid\": 1,"
-		"\"pid\": 1,"
-		"\"name\": \"%s\","
-		"\"ts\": %f,"
-		"\"dur\": %f"
-		"},",
-		timer->name, timer->start, duration);
+	    "\"ph\": \"X\","
+	    "\"cat\": \"PERF\","
+	    "\"tid\": 1,"
+	    "\"pid\": 1,"
+	    "\"name\": \"%s\","
+	    "\"ts\": %f,"
+	    "\"dur\": %f"
+	    "},",
+	    timer->name, timer->start, duration);
 }
 
 static const char *log_str[LOG_LEVEL_COUNT] = {
@@ -109,13 +107,13 @@ log_time(void)
 
 static void
 log_(enum log_level level, const char *file, u32 line, const char *func,
-		const char *fmt, ...)
+    const char *fmt, ...)
 {
 	va_list ap;
 
 	u64 time = log_time();
 	fprintf(stderr, "[%7ld.%-3ld] %5s %s:%d:%s: ", time / 1000, time % 1000,
-		log_str[level], file, line, func);
+	    log_str[level], file, line, func);
 
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);

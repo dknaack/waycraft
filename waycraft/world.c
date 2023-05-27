@@ -54,8 +54,8 @@ chunk_at(const struct chunk *chunk, i32 x, i32 y, i32 z)
 {
 	u32 result = 0;
 	u32 is_inside_chunk = (0 <= x && x < BLOCK_COUNT_X)
-		&& (0 <= y && y < BLOCK_COUNT_Y)
-		&& (0 <= z && z < BLOCK_COUNT_Z);
+	    && (0 <= y && y < BLOCK_COUNT_Y)
+	    && (0 <= z && z < BLOCK_COUNT_Z);
 	if (is_inside_chunk) {
 		u32 index = (z * BLOCK_COUNT_Y + y) * BLOCK_COUNT_X + x;
 
@@ -166,7 +166,7 @@ world_init(struct memory_arena *arena)
 
 static void
 world_load_chunk(struct world *world, struct chunk *chunk,
-		struct render_cmdbuf *mesh, struct renderer *renderer)
+    struct render_cmdbuf *mesh, struct renderer *renderer)
 {
 	struct game_assets *assets = mesh->assets;
 
@@ -257,7 +257,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 
 			if (height[x][z] + chunk_pos.y > 2) {
 				for (i32 y = height[x][z]; y < BLOCK_COUNT_Y && 2 <= y &&
-						y < height[x][z] + tree_height; y++) {
+				    y < height[x][z] + tree_height; y++) {
 					u32 i = block_index(x, y, z);
 					blocks[i] = BLOCK_OAK_LOG;
 				}
@@ -346,28 +346,28 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		u32 (*is_empty)(enum block_type block) = block_is_empty;
 
 		u16 block_right = x + 1 >= BLOCK_COUNT_X ?
-			blocks_right[block_index(x + 1 - BLOCK_COUNT_X, y, z)] :
-			blocks[block_index(x + 1, y, z)];
+		    blocks_right[block_index(x + 1 - BLOCK_COUNT_X, y, z)] :
+		    blocks[block_index(x + 1, y, z)];
 
 		u16 block_left = x - 1 < 0 ?
-			blocks_left[block_index(x - 1 + BLOCK_COUNT_X, y, z)] :
-			blocks[block_index(x - 1, y, z)];
+		    blocks_left[block_index(x - 1 + BLOCK_COUNT_X, y, z)] :
+		    blocks[block_index(x - 1, y, z)];
 
 		u16 block_top = y + 1 >= BLOCK_COUNT_Y ?
-			blocks_top[block_index(x, y + 1 - BLOCK_COUNT_Y, z)] :
-			blocks[block_index(x, y + 1, z)];
+		    blocks_top[block_index(x, y + 1 - BLOCK_COUNT_Y, z)] :
+		    blocks[block_index(x, y + 1, z)];
 
 		u16 block_bottom = y - 1 < 0 ?
-			blocks_bottom[block_index(x, y - 1 + BLOCK_COUNT_Y, z)] :
-			blocks[block_index(x, y - 1, z)];
+		    blocks_bottom[block_index(x, y - 1 + BLOCK_COUNT_Y, z)] :
+		    blocks[block_index(x, y - 1, z)];
 
 		u16 block_front = z + 1 >= BLOCK_COUNT_Z ?
-			blocks_front[block_index(x, y, z + 1 - BLOCK_COUNT_Z)] :
-			blocks[block_index(x, y, z + 1)];
+		    blocks_front[block_index(x, y, z + 1 - BLOCK_COUNT_Z)] :
+		    blocks[block_index(x, y, z + 1)];
 
 		u16 block_back = z - 1 < 0 ?
-			blocks_back[block_index(x, y, z - 1 + BLOCK_COUNT_Z)] :
-			blocks[block_index(x, y, z - 1)];
+		    blocks_back[block_index(x, y, z - 1 + BLOCK_COUNT_Z)] :
+		    blocks[block_index(x, y, z - 1)];
 
 		if (block == BLOCK_WATER) {
 			is_empty = block_is_not_water;
@@ -385,37 +385,37 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 		if (block != BLOCK_WATER && is_empty(block_right)) {
 			block_texcoords_right(block, uv);
 			render_quad(mesh, pos[4], pos[0], pos[6], pos[2],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (block != BLOCK_WATER && is_empty(block_left)) {
 			block_texcoords_left(block, uv);
 			render_quad(mesh, pos[1], pos[5], pos[3], pos[7],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_top)) {
 			block_texcoords_top(block, uv);
 			render_quad(mesh, pos[4], pos[5], pos[0], pos[1],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (is_empty(block_bottom)) {
 			block_texcoords_bottom(block, uv);
 			render_quad(mesh, pos[7], pos[6], pos[3], pos[2],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (block != BLOCK_WATER && is_empty(block_front)) {
 			block_texcoords_front(block, uv);
 			render_quad(mesh, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 
 		if (block != BLOCK_WATER && is_empty(block_back)) {
 			block_texcoords_back(block, uv);
 			render_quad(mesh, pos[5], pos[4], pos[7], pos[6],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 	}
 
@@ -425,8 +425,8 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 
 static void
 world_update(struct world *world, v3 player_pos, v3 player_dir,
-		struct renderer *renderer, struct render_cmdbuf *cmd_buffer,
-		struct memory_arena *frame_arena, struct game_assets *assets)
+    struct renderer *renderer, struct render_cmdbuf *cmd_buffer,
+    struct memory_arena *frame_arena, struct game_assets *assets)
 {
 	u32 max_vertex_count = BLOCK_COUNT * 4 * 6;
 	u32 max_index_count = BLOCK_COUNT * 6 * 6;
@@ -535,7 +535,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 
 static void
 world_place_block(struct world *world, f32 x, f32 y, f32 z,
-		enum block_type block_type)
+    enum block_type block_type)
 {
 	v3 point = v3(x, y, z);
 

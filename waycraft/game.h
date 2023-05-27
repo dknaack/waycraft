@@ -21,19 +21,19 @@ enum item_type {
 	ITEM_NONE,
 	// NOTE: blocks should be synchronized with the block_type enum.
 	ITEM_FIRST_BLOCK = ITEM_NONE,
-    ITEM_AIR_BLOCK,
-    ITEM_STONE_BLOCK,
-    ITEM_DIRT_BLOCK,
-    ITEM_GRASS_BLOCK,
-    ITEM_GRASS_TOP_BLOCK,
-    ITEM_PLANKS_BLOCK,
-    ITEM_OAK_LOG_BLOCK,
-    ITEM_OAK_LEAVES_BLOCK,
-    ITEM_SAND_BLOCK,
-    ITEM_WATER_BLOCK,
-    ITEM_MONITOR_BLOCK,
+	ITEM_AIR_BLOCK,
+	ITEM_STONE_BLOCK,
+	ITEM_DIRT_BLOCK,
+	ITEM_GRASS_BLOCK,
+	ITEM_GRASS_TOP_BLOCK,
+	ITEM_PLANKS_BLOCK,
+	ITEM_OAK_LOG_BLOCK,
+	ITEM_OAK_LEAVES_BLOCK,
+	ITEM_SAND_BLOCK,
+	ITEM_WATER_BLOCK,
+	ITEM_MONITOR_BLOCK,
 	ITEM_LAST_BLOCK,
-    ITEM_WINDOW = ITEM_LAST_BLOCK,
+	ITEM_WINDOW = ITEM_LAST_BLOCK,
 	ITEM_COUNT
 };
 
@@ -129,6 +129,6 @@ static inline i32
 box_contains_point(struct box box, v3 point)
 {
 	return (box.min.x <= point.x && point.x <= box.max.x &&
-		box.min.y <= point.y && point.y <= box.max.y &&
-		box.min.z <= point.z && point.z <= box.max.z);
+	    box.min.y <= point.y && point.y <= box.max.y &&
+	    box.min.z <= point.z && point.z <= box.max.z);
 }

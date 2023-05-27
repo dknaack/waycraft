@@ -42,7 +42,7 @@ struct platform_task_queue {
 
 static void game_load(struct game_code *game);
 static i32 egl_init(struct egl_context *egl, EGLenum platform,
-	EGLNativeDisplayType native_display, EGLNativeWindowType native_window);
+    EGLNativeDisplayType native_display, EGLNativeWindowType native_window);
 static void egl_finish(struct egl_context *egl);
 static struct platform_event *push_event(
-	struct platform_event_array *events, u32 type);
+    struct platform_event_array *events, u32 type);

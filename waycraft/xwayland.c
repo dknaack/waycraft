@@ -62,9 +62,9 @@ xwm_handle_create_notify(struct xwm *xwm, xcb_create_notify_event_t *event)
 
 	if (window != xwm->window) {
 		values[0] = XCB_EVENT_MASK_PROPERTY_CHANGE |
-			XCB_EVENT_MASK_FOCUS_CHANGE;
+		    XCB_EVENT_MASK_FOCUS_CHANGE;
 		xcb_change_window_attributes(xwm->connection, window,
-			XCB_CW_EVENT_MASK, values);
+		    XCB_CW_EVENT_MASK, values);
 	}
 }
 
@@ -86,14 +86,14 @@ xwm_handle_client_message(struct xwm *xwm, xcb_client_message_event_t *event)
 	if (event->type == xwm->atoms[XWM_WL_SURFACE_ID]) {
 		u32 wl_surface_id = event->data.data32[0];
 		struct wl_resource *resource = wl_client_get_object(xwm->client,
-			wl_surface_id);
+		    wl_surface_id);
 
 		// NOTE: surface may not have been created yet.
 		if (resource) {
 			xwayland_assign_role(resource, event->window, xwm->connection);
 		} else {
 			struct xwayland_surface *surface =
-				&xwm->unpaired_surfaces[xwm->unpaired_surface_count++];
+			    &xwm->unpaired_surfaces[xwm->unpaired_surface_count++];
 
 			surface->wl_surface = wl_surface_id;
 			surface->window = event->window;
@@ -185,55 +185,55 @@ xwm_init(struct xwm *xwm, i32 wm_fd, struct wl_display *display)
 
 	u32 values[] = {
 		XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY |
-			XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
-			XCB_EVENT_MASK_PROPERTY_CHANGE,
+		    XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+		    XCB_EVENT_MASK_PROPERTY_CHANGE,
 	};
 
 	xcb_change_window_attributes(xwm->connection, xwm->screen->root,
-		XCB_CW_EVENT_MASK, values);
+	    XCB_CW_EVENT_MASK, values);
 
 	xcb_intern_atom_cookie_t cookies[XWM_ATOM_COUNT];
 	for (u32 i = 0; i < XWM_ATOM_COUNT; i++) {
 		cookies[i] = xcb_intern_atom(xwm->connection, 0,
-			strlen(xwm_atom_names[i]), xwm_atom_names[i]);
+		    strlen(xwm_atom_names[i]), xwm_atom_names[i]);
 	}
 
 	for (u32 i = 0; i < XWM_ATOM_COUNT; i++) {
 		xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(
-			xwm->connection, cookies[i], 0);
+		    xwm->connection, cookies[i], 0);
 		xwm->atoms[i] = reply->atom;
 		free(reply);
 	}
 
 	xcb_create_window(xwm->connection, XCB_COPY_FROM_PARENT, xwm->window,
-		xwm->screen->root, 0, 0, 10, 10, 0,
-		XCB_WINDOW_CLASS_INPUT_OUTPUT, xwm->screen->root_visual, 0, 0);
+	    xwm->screen->root, 0, 0, 10, 10, 0,
+	    XCB_WINDOW_CLASS_INPUT_OUTPUT, xwm->screen->root_visual, 0, 0);
 
 	char title[] = "waycraft wm";
 	xcb_change_property(xwm->connection, XCB_PROP_MODE_REPLACE, xwm->window,
-		xwm->atoms[XWM_NET_WM_NAME], XCB_ATOM_STRING, 8, strlen(title), title);
+	    xwm->atoms[XWM_NET_WM_NAME], XCB_ATOM_STRING, 8, strlen(title), title);
 
 	xcb_change_property(xwm->connection, XCB_PROP_MODE_REPLACE,
-		xwm->screen->root, xwm->atoms[XWM_NET_SUPPORTING_WM_CHECK],
-		XCB_ATOM_WINDOW, 32, 1, &xwm->window);
+	    xwm->screen->root, xwm->atoms[XWM_NET_SUPPORTING_WM_CHECK],
+	    XCB_ATOM_WINDOW, 32, 1, &xwm->window);
 	xcb_change_property(xwm->connection, XCB_PROP_MODE_REPLACE,
-		xwm->window, xwm->atoms[XWM_NET_SUPPORTING_WM_CHECK],
-		XCB_ATOM_WINDOW, 32, 1, &xwm->window);
+	    xwm->window, xwm->atoms[XWM_NET_SUPPORTING_WM_CHECK],
+	    XCB_ATOM_WINDOW, 32, 1, &xwm->window);
 
 	xcb_window_t no_window = XCB_WINDOW_NONE;
 	xcb_change_property(xwm->connection, XCB_PROP_MODE_REPLACE,
-			xwm->screen->root, xwm->atoms[XWM_NET_ACTIVE_WINDOW],
-			xwm->atoms[XWM_WINDOW], 32, 1, &no_window);
+	    xwm->screen->root, xwm->atoms[XWM_NET_ACTIVE_WINDOW],
+	    xwm->atoms[XWM_WINDOW], 32, 1, &no_window);
 
 	xcb_set_selection_owner(xwm->connection, xwm->window,
-		xwm->atoms[XWM_WM_S0], XCB_CURRENT_TIME);
+	    xwm->atoms[XWM_WM_S0], XCB_CURRENT_TIME);
 
 	xcb_composite_redirect_subwindows(xwm->connection, xwm->screen->root,
-		XCB_COMPOSITE_REDIRECT_MANUAL);
+	    XCB_COMPOSITE_REDIRECT_MANUAL);
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(display);
 	xwm->event_source = wl_event_loop_add_fd(loop, wm_fd, WL_EVENT_READABLE,
-		xwm_handle_event, xwm);
+	    xwm_handle_event, xwm);
 	wl_event_source_check(xwm->event_source);
 
 	xcb_flush(xwm->connection);
@@ -272,13 +272,13 @@ xwm_focus(struct xwm *xwm, struct xwayland_surface *surface)
 		xcb_configure_window(connection, window, mask, values);
 	}
 
-    uint32_t values[] = { XCB_STACK_MODE_ABOVE };
-    xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, values);
+	uint32_t values[] = { XCB_STACK_MODE_ABOVE };
+	xcb_configure_window(connection, window, XCB_CONFIG_WINDOW_STACK_MODE, values);
 	xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE,
-		XCB_WINDOW_NONE, XCB_CURRENT_TIME);
+	    XCB_WINDOW_NONE, XCB_CURRENT_TIME);
 	xcb_flush(connection);
 	xcb_set_input_focus(connection, XCB_INPUT_FOCUS_NONE, window,
-		XCB_CURRENT_TIME);
+	    XCB_CURRENT_TIME);
 	xcb_flush(connection);
 }
 
@@ -348,7 +348,7 @@ xwayland_new_surface(struct wl_listener *listener, void *data)
 			assert(window != XCB_WINDOW_NONE);
 
 			xwm->unpaired_surfaces[i] =
-				xwm->unpaired_surfaces[--xwm->unpaired_surface_count];
+			    xwm->unpaired_surfaces[--xwm->unpaired_surface_count];
 			xwayland_assign_role(resource, window, xwm->connection);
 			break;
 		}
@@ -359,7 +359,7 @@ static void
 xwayland_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct compositor *compositor = wl_container_of(listener,
-		compositor, xwayland_surface_destroy);
+	    compositor, xwayland_surface_destroy);
 	xcb_destroy_notify_event_t *event = data;
 
 	struct surface *surface = compositor->surfaces + 1;
@@ -367,7 +367,7 @@ xwayland_surface_destroy(struct wl_listener *listener, void *data)
 	while (surface_count-- > 0) {
 		printf("%d == %d?\n", surface->xwayland_surface.window, event->window);
 		if (surface->role == SURFACE_ROLE_XWAYLAND &&
-				surface->xwayland_surface.window == event->window) {
+		    surface->xwayland_surface.window == event->window) {
 			if (surface->window) {
 				surface->window->flags |= WINDOW_DESTROYED;
 			}
@@ -452,9 +452,9 @@ xwayland_init(struct xwayland *xwayland, struct compositor *compositor)
 	xwayland->wl_fd[0] = -1;
 
 	struct wl_event_loop *event_loop =
-		wl_display_get_event_loop(xwayland->display);
+	    wl_display_get_event_loop(xwayland->display);
 	xwayland->usr1_source = wl_event_loop_add_signal(event_loop, SIGUSR1,
-		server_ready, xwayland);
+	    server_ready, xwayland);
 
 	switch (fork()) {
 	case -1:

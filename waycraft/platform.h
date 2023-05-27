@@ -96,7 +96,7 @@ struct platform_task_queue;
 
 typedef void platform_task_callback_t(void *data);
 typedef void platform_add_task_t(struct platform_task_queue *queue,
-	platform_task_callback_t *callback, void *data);
+    platform_task_callback_t *callback, void *data);
 
 struct platform_api {
 	struct platform_task_queue *queue;
@@ -105,17 +105,17 @@ struct platform_api {
 };
 
 struct platform_memory {
-    void *data;
-    usize size;
+	void *data;
+	usize size;
 
-    bool is_initialized;
+	bool is_initialized;
 	bool is_done;
 	struct opengl_api *gl;
 	struct platform_api *platform;
 };
 
 typedef void game_update_t(struct platform_memory *memory, struct game_input *input,
-	struct game_window_manager *window_manager);
+    struct game_window_manager *window_manager);
 
 static inline struct game_window *
 window_manager_get_window(struct game_window_manager *wm, u32 id)
@@ -131,7 +131,7 @@ window_manager_get_focused_window(struct game_window_manager *wm)
 
 static inline u32
 window_manager_get_window_id(struct game_window_manager *wm,
-		struct game_window *window)
+    struct game_window *window)
 {
 	assert(!window || window - wm->windows < wm->window_count);
 

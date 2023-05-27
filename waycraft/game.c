@@ -87,9 +87,9 @@ item_to_block(enum item_type item, v3 direction)
 			v3 abs_direction = v3_abs(direction);
 
 			u32 is_facing_x_axis = abs_direction.x > abs_direction.y &&
-				abs_direction.x > abs_direction.z;
+			    abs_direction.x > abs_direction.z;
 			u32 is_facing_y_axis = abs_direction.y > abs_direction.x &&
-				abs_direction.y > abs_direction.z;
+			    abs_direction.y > abs_direction.z;
 
 			u32 is_facing_in_negative_direction = 0;
 			if (is_facing_x_axis) {
@@ -113,7 +113,7 @@ item_to_block(enum item_type item, v3 direction)
 
 static void
 item_render(struct inventory_item *item, struct rectangle rect,
-		struct render_cmdbuf *cmd_buffer)
+    struct render_cmdbuf *cmd_buffer)
 {
 	struct game_assets *assets = cmd_buffer->assets;
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
@@ -127,7 +127,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 		v2 uv[4] = {0};
 		block_texcoords_right(BLOCK_AIR, uv);
 		render_quad(cmd_buffer, pos0, pos1, pos2, pos3,
-			uv[0], uv[1], uv[2], uv[3], texture);
+		    uv[0], uv[1], uv[2], uv[3], texture);
 	} else {
 		enum block_type block = item_to_block(item->type, v3(1, 0, 0));
 		if (block != BLOCK_AIR) {
@@ -141,7 +141,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 
 			block_texcoords_left(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 
 			pos[0] = v3(rect.x + 0.50f * rect.width, rect.y + 1.00f * rect.height, 0);
 			pos[1] = v3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
@@ -150,7 +150,7 @@ item_render(struct inventory_item *item, struct rectangle rect,
 
 			block_texcoords_top(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 
 			pos[0] = v3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
 			pos[1] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
@@ -159,14 +159,14 @@ item_render(struct inventory_item *item, struct rectangle rect,
 
 			block_texcoords_right(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], texture);
+			    uv[0], uv[1], uv[2], uv[3], texture);
 		}
 	}
 }
 
 static void
 inventory_render(struct inventory *inventory,
-		struct render_cmdbuf *cmd_buffer)
+    struct render_cmdbuf *cmd_buffer)
 {
 	struct game_assets *assets = cmd_buffer->assets;
 	f32 screen_width = cmd_buffer->transform.viewport.width;
@@ -414,9 +414,9 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 {
 	v3 direction = v3(0, 0, 0);
 	f32 haxis = button_is_down(input->controller.move_right) -
-		button_is_down(input->controller.move_left);
+	    button_is_down(input->controller.move_left);
 	f32 vaxis = button_is_down(input->controller.move_up) -
-		button_is_down(input->controller.move_down);
+	    button_is_down(input->controller.move_down);
 
 	if (haxis || vaxis) {
 		front = mulf(front, vaxis);
@@ -432,7 +432,7 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 // NOTE: assumes ray starts outside the box and intersects the box
 static u32
 ray_box_intersection(struct box box, v3 start, v3 direction,
-	v3 *normal_min, v3 *normal_max, f32 *out_tmin, f32 *out_tmax)
+    v3 *normal_min, v3 *normal_max, f32 *out_tmin, f32 *out_tmax)
 {
 	f32 tmin = 0.f;
 	f32 tmax = INFINITY;
@@ -480,7 +480,7 @@ player_move(struct game_state *game, struct game_input *input)
 
 	v3 player_pos = player->position;
 	struct chunk *chunk = world_get_chunk(world, player_pos.x, player_pos.y,
-		player_pos.z);
+	    player_pos.z);
 	if (!chunk || chunk->state != CHUNK_READY) {
 		return;
 	}
@@ -545,17 +545,17 @@ player_move(struct game_state *game, struct game_input *input)
 
 					v3 new_position = add(relative_old_pos, position_delta);
 					if (!block_is_empty(world_at(world, x, y, z)) &&
-							box_contains_point(block_bounds, new_position))
+					    box_contains_point(block_bounds, new_position))
 					{
 						v3 normal_min = {0};
 						v3 normal_max;
 						f32 t, tmax;
 
 						ray_box_intersection(
-							block_bounds,
-							relative_old_pos,
-							position_delta,
-							&normal_min, &normal_max, &t, &tmax);
+						    block_bounds,
+						    relative_old_pos,
+						    position_delta,
+						    &normal_min, &normal_max, &t, &tmax);
 
 						t = MAX(t - 0.01f, 0);
 						if (t_min > t) {
@@ -575,7 +575,7 @@ player_move(struct game_state *game, struct game_input *input)
 		position = add(position, mulf(position_delta, t_min));
 		velocity = sub(velocity, mulf(normal, dot(normal, velocity)));
 		position_delta = sub(position_delta,
-			mulf(normal, dot(normal, position_delta)));
+		    mulf(normal, dot(normal, position_delta)));
 
 		t_remaining -= t_min * t_remaining;
 	}
@@ -586,7 +586,7 @@ player_move(struct game_state *game, struct game_input *input)
 
 static u32
 player_select_block(struct game_state *game, struct game_input *input,
-	v3 *out_block_pos, v3 *out_normal_min, f32 *out_t)
+    v3 *out_block_pos, v3 *out_normal_min, f32 *out_t)
 {
 	struct player *player = &game->player;
 	struct world *world   = &game->world;
@@ -608,7 +608,7 @@ player_select_block(struct game_state *game, struct game_input *input,
 		tmax = INFINITY;
 
 		ray_box_intersection(selected_block, start, direction,
-			&normal_min, &normal_max, &tmin, &tmax);
+		    &normal_min, &normal_max, &tmin, &tmax);
 		if (tmin > 5.f) {
 			break;
 		}
@@ -647,15 +647,15 @@ player_select_block(struct game_state *game, struct game_input *input,
 
 static v3
 window_get_global_position(struct game_window *window,
-		struct game_window_manager *wm)
+    struct game_window_manager *wm)
 {
 	v3 position = window->position;
 	u32 parent = window->parent;
 	if (parent) {
 		struct game_window *parent_window =
-			window_manager_get_window(wm, parent);
+		    window_manager_get_window(wm, parent);
 		position = v3_add(position,
-			window_get_global_position(parent_window, wm));
+		    window_get_global_position(parent_window, wm));
 	}
 
 	return position;
@@ -667,9 +667,9 @@ window_move(struct game_window *window, v3 new_position, v3 normal, v3 up)
 	v3 right = v3_cross(up, normal);
 
 	m3x3 transform = m3x3(
-		right.x,  right.y,  right.z,
-		up.x,     up.y,     up.z,
-		normal.x, normal.y, normal.z);
+	    right.x,  right.y,  right.z,
+	    up.x,     up.y,     up.z,
+	    normal.x, normal.y, normal.z);
 
 	window->position = new_position;
 	window->rotation = transform;
@@ -690,7 +690,7 @@ window_axes(struct game_window *window, v3 *x_axis, v3 *y_axis, v3 *z_axis)
 
 static void
 window_manager_render(struct game_window_manager *wm, m4x4 view,
-		m4x4 projection, struct render_cmdbuf *cmd_buffer)
+    m4x4 projection, struct render_cmdbuf *cmd_buffer)
 {
 	u32 window_count = wm->window_count;
 	struct game_window *window = wm->windows;
@@ -718,7 +718,7 @@ window_manager_render(struct game_window_manager *wm, m4x4 view,
 
 			struct texture_id window_texture = {window->texture};
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-				uv[0], uv[1], uv[2], uv[3], window_texture);
+			    uv[0], uv[1], uv[2], uv[3], window_texture);
 			window++;
 		}
 	}
@@ -726,7 +726,7 @@ window_manager_render(struct game_window_manager *wm, m4x4 view,
 
 static u32
 window_ray_intersection_point(struct game_window *window,
-		v3 ray_start, v3 ray_direction, v2 *point_on_window)
+    v3 ray_start, v3 ray_direction, v2 *point_on_window)
 {
 	u32 hit = 0;
 	v3 window_pos = window->position;
@@ -759,11 +759,11 @@ window_ray_intersection_point(struct game_window *window,
 
 static struct game_window *
 window_find(struct game_window *window, u32 window_count,
-		v3 ray_start, v3 ray_direction)
+    v3 ray_start, v3 ray_direction)
 {
 	for (u32 i = 0; i < window_count; i++) {
 		u32 intersects_window = window_ray_intersection_point(
-			window, ray_start, ray_direction, 0);
+		    window, ray_start, ray_direction, 0);
 		if (intersects_window && window->flags & WINDOW_VISIBLE) {
 			return window;
 		}
@@ -782,7 +782,7 @@ game_finish(struct game_state *game)
 
 void
 game_update(struct platform_memory *memory, struct game_input *input,
-		struct game_window_manager *wm)
+    struct game_window_manager *wm)
 {
 	struct game_state *game = memory->data;
 	struct world *world = &game->world;
@@ -851,7 +851,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		v3 block_normal = {0};
 		f32 t = 0.f;
 		u32 has_selected_block = player_select_block(game, input,
-			&block_pos, &block_normal, &t);
+		    &block_pos, &block_normal, &t);
 
 		struct game_window *hot_window = game->hot_window;
 		if (hot_window) {
@@ -883,10 +883,10 @@ game_update(struct platform_memory *memory, struct game_input *input,
 					hot_window = 0;
 				} else {
 					hot_window = window_find(windows, window_count, camera_pos,
-						camera_front);
+					    camera_front);
 				}
 			} else if ((window = window_find(windows, window_count, camera_pos,
-					camera_front))) {
+			    camera_front))) {
 				// TODO: destroy the window
 			} else if (has_selected_block) {
 				world_destroy_block(world, block_pos.x, block_pos.y, block_pos.z);
@@ -902,7 +902,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 			} else {
 				u32 hotbar_selection = player->inventory.active_item;
 				struct inventory_item *selected_item =
-					&player->inventory.items[hotbar_selection];
+				    &player->inventory.items[hotbar_selection];
 
 				u32 selected_block = item_to_block(selected_item->type, camera_front);
 				v3 new_block_pos = v3_add(block_pos, block_normal);
@@ -910,10 +910,10 @@ game_update(struct platform_memory *memory, struct game_input *input,
 				v3 player_pos = player->position;
 				v3 block_size = v3(0.5, 0.5, 0.5);
 				struct box block_bounds = box_from_center(new_block_pos,
-					v3_add(block_size, player_size));
+				    v3_add(block_size, player_size));
 
 				struct game_window *window = window_find(windows, window_count,
-					camera_pos, camera_front);
+				    camera_pos, camera_front);
 				if (window) {
 					wm->is_active = 1;
 					wm->focused_window = window_manager_get_window_id(wm, window);
@@ -922,9 +922,9 @@ game_update(struct platform_memory *memory, struct game_input *input,
 					selected_item->type = ITEM_NONE;
 					selected_item->count = 0;
 				} else if (has_selected_block &&
-						!box_contains_point(block_bounds, player_pos)) {
+				    !box_contains_point(block_bounds, player_pos)) {
 					world_place_block(world, new_block_pos.x, new_block_pos.y,
-						new_block_pos.z, selected_block);
+					    new_block_pos.z, selected_block);
 				}
 			}
 		}
@@ -941,7 +941,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	}
 
 	world_update(&game->world, game->camera.position, game->camera.direction,
-		&game->renderer, &cmd_buffer, &game->frame_arena, &game->assets);
+	    &game->renderer, &cmd_buffer, &game->frame_arena, &game->assets);
 	window_manager_render(wm, view, projection, &cmd_buffer);
 
 	if (focused_window) {
@@ -958,15 +958,15 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 		v2 cursor_pos = {0};
 		window_ray_intersection_point(focused_window,
-			camera_pos, camera->direction, &cursor_pos);
+		    camera_pos, camera->direction, &cursor_pos);
 
 		v3 window_pos = focused_window->position;
 		v2 window_scale = focused_window->scale;
 		v2 cursor_offset = mulf(wm->cursor.offset, 1./VIRTUAL_SCREEN_SIZE);
 		v3 cursor_world_pos = add(window_pos, v3_add(v3_add(
-			mulf(window_x, cursor_pos.x / window_scale.x + cursor_offset.x),
-			mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
-			mulf(window_z, -0.01f)));
+		    mulf(window_x, cursor_pos.x / window_scale.x + cursor_offset.x),
+		    mulf(window_y, cursor_pos.y / window_scale.y + cursor_offset.y)),
+		    mulf(window_z, -0.01f)));
 
 		struct texture_id cursor_texture = {wm->cursor.texture};
 		v2 uv[4];
@@ -986,7 +986,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 		pos[3] = add(pos[2], cursor_y);
 
 		render_quad(&cmd_buffer, pos[0], pos[1], pos[2], pos[3],
-			uv[0], uv[1], uv[2], uv[3], cursor_texture);
+		    uv[0], uv[1], uv[2], uv[3], cursor_texture);
 
 		u32 is_pressing_alt = input->alt_down;
 		if (input->mouse.buttons[3] && is_pressing_alt) {

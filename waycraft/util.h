@@ -1,6 +1,6 @@
 struct timer {
-    const char *name;
-    f64 start;
+	const char *name;
+	f64 start;
 };
 
 enum log_level {
@@ -12,13 +12,13 @@ enum log_level {
 };
 
 struct memory_arena {
-    u8 *data;
-    usize size;
-    usize used;
+	u8 *data;
+	usize size;
+	usize used;
 };
 
 #define arena_alloc(arena, count, type) \
-	((type *)arena_alloc_(arena, count * sizeof(type)))
+    ((type *)arena_alloc_(arena, count * sizeof(type)))
 
 #define log_info(...) log_(LOG_INFO, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define log_debug(...) log_(LOG_DEBUG, __FILE__, __LINE__, __func__, __VA_ARGS__)

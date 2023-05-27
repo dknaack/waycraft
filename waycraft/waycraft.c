@@ -105,10 +105,10 @@ add_task(struct platform_task_queue *queue, platform_task_callback_t *callback, 
 
 static i32
 egl_init(struct egl_context *egl, EGLenum platform,
-		EGLNativeDisplayType native_display, EGLNativeWindowType native_window)
+    EGLNativeDisplayType native_display, EGLNativeWindowType native_window)
 {
 	PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
-		(PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+	    (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
 	assert(eglGetPlatformDisplayEXT);
 
 	egl->display = eglGetPlatformDisplayEXT(platform, native_display, NULL);
