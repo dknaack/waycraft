@@ -8,28 +8,28 @@ enum render_mode {
 	RENDER_2D,
 };
 
-enum render_command_type {
+enum render_cmd_type {
 	RENDER_CLEAR,
 	RENDER_QUADS,
 	RENDER_MESH,
 	RENDER_COMMAND_COUNT
 };
 
-struct render_command {
-	enum render_command_type type;
+struct render_cmd {
+	enum render_cmd_type type;
 };
 
-struct render_command_clear {
+struct render_cmd_clear {
 	v4 color;
 };
 
-struct render_command_quads {
+struct render_cmd_quads {
 	u32 index_offset;
 	u32 quad_count;
 	u32 texture;
 };
 
-struct render_command_mesh {
+struct render_cmd_mesh {
 	u32 mesh;
 	u32 texture;
 	m4x4 transform;
@@ -42,7 +42,7 @@ struct render_transform {
 	v2 viewport;
 };
 
-struct render_command_buffer {
+struct render_cmd_buffer {
 	struct render_transform transform;
 	enum render_mode mode;
 
@@ -58,7 +58,7 @@ struct render_command_buffer {
 	u32 max_vertex_count;
 	u32 max_index_count;
 
-	struct render_command_quads *current_quads;
+	struct render_cmd_quads *current_quads;
 	struct game_assets *assets;
 };
 
@@ -71,7 +71,7 @@ struct mesh {
 };
 
 struct renderer {
-	struct render_command_buffer command_buffer;
+	struct render_cmd_buffer command_buffer;
 
 	u32 white_texture;
 	u32 vertex_array;
