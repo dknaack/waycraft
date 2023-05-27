@@ -94,7 +94,7 @@ struct region {
 
 struct compositor {
 	struct game_window_manager window_manager;
-	struct memory_arena arena;
+	struct arena arena;
 	struct xwayland xwayland;
 	struct wl_display *display;
 	EGLDisplay *egl_display;

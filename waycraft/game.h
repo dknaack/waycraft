@@ -88,8 +88,8 @@ struct game_assets {
 struct game_state {
 	struct world world;
 	struct camera camera;
-	struct memory_arena arena;
-	struct memory_arena frame_arena;
+	struct arena arena;
+	struct arena frame_arena;
 	struct renderer renderer;
 	struct game_window *hot_window;
 	struct game_assets assets;

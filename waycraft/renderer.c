@@ -108,7 +108,7 @@ gl_program_error(u32 program, char *buffer, u32 size)
 }
 
 static struct renderer
-renderer_init(struct memory_arena *arena)
+renderer_init(struct arena *arena)
 {
 	struct renderer renderer = {0};
 
@@ -188,7 +188,7 @@ renderer_finish(struct renderer *renderer)
 }
 
 static struct render_cmdbuf
-render_cmdbuf_init(struct memory_arena *arena, u32 max_push_buffer_size,
+render_cmdbuf_init(struct arena *arena, u32 max_push_buffer_size,
     u32 max_vertex_count, u32 max_index_count)
 {
 	struct render_cmdbuf cmdbuf = {0};

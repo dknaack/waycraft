@@ -404,7 +404,7 @@ static void
 game_init(struct platform_memory *memory)
 {
 	struct game_state *game = memory->data;
-	struct memory_arena *arena = &game->arena;
+	struct arena *arena = &game->arena;
 	*arena = arena_init(game + 1, memory->size - sizeof(struct game_state));
 	arena_suballoc(arena, MB(64), &game->frame_arena);
 

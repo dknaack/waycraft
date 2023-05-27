@@ -92,4 +92,4 @@ struct renderer {
 	u32 mesh_count;
 };
 
-struct memory_arena;
+struct arena;

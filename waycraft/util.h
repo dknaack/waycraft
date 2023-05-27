@@ -11,10 +11,10 @@ enum log_level {
 	LOG_LEVEL_COUNT
 };
 
-struct memory_arena {
+struct arena {
 	u8 *data;
-	usize size;
-	usize used;
+	usz size;
+	usz used;
 };
 
 #define arena_alloc(arena, count, type) \

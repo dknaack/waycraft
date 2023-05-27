@@ -714,7 +714,7 @@ compositor_init(struct platform_memory *memory,
 		EGLDisplay *egl_display, i32 keymap, i32 keymap_size)
 {
 	struct compositor *compositor = memory->data;
-	struct memory_arena *arena = &compositor->arena;
+	struct arena *arena = &compositor->arena;
 	struct wl_display *display = NULL;
 
 	if (!(display = wl_display_create())) {

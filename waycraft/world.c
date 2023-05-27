@@ -149,7 +149,7 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 }
 
 static struct world
-world_init(struct memory_arena *arena)
+world_init(struct arena *arena)
 {
 	struct world world = {0};
 	// NOTE: allocate memory for the chunks and blocks
@@ -426,7 +426,7 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 static void
 world_update(struct world *world, v3 player_pos, v3 player_dir,
     struct renderer *renderer, struct render_cmdbuf *cmd_buffer,
-    struct memory_arena *frame_arena, struct game_assets *assets)
+    struct arena *frame_arena, struct game_assets *assets)
 {
 	u32 max_vertex_count = BLOCK_COUNT * 4 * 6;
 	u32 max_index_count = BLOCK_COUNT * 6 * 6;

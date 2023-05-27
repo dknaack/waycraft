@@ -10,10 +10,10 @@ get_time_sec(void)
 	return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-static struct memory_arena
+static struct arena
 arena_init(void *data, u64 size)
 {
-	struct memory_arena arena = {0};
+	struct arena arena = {0};
 	arena.data = data;
 	arena.size = size;
 	arena.used = 0;
@@ -21,7 +21,7 @@ arena_init(void *data, u64 size)
 }
 
 static void *
-arena_alloc_(struct memory_arena *arena, usize size)
+arena_alloc_(struct arena *arena, usize size)
 {
 	assert(arena->used + size < arena->size);
 	void *ptr = arena->data + arena->used;
@@ -30,7 +30,7 @@ arena_alloc_(struct memory_arena *arena, usize size)
 }
 
 static void
-arena_suballoc(struct memory_arena *arena, usize size, struct memory_arena *result)
+arena_suballoc(struct arena *arena, usize size, struct arena *result)
 {
 	result->data = arena_alloc_(arena, size);
 	result->size = size;
