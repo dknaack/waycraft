@@ -81,21 +81,6 @@ struct box {
 #define CONTAINER_OF(ptr, type, member) \
     ((type *)((char *)(ptr) - offsetof(type, member)))
 
-#define U64_MAX 0xffffffffffffffffl
-#define U32_MAX 0xffffffff
-#define U16_MAX 0xffff
-#define U8_MAX  0xff
-
-#define I64_MAX 0x7fffffffffffffffl
-#define I32_MAX 0x7fffffff
-#define I16_MAX 0x7fff
-#define I8_MAX  0x7f
-
-#define I64_MIN (i64)0x8000000000000000l
-#define I32_MIN (i32)0x80000000l
-#define I16_MIN (i16)0x8000
-#define I8_MIN  (i8)0x80
-
 #define F32_PI 3.14159265358979323846f
 #define F32_TAU (2.0f * F32_PI)
 #define F32_INF INFINITY
