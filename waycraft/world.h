@@ -5,10 +5,12 @@
 #define CHUNK_COUNT_Z 16
 #define CHUNK_COUNT (CHUNK_COUNT_X * CHUNK_COUNT_Y * CHUNK_COUNT_Z)
 
+#define BLOCK_EXP 4
+
 // NOTE: block counts should stay the same
-#define BLOCK_COUNT_X 16
-#define BLOCK_COUNT_Y 16
-#define BLOCK_COUNT_Z 16
+#define BLOCK_COUNT_X (1 << BLOCK_EXP)
+#define BLOCK_COUNT_Y (1 << BLOCK_EXP)
+#define BLOCK_COUNT_Z (1 << BLOCK_EXP)
 #define BLOCK_COUNT (BLOCK_COUNT_X * BLOCK_COUNT_Y * BLOCK_COUNT_Z)
 
 enum chunk_state {

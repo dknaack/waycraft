@@ -148,19 +148,20 @@ world_at(struct world *world, f32 x, f32 y, f32 z)
 	return result;
 }
 
-static i32
-world_init(struct world *world, struct memory_arena *arena)
+static struct world
+world_init(struct memory_arena *arena)
 {
+	struct world world = {0};
 	// NOTE: allocate memory for the chunks and blocks
-	world->chunks = arena_alloc(arena, CHUNK_COUNT, struct chunk);
+	world.chunks = arena_alloc(arena, CHUNK_COUNT, struct chunk);
 	usize block_count = CHUNK_COUNT * BLOCK_COUNT;
 	u16 *blocks = arena_alloc(arena, block_count, u16);
 
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
-		world->chunks[i].blocks = blocks + i * BLOCK_COUNT;
+		world.chunks[i].blocks = blocks + i * BLOCK_COUNT;
 	}
 
-	return 0;
+	return world;
 }
 
 static void

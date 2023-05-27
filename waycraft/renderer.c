@@ -107,9 +107,11 @@ gl_program_error(u32 program, char *buffer, u32 size)
 	gl.GetProgramInfoLog(program, size - 1, 0, buffer);
 }
 
-static void
-renderer_init(struct renderer *renderer, struct memory_arena *arena)
+static struct renderer
+renderer_init(struct memory_arena *arena)
 {
+	struct renderer renderer = {0};
+
 	gl.Enable(GL_DEPTH_TEST);
 	gl.Enable(GL_CULL_FACE);
 	gl.Enable(GL_BLEND);
@@ -125,21 +127,21 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 		assert(!"Failed to create program");
 	}
 
-	renderer->shader.model = gl.GetUniformLocation(program, "model");
-	renderer->shader.view = gl.GetUniformLocation(program, "view");
-	renderer->shader.projection = gl.GetUniformLocation(program, "projection");
-	renderer->shader.camera_pos = gl.GetUniformLocation(program, "camera_pos");
-	renderer->shader.enable_fog = gl.GetUniformLocation(program, "enable_fog");
-	renderer->shader.program = program;
+	renderer.shader.model = gl.GetUniformLocation(program, "model");
+	renderer.shader.view = gl.GetUniformLocation(program, "view");
+	renderer.shader.projection = gl.GetUniformLocation(program, "projection");
+	renderer.shader.camera_pos = gl.GetUniformLocation(program, "camera_pos");
+	renderer.shader.enable_fog = gl.GetUniformLocation(program, "enable_fog");
+	renderer.shader.program = program;
 
 	// NOTE: initialize the main vertex array
-	gl.GenVertexArrays(1, &renderer->vertex_array);
-	gl.GenBuffers(1, &renderer->vertex_buffer);
-	gl.GenBuffers(1, &renderer->index_buffer);
+	gl.GenVertexArrays(1, &renderer.vertex_array);
+	gl.GenBuffers(1, &renderer.vertex_buffer);
+	gl.GenBuffers(1, &renderer.index_buffer);
 
-	gl.BindVertexArray(renderer->vertex_array);
-	gl.BindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
-	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
+	gl.BindVertexArray(renderer.vertex_array);
+	gl.BindBuffer(GL_ARRAY_BUFFER, renderer.vertex_buffer);
+	gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer.index_buffer);
 
 	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(struct vertex),
 		(const void *)offsetof(struct vertex, position));
@@ -152,20 +154,21 @@ renderer_init(struct renderer *renderer, struct memory_arena *arena)
 
 	// NOTE: allocate memory for the meshes
 	u32 max_mesh_count = 32 * 32 * 32;
-	renderer->meshes = arena_alloc(arena, max_mesh_count, struct mesh);
-	renderer->max_mesh_count = max_mesh_count;
+	renderer.meshes = arena_alloc(arena, max_mesh_count, struct mesh);
+	renderer.max_mesh_count = max_mesh_count;
 	// NOTE: we ignore the first mesh
-	renderer->mesh_count = 1;
+	renderer.mesh_count = 1;
 
 	// NOTE: generate a white texture
 	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
-	gl.GenTextures(1, &renderer->white_texture);
-	gl.BindTexture(GL_TEXTURE_2D, renderer->white_texture);
+	gl.GenTextures(1, &renderer.white_texture);
+	gl.BindTexture(GL_TEXTURE_2D, renderer.white_texture);
 	gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	return renderer;
 }
 
 static void

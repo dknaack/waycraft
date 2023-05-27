@@ -358,18 +358,19 @@ camera_get_projection(struct camera *camera)
 	return result;
 }
 
-static void
-player_init(struct player *player, struct camera *camera)
+static struct player
+player_init(struct camera *camera)
 {
+	struct player player = {0};
 	f32 player_speed = 200.f;
 	f32 camera_fov = 75.f;
 	v3 player_position = v3(0, 20, 0);
 
 	camera_init(camera, player_position, camera_fov);
-	player->position = player_position;
-	player->speed = player_speed;
+	player.position = player_position;
+	player.speed = player_speed;
 
-	struct inventory_item *hotbar = player->inventory.items;
+	struct inventory_item *hotbar = player.inventory.items;
 	(*hotbar++).type = ITEM_NONE;
 	(*hotbar++).type = ITEM_DIRT_BLOCK;
 	(*hotbar++).type = ITEM_GRASS_BLOCK;
@@ -381,6 +382,7 @@ player_init(struct player *player, struct camera *camera)
 	hotbar++;
 	(*hotbar++).type = ITEM_DIRT_BLOCK;
 	(*hotbar++).type = ITEM_GRASS_BLOCK;
+	return player;
 }
 
 static void
@@ -391,10 +393,10 @@ game_init(struct platform_memory *memory)
 	*arena = arena_init(game + 1, memory->size - sizeof(struct game_state));
 	arena_suballoc(arena, MB(64), &game->frame_arena);
 
-	debug_init(&game->debug_state);
-	world_init(&game->world, arena);
-	player_init(&game->player, &game->camera);
-	renderer_init(&game->renderer, arena);
+	debug_init();
+	game->world = world_init(arena);
+	game->player = player_init(&game->camera);
+	game->renderer = renderer_init(arena);
 }
 
 static struct box
