@@ -22,10 +22,10 @@ enum chunk_state {
 struct chunk {
 	u32 state;
 	u32 mesh;
-    u16 *blocks;
+	u16 *blocks;
 	v3i coord;
 };
 
 struct world {
-    struct chunk *chunks;
+	struct chunk *chunks;
 };
