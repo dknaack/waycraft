@@ -805,9 +805,8 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	v3 camera_front = camera->direction;
 
 	u32 max_quad_count = 1024;
-	struct render_cmdbuf cmd_buffer = {0};
-	render_cmdbuf_init(&cmd_buffer, &game->frame_arena,
-		MB(8), 4 * max_quad_count, 6 * max_quad_count);
+	struct render_cmdbuf cmd_buffer = render_cmdbuf_init(
+	    &game->frame_arena, MB(8), 4 * max_quad_count, 6 * max_quad_count);
 	cmd_buffer.mode = RENDER_3D;
 	cmd_buffer.assets = &game->assets;
 	cmd_buffer.transform.view = view;
@@ -815,9 +814,8 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	cmd_buffer.transform.camera_pos = camera_pos;
 	cmd_buffer.transform.viewport = v2(input->width, input->height);
 
-	struct render_cmdbuf ui_cmd_buffer = {0};
-	render_cmdbuf_init(&ui_cmd_buffer, &game->frame_arena,
-		KB(64), 4 * 128, 6 * 128);
+	struct render_cmdbuf ui_cmd_buffer = render_cmdbuf_init(
+	    &game->frame_arena, KB(64), 4 * 128, 6 * 128);
 	ui_cmd_buffer.mode = RENDER_2D;
 	ui_cmd_buffer.assets = &game->assets;
 	ui_cmd_buffer.transform.view = m4x4_id(1);

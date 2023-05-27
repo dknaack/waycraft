@@ -184,18 +184,19 @@ renderer_finish(struct renderer *renderer)
 	gl.DeleteProgram(renderer->shader.program);
 }
 
-static void
-render_cmdbuf_init(struct render_cmdbuf *cmd_buffer,
-		struct memory_arena *arena, u32 max_push_buffer_size,
-		u32 max_vertex_count, u32 max_index_count)
+static struct render_cmdbuf
+render_cmdbuf_init(struct memory_arena *arena, u32 max_push_buffer_size,
+    u32 max_vertex_count, u32 max_index_count)
 {
-	cmd_buffer->max_vertex_count = max_vertex_count;
-	cmd_buffer->max_index_count = max_index_count;
-	cmd_buffer->max_push_buffer_size = max_push_buffer_size;
+	struct render_cmdbuf cmdbuf = {0};
+	cmdbuf.max_vertex_count     = max_vertex_count;
+	cmdbuf.max_index_count      = max_index_count;
+	cmdbuf.max_push_buffer_size = max_push_buffer_size;
 
-	cmd_buffer->push_buffer = arena_alloc(arena, max_push_buffer_size, u8);
-	cmd_buffer->vertex_buffer = arena_alloc(arena, max_vertex_count, struct vertex);
-	cmd_buffer->index_buffer = arena_alloc(arena, max_index_count, u32);
+	cmdbuf.push_buffer   = arena_alloc(arena, max_push_buffer_size, u8);
+	cmdbuf.vertex_buffer = arena_alloc(arena, max_vertex_count, struct vertex);
+	cmdbuf.index_buffer  = arena_alloc(arena, max_index_count, u32);
+	return cmdbuf;
 }
 
 static void
