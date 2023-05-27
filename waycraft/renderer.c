@@ -154,7 +154,7 @@ renderer_init(struct arena *arena)
 
 	// NOTE: allocate memory for the meshes
 	u32 max_mesh_count = 32 * 32 * 32;
-	renderer.meshes = arena_alloc(arena, max_mesh_count, struct mesh);
+	renderer.meshes = ALLOC(arena, max_mesh_count, struct mesh);
 	renderer.max_mesh_count = max_mesh_count;
 	// NOTE: we ignore the first mesh
 	renderer.mesh_count = 1;
@@ -196,9 +196,9 @@ render_cmdbuf_init(struct arena *arena, u32 max_push_buffer_size,
 	cmdbuf.max_index_count      = max_index_count;
 	cmdbuf.max_push_buffer_size = max_push_buffer_size;
 
-	cmdbuf.push_buffer   = arena_alloc(arena, max_push_buffer_size, u8);
-	cmdbuf.vertex_buffer = arena_alloc(arena, max_vertex_count, struct vertex);
-	cmdbuf.index_buffer  = arena_alloc(arena, max_index_count, u32);
+	cmdbuf.push_buffer   = ALLOC(arena, max_push_buffer_size, u8);
+	cmdbuf.vertex_buffer = ALLOC(arena, max_vertex_count, struct vertex);
+	cmdbuf.index_buffer  = ALLOC(arena, max_index_count, u32);
 	return cmdbuf;
 }
 

@@ -49,7 +49,7 @@ debug_init(void)
 static void
 debug_update(struct arena *frame_arena)
 {
-	debug.vertices = arena_alloc(frame_arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
+	debug.vertices = ALLOC(frame_arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
 	debug.vertex_count = 0;
 }
 

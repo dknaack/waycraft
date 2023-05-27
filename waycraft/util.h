@@ -17,8 +17,7 @@ struct arena {
 	usz used;
 };
 
-#define arena_alloc(arena, count, type) \
-    ((type *)arena_alloc_(arena, count * sizeof(type)))
+#define ALLOC(arena, count, type) ((type *)alloc(arena, count, sizeof(type)))
 
 #define log_info(...) log_(LOG_INFO, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define log_debug(...) log_(LOG_DEBUG, __FILE__, __LINE__, __func__, __VA_ARGS__)

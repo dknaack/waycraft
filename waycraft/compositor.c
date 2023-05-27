@@ -732,8 +732,8 @@ compositor_init(struct platform_memory *memory,
 
 	compositor->display = display;
 	compositor->egl_display = egl_display;
-	compositor->surfaces = arena_alloc(arena, MAX_SURFACE_COUNT, struct surface);
-	compositor->window_manager.windows = arena_alloc(
+	compositor->surfaces = ALLOC(arena, MAX_SURFACE_COUNT, struct surface);
+	compositor->window_manager.windows = ALLOC(
 		arena, MAX_WINDOW_COUNT, struct game_window);
 	compositor->surface_count = 1;
 

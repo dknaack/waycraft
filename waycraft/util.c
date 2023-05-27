@@ -21,11 +21,11 @@ arena_init(void *data, u64 size)
 }
 
 static void *
-arena_alloc_(struct arena *arena, usize size)
+alloc(struct arena *arena, usz count, usz size)
 {
-	assert(arena->used + size < arena->size);
+	assert(arena->used + count * size < arena->size);
 	void *ptr = arena->data + arena->used;
-	arena->used += size;
+	arena->used += count * size;
 	return ptr;
 }
 

@@ -153,9 +153,9 @@ world_init(struct arena *arena)
 {
 	struct world world = {0};
 	// NOTE: allocate memory for the chunks and blocks
-	world.chunks = arena_alloc(arena, CHUNK_COUNT, struct chunk);
+	world.chunks = ALLOC(arena, CHUNK_COUNT, struct chunk);
 	usize block_count = CHUNK_COUNT * BLOCK_COUNT;
-	u16 *blocks = arena_alloc(arena, block_count, u16);
+	u16 *blocks = ALLOC(arena, block_count, u16);
 
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		world.chunks[i].blocks = blocks + i * BLOCK_COUNT;
