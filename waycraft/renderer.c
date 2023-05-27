@@ -432,12 +432,12 @@ render_quad(struct render_cmdbuf *cmd_buffer,
 
 static void
 render_sprite(struct render_cmdbuf *cmd_buffer,
-    struct rectangle rect, struct texture_id texture)
+    box2 rect, struct texture_id texture)
 {
-	v3 pos0 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
-	v3 pos1 = v3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
-	v3 pos2 = v3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
-	v3 pos3 = v3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
+	v3 pos0 = v3(rect.min.x, rect.min.y, 0);
+	v3 pos1 = v3(rect.max.x, rect.min.y, 0);
+	v3 pos2 = v3(rect.min.x, rect.max.y, 0);
+	v3 pos3 = v3(rect.max.x, rect.max.y, 0);
 
 	v2 uv0 = v2(0, 1);
 	v2 uv1 = v2(1, 1);
@@ -448,7 +448,7 @@ render_sprite(struct render_cmdbuf *cmd_buffer,
 }
 
 static void
-render_rect(struct render_cmdbuf *cmd_buffer, struct rectangle rect)
+render_rect(struct render_cmdbuf *cmd_buffer, box2 rect)
 {
 	struct texture_id texture_id = {0};
 

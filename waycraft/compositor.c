@@ -250,7 +250,7 @@ static bool
 region_push(struct region *region, u32 mode, i32 x, i32 y, i32 width, i32 height)
 {
 	bool result = false;
-	struct rectangle rect = { x, y, width, height };
+	box2 rect = { x, y, width, height };
 
 	if (region->count < MAX_RECT_COUNT) {
 		region->entries[region->count].mode = mode;

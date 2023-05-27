@@ -18,16 +18,20 @@
 
 #define VIRTUAL_SCREEN_SIZE 400
 
-static struct rectangle
-rectangle_init(v2 center, v2 size)
+static box2
+box2_init(v2 center, v2 size)
 {
-	struct rectangle result;
+	box2 box;
+	v2 half_size = mulf(size, 0.5f);
+	box.min = sub(center, half_size);
+	box.max = add(center, half_size);
+	return box;
+}
 
-	result.x = center.x - 0.5f * size.x;
-	result.y = center.y - 0.5f * size.y;
-	result.width = size.x;
-	result.height = size.y;
-
+static v2
+box2_size(box2 box)
+{
+	v2 result = sub(box.max, box.min);
 	return result;
 }
 
@@ -112,17 +116,17 @@ item_to_block(enum item_type item, v3 direction)
 }
 
 static void
-item_render(struct inventory_item *item, struct rectangle rect,
+item_render(struct inventory_item *item, box2 rect,
     struct render_cmdbuf *cmd_buffer)
 {
 	struct game_assets *assets = cmd_buffer->assets;
 	struct texture_id texture = get_texture(assets, TEXTURE_BLOCK_ATLAS).id;
 
 	if (item->type == ITEM_WINDOW) {
-		v3 pos0 = v3(rect.x + 1 * rect.width, rect.y + 1 * rect.height, 0);
-		v3 pos1 = v3(rect.x + 0 * rect.width, rect.y + 1 * rect.height, 0);
-		v3 pos2 = v3(rect.x + 1 * rect.width, rect.y + 0 * rect.height, 0);
-		v3 pos3 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
+		v3 pos0 = v3(rect.max.x, rect.max.y, 0);
+		v3 pos1 = v3(rect.min.x, rect.max.y, 0);
+		v3 pos2 = v3(rect.max.x, rect.min.y, 0);
+		v3 pos3 = v3(rect.min.x, rect.min.y, 0);
 
 		v2 uv[4] = {0};
 		block_texcoords_right(BLOCK_AIR, uv);
@@ -134,28 +138,33 @@ item_render(struct inventory_item *item, struct rectangle rect,
 			v3 pos[4] = {0};
 			v2 uv[4] = {0};
 
-			pos[0] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
-			pos[1] = v3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[2] = v3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
-			pos[3] = v3(rect.x + 0.06f * rect.width, rect.y + 0.25f * rect.height, 0);
+			f32 x = rect.min.x;
+			f32 y = rect.min.y;
+			f32 width = rect.max.x - x;
+			f32 height = rect.max.x - y;
+
+			pos[0] = v3(x + 0.50f * width, y + 0.50f * height, 0);
+			pos[1] = v3(x + 0.06f * width, y + 0.75f * height, 0);
+			pos[2] = v3(x + 0.50f * width, y + 0.00f * height, 0);
+			pos[3] = v3(x + 0.06f * width, y + 0.25f * height, 0);
 
 			block_texcoords_left(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			    uv[0], uv[1], uv[2], uv[3], texture);
 
-			pos[0] = v3(rect.x + 0.50f * rect.width, rect.y + 1.00f * rect.height, 0);
-			pos[1] = v3(rect.x + 0.06f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[2] = v3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[3] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
+			pos[0] = v3(x + 0.50f * width, y + 1.00f * height, 0);
+			pos[1] = v3(x + 0.06f * width, y + 0.75f * height, 0);
+			pos[2] = v3(x + 0.96f * width, y + 0.75f * height, 0);
+			pos[3] = v3(x + 0.50f * width, y + 0.50f * height, 0);
 
 			block_texcoords_top(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
 			    uv[0], uv[1], uv[2], uv[3], texture);
 
-			pos[0] = v3(rect.x + 0.96f * rect.width, rect.y + 0.75f * rect.height, 0);
-			pos[1] = v3(rect.x + 0.50f * rect.width, rect.y + 0.50f * rect.height, 0);
-			pos[2] = v3(rect.x + 0.96f * rect.width, rect.y + 0.25f * rect.height, 0);
-			pos[3] = v3(rect.x + 0.50f * rect.width, rect.y + 0.00f * rect.height, 0);
+			pos[0] = v3(x + 0.96f * width, y + 0.75f * height, 0);
+			pos[1] = v3(x + 0.50f * width, y + 0.50f * height, 0);
+			pos[2] = v3(x + 0.96f * width, y + 0.25f * height, 0);
+			pos[3] = v3(x + 0.50f * width, y + 0.00f * height, 0);
 
 			block_texcoords_right(block, uv);
 			render_quad(cmd_buffer, pos[0], pos[1], pos[2], pos[3],
@@ -176,11 +185,15 @@ inventory_render(struct inventory *inventory,
 		struct texture inventory_texture = get_texture(assets, TEXTURE_INVENTORY);
 		f32 size = 0.5f * screen_width / inventory_texture.width;
 
-		struct rectangle inventory_rect = {0};
-		inventory_rect.width = size * inventory_texture.width;
-		inventory_rect.height = size * inventory_texture.height;
-		inventory_rect.x = 0.5f * (screen_width - inventory_rect.width);
-		inventory_rect.y = 0.5f * (screen_height - inventory_rect.height);
+		v2 inventory_size;
+		inventory_size.x = size * inventory_texture.width;
+		inventory_size.y = size * inventory_texture.height;
+
+		box2 inventory_rect = {0};
+		inventory_rect.min.x = 0.5f * (screen_width - inventory_size.x);
+		inventory_rect.min.y = 0.5f * (screen_height - inventory_size.y);
+		inventory_rect.max.x = inventory_rect.min.x + inventory_size.x;
+		inventory_rect.max.y = inventory_rect.min.y + inventory_size.y;
 
 		render_sprite(cmd_buffer, inventory_rect, inventory_texture.id);
 
@@ -193,14 +206,15 @@ inventory_render(struct inventory *inventory,
 			u32 x = i % 9;
 			u32 y = i / 9;
 
-			struct rectangle item_rect = {0};
-			item_rect.x = inventory_rect.x + 12 * size + x * column_width;
-			item_rect.y = inventory_rect.y + 10 * size + y * row_height;
-			item_rect.width = slot_size;
-			item_rect.height = slot_size;
+			box2 item_rect = {0};
+			item_rect.min.x = inventory_rect.min.x + 12 * size + x * column_width;
+			item_rect.min.y = inventory_rect.min.y + 10 * size + y * row_height;
+			item_rect.max.x = item_rect.min.x + slot_size;
+			item_rect.max.y = item_rect.min.y + slot_size;
 
 			if (y != 0) {
-				item_rect.y += 6 * size;
+				item_rect.min.y += 6 * size;
+				item_rect.max.y += 6 * size;
 			}
 
 			item_render(item++, item_rect, cmd_buffer);
@@ -209,33 +223,34 @@ inventory_render(struct inventory *inventory,
 		struct texture hotbar_texture = get_texture(assets, TEXTURE_HOTBAR);
 		f32 size = 0.5f * screen_width / hotbar_texture.width;
 
-		struct rectangle hotbar = {0};
-		hotbar.width = size * hotbar_texture.width;
-		hotbar.height = size * hotbar_texture.height;
-		hotbar.x = 0.5f * (screen_width - hotbar.width);
-		hotbar.y = 0;
+		box2 hotbar = {0};
+		hotbar.min.x = 0.5f * (screen_width - hotbar_texture.width);
+		hotbar.min.y = 0;
+		hotbar.max.x = hotbar.min.x + size * hotbar_texture.width;
+		hotbar.max.y = hotbar.min.y + size * hotbar_texture.height;
 
 		render_sprite(cmd_buffer, hotbar, hotbar_texture.id);
 
-		f32 slot_size = hotbar.height / 20.0 * 16.0;
-		f32 slot_advance = hotbar.height / 20.0f * 18.0f;
+		v2 hotbar_size = box2_size(hotbar);
+		f32 slot_size = hotbar_size.y / 20.0 * 16.0;
+		f32 slot_advance = hotbar_size.y / 20.0f * 18.0f;
 
-		struct rectangle active_slot = {0};
-		active_slot.x = hotbar.x + slot_advance * inventory->active_item;
-		active_slot.y = hotbar.y;
-		active_slot.width = hotbar.height;
-		active_slot.height = hotbar.height;
+		box2 active_slot = {0};
+		active_slot.min.x = hotbar.min.x + slot_advance * inventory->active_item;
+		active_slot.min.y = hotbar.min.y;
+		active_slot.max.x = active_slot.min.x + hotbar_size.y;
+		active_slot.max.y = hotbar.max.y;
 
 		struct texture_id texture = get_texture(assets, TEXTURE_ACTIVE_SLOT).id;
 		render_sprite(cmd_buffer, active_slot, texture);
 
 		struct inventory_item *item = inventory->items;
 		for (u32 i = 0; i < 9; i++) {
-			struct rectangle item_rect = {0};
-			item_rect.x = hotbar.x + 0.5f * (hotbar.height - slot_size) + slot_advance * i;
-			item_rect.y = hotbar.y + 0.5f * (hotbar.height - slot_size);
-			item_rect.width = slot_size;
-			item_rect.height = slot_size;
+			box2 item_rect = {0};
+			item_rect.min.x = hotbar.min.x + 0.5f * (hotbar_size.y - slot_size) + slot_advance * i;
+			item_rect.min.y = hotbar.min.y + 0.5f * (hotbar_size.y - slot_size);
+			item_rect.max.x = item_rect.min.x + slot_size;
+			item_rect.max.y = item_rect.min.y + slot_size;
 
 			item_render(item++, item_rect, cmd_buffer);
 		}
@@ -399,10 +414,10 @@ game_init(struct platform_memory *memory)
 	game->renderer = renderer_init(arena);
 }
 
-static struct box
-box_from_center(v3 center, v3 size)
+static box3
+box3_from_center(v3 center, v3 size)
 {
-	struct box box;
+	box3 box;
 
 	box.min = sub(center, size);
 	box.max = add(center, size);
@@ -431,7 +446,7 @@ player_direction_from_input(struct game_input *input, v3 front, v3 right, f32 sp
 
 // NOTE: assumes ray starts outside the box and intersects the box
 static u32
-ray_box_intersection(struct box box, v3 start, v3 direction,
+ray_box3_intersection(box3 box, v3 start, v3 direction,
     v3 *normal_min, v3 *normal_max, f32 *out_tmin, f32 *out_tmax)
 {
 	f32 tmin = 0.f;
@@ -527,7 +542,7 @@ player_move(struct game_state *game, struct game_input *input)
 	v3 block_size = v3(0.5, 0.5, 0.5);
 	v3 block_offset = add(player_size, block_size);
 
-	struct box block_bounds;
+	box3 block_bounds;
 	block_bounds.min = mulf(block_offset, -1.f);
 	block_bounds.max = mulf(block_offset,  1.f);
 
@@ -545,13 +560,13 @@ player_move(struct game_state *game, struct game_input *input)
 
 					v3 new_position = add(relative_old_pos, position_delta);
 					if (!block_is_empty(world_at(world, x, y, z)) &&
-					    box_contains_point(block_bounds, new_position))
+					    box3_contains_point(block_bounds, new_position))
 					{
 						v3 normal_min = {0};
 						v3 normal_max;
 						f32 t, tmax;
 
-						ray_box_intersection(
+						ray_box3_intersection(
 						    block_bounds,
 						    relative_old_pos,
 						    position_delta,
@@ -594,7 +609,7 @@ player_select_block(struct game_state *game, struct game_input *input,
 
 	v3 block_pos = v3_round(camera->position);
 	v3 block_size = {{ 0.5, 0.5, 0.5 }};
-	struct box selected_block = box_from_center(block_pos, block_size);
+	box3 selected_block = box3_from_center(block_pos, block_size);
 
 	v3 start = camera->position;
 	v3 direction = camera->direction;
@@ -607,7 +622,7 @@ player_select_block(struct game_state *game, struct game_input *input,
 		tmin = 0.f;
 		tmax = INFINITY;
 
-		ray_box_intersection(selected_block, start, direction,
+		ray_box3_intersection(selected_block, start, direction,
 		    &normal_min, &normal_max, &tmin, &tmax);
 		if (tmin > 5.f) {
 			break;
@@ -909,7 +924,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 				v3 player_size = v3(0.25, 0.99f, 0.25f);
 				v3 player_pos = player->position;
 				v3 block_size = v3(0.5, 0.5, 0.5);
-				struct box block_bounds = box_from_center(new_block_pos,
+				box3 block_bounds = box3_from_center(new_block_pos,
 				    v3_add(block_size, player_size));
 
 				struct game_window *window = window_find(windows, window_count,
@@ -922,7 +937,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 					selected_item->type = ITEM_NONE;
 					selected_item->count = 0;
 				} else if (has_selected_block &&
-				    !box_contains_point(block_bounds, player_pos)) {
+				    !box3_contains_point(block_bounds, player_pos)) {
 					world_place_block(world, new_block_pos.x, new_block_pos.y,
 					    new_block_pos.z, selected_block);
 				}
@@ -1009,8 +1024,8 @@ game_update(struct platform_memory *memory, struct game_input *input,
 	// NOTE: render a crosshair in the center of the screen
 	{
 		v2 viewport = ui_cmd_buffer.transform.viewport;
-		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), v2(16, 2)));
-		render_rect(&ui_cmd_buffer, rectangle_init(mulf(viewport, 0.5f), v2(2, 16)));
+		render_rect(&ui_cmd_buffer, box2_init(mulf(viewport, 0.5f), v2(16, 2)));
+		render_rect(&ui_cmd_buffer, box2_init(mulf(viewport, 0.5f), v2(2, 16)));
 	}
 
 	renderer_submit(&game->renderer, &cmd_buffer);

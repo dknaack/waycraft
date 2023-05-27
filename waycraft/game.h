@@ -126,7 +126,7 @@ button_is_down(u8 button)
 }
 
 static inline i32
-box_contains_point(struct box box, v3 point)
+box3_contains_point(box3 box, v3 point)
 {
 	return (box.min.x <= point.x && point.x <= box.max.x &&
 	    box.min.y <= point.y && point.y <= box.max.y &&

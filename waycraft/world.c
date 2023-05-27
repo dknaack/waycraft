@@ -434,7 +434,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	    KB(1), max_vertex_count, max_index_count);
 	tmp_buffer.assets = cmd_buffer->assets;
 
-	struct box player_bounds = {0};
+	box3 player_bounds = {0};
 	v3 target = add(player_pos, mulf(player_dir, 3.0f * BLOCK_COUNT_X));
 	v3 world_size = v3(CHUNK_COUNT_X, CHUNK_COUNT_Y, CHUNK_COUNT_Z);
 	player_bounds.min = sub(target, mulf(world_size, 0.6 * BLOCK_COUNT_X));
@@ -443,7 +443,7 @@ world_update(struct world *world, v3 player_pos, v3 player_dir,
 	// NOTE: unload any chunks that are outside the player bounds
 	for (u32 i = 0; i < CHUNK_COUNT; i++) {
 		v3 chunk_pos = chunk_get_pos(&world->chunks[i]);
-		if (!box_contains_point(player_bounds, chunk_pos)) {
+		if (!box3_contains_point(player_bounds, chunk_pos)) {
 			world->chunks[i].state = CHUNK_UNLOADED;
 		}
 	}

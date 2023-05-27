@@ -86,7 +86,7 @@ enum region_mode {
 
 struct region {
 	struct {
-		struct rectangle rect;
+		box2 rect;
 		u8 mode;
 	} entries[MAX_RECT_COUNT];
 	u8 count;

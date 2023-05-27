@@ -53,15 +53,15 @@ typedef union {
 	i32 e[3];
 } v3i;
 
-struct rectangle {
-	f32 x, y;
-	f32 width, height;
-};
+typedef struct box2 {
+	v2 min;
+	v2 max;
+} box2;
 
-struct box {
+typedef struct box3 {
 	v3 min;
 	v3 max;
-};
+} box3;
 
 #define assert(expr) ((expr) ? 0 : (*(volatile int *)0 = 0))
 #define static_assert(expr, msg) _Static_assert(expr, msg)
