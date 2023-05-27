@@ -42,7 +42,7 @@ struct render_transform {
 	v2 viewport;
 };
 
-struct render_cmd_buffer {
+struct render_cmdbuf {
 	struct render_transform transform;
 	enum render_mode mode;
 
@@ -71,7 +71,7 @@ struct mesh {
 };
 
 struct renderer {
-	struct render_cmd_buffer command_buffer;
+	struct render_cmdbuf command_buffer;
 
 	u32 white_texture;
 	u32 vertex_array;

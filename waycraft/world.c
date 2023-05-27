@@ -165,7 +165,7 @@ world_init(struct world *world, struct memory_arena *arena)
 
 static void
 world_load_chunk(struct world *world, struct chunk *chunk,
-		struct render_cmd_buffer *mesh, struct renderer *renderer)
+		struct render_cmdbuf *mesh, struct renderer *renderer)
 {
 	struct game_assets *assets = mesh->assets;
 
@@ -424,13 +424,13 @@ world_load_chunk(struct world *world, struct chunk *chunk,
 
 static void
 world_update(struct world *world, v3 player_pos, v3 player_dir,
-		struct renderer *renderer, struct render_cmd_buffer *cmd_buffer,
+		struct renderer *renderer, struct render_cmdbuf *cmd_buffer,
 		struct memory_arena *frame_arena, struct game_assets *assets)
 {
-	struct render_cmd_buffer tmp_buffer = {0};
+	struct render_cmdbuf tmp_buffer = {0};
 	u32 max_vertex_count = BLOCK_COUNT * 4 * 6;
 	u32 max_index_count = BLOCK_COUNT * 6 * 6;
-	render_cmd_buffer_init(&tmp_buffer, frame_arena, KB(1),
+	render_cmdbuf_init(&tmp_buffer, frame_arena, KB(1),
 		max_vertex_count, max_index_count);
 	tmp_buffer.assets = cmd_buffer->assets;
 

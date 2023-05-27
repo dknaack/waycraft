@@ -185,7 +185,7 @@ renderer_finish(struct renderer *renderer)
 }
 
 static void
-render_cmd_buffer_init(struct render_cmd_buffer *cmd_buffer,
+render_cmdbuf_init(struct render_cmdbuf *cmd_buffer,
 		struct memory_arena *arena, u32 max_push_buffer_size,
 		u32 max_vertex_count, u32 max_index_count)
 {
@@ -200,7 +200,7 @@ render_cmd_buffer_init(struct render_cmd_buffer *cmd_buffer,
 
 static void
 renderer_build_command_buffer(struct renderer *renderer,
-		struct render_cmd_buffer *cmd_buffer, u32 *cmd_buffer_id)
+		struct render_cmdbuf *cmd_buffer, u32 *cmd_buffer_id)
 {
 	assert(renderer->mesh_count < renderer->max_mesh_count);
 
@@ -250,7 +250,7 @@ renderer_bind_texture(struct renderer *renderer, u32 texture_id)
 }
 
 static void
-renderer_submit(struct renderer *renderer, struct render_cmd_buffer *cmd_buffer)
+renderer_submit(struct renderer *renderer, struct render_cmdbuf *cmd_buffer)
 {
 	u32 command_count = cmd_buffer->command_count;
 	u8 *push_buffer = cmd_buffer->push_buffer;
@@ -347,7 +347,7 @@ renderer_submit(struct renderer *renderer, struct render_cmd_buffer *cmd_buffer)
 }
 
 static void *
-push_command(struct render_cmd_buffer *cmd_buffer, u32 type)
+push_command(struct render_cmdbuf *cmd_buffer, u32 type)
 {
 	struct render_cmd *command = (struct render_cmd *)
 		(cmd_buffer->push_buffer + cmd_buffer->push_buffer_size);
@@ -367,7 +367,7 @@ push_command(struct render_cmd_buffer *cmd_buffer, u32 type)
 }
 
 static void
-render_clear(struct render_cmd_buffer *cmd_buffer, v4 color)
+render_clear(struct render_cmdbuf *cmd_buffer, v4 color)
 {
 	struct render_cmd_clear *clear =
 		push_command(cmd_buffer, RENDER_CLEAR);
@@ -376,7 +376,7 @@ render_clear(struct render_cmd_buffer *cmd_buffer, v4 color)
 }
 
 static void
-render_quad(struct render_cmd_buffer *cmd_buffer,
+render_quad(struct render_cmdbuf *cmd_buffer,
 		v3 pos0, v3 pos1, v3 pos2, v3 pos3,
 		v2 uv0, v2 uv1, v2 uv2, v2 uv3, struct texture_id texture)
 {
@@ -427,7 +427,7 @@ render_quad(struct render_cmd_buffer *cmd_buffer,
 }
 
 static void
-render_sprite(struct render_cmd_buffer *cmd_buffer,
+render_sprite(struct render_cmdbuf *cmd_buffer,
 		struct rectangle rect, struct texture_id texture)
 {
 	v3 pos0 = v3(rect.x + 0 * rect.width, rect.y + 0 * rect.height, 0);
@@ -444,7 +444,7 @@ render_sprite(struct render_cmd_buffer *cmd_buffer,
 }
 
 static void
-render_rect(struct render_cmd_buffer *cmd_buffer, struct rectangle rect)
+render_rect(struct render_cmdbuf *cmd_buffer, struct rectangle rect)
 {
 	struct texture_id texture_id = {0};
 
@@ -453,7 +453,7 @@ render_rect(struct render_cmd_buffer *cmd_buffer, struct rectangle rect)
 
 #if 0
 static void
-render_textured_quad(struct render_cmd_buffer *cmd_buffer,
+render_textured_quad(struct render_cmdbuf *cmd_buffer,
 		m4x4 transform, struct texture_id texture)
 {
 	v3 pos0 = m4x4_mulv(transform, v4(+1, +1, 0, 1)).xyz;
@@ -471,7 +471,7 @@ render_textured_quad(struct render_cmd_buffer *cmd_buffer,
 #endif
 
 static void
-render_mesh(struct render_cmd_buffer *cmd_buffer,
+render_mesh(struct render_cmdbuf *cmd_buffer,
 		u32 mesh, m4x4 transform, struct texture_id texture)
 {
 	struct render_cmd_mesh *command = push_command(cmd_buffer, RENDER_MESH);
