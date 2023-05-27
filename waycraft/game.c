@@ -796,7 +796,7 @@ game_update(struct platform_memory *memory, struct game_input *input,
 
 	// NOTE: reset the frame arena
 	game->frame_arena.used = 0;
-	debug_update(&game->debug_state, &game->frame_arena);
+	debug_update(&game->frame_arena);
 
 	m4x4 projection = camera_get_projection(camera);
 	m4x4 view = camera_get_view(camera);

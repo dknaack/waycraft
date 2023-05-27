@@ -17,23 +17,23 @@ static char *debug_fragment_shader_source = "#version 330\n"
 "   frag_color = vec4(color, 1.);"
 "}";
 
-static struct debug_state *debug = 0;
+static struct debug_state debug;
 
 static void
-debug_init(struct debug_state *debug)
+debug_init(void)
 {
 	gl.LineWidth(4.f);
 
-	debug->program = gl_program_create(debug_vertex_shader_source,
+	debug.program = gl_program_create(debug_vertex_shader_source,
 		debug_fragment_shader_source);
-	debug->model      = gl.GetUniformLocation(debug->program, "model");
-	debug->view       = gl.GetUniformLocation(debug->program, "view");
-	debug->projection = gl.GetUniformLocation(debug->program, "projection");
+	debug.model      = gl.GetUniformLocation(debug.program, "model");
+	debug.view       = gl.GetUniformLocation(debug.program, "view");
+	debug.projection = gl.GetUniformLocation(debug.program, "projection");
 
-	gl.GenVertexArrays(1, &debug->vertex_array);
-	gl.GenBuffers(1, &debug->vertex_buffer);
-	gl.BindVertexArray(debug->vertex_array);
-	gl.BindBuffer(GL_ARRAY_BUFFER, debug->vertex_buffer);
+	gl.GenVertexArrays(1, &debug.vertex_array);
+	gl.GenBuffers(1, &debug.vertex_buffer);
+	gl.BindVertexArray(debug.vertex_array);
+	gl.BindBuffer(GL_ARRAY_BUFFER, debug.vertex_buffer);
 	gl.BufferData(GL_ARRAY_BUFFER, DEBUG_VERTEX_BUFFER_SIZE, 0, GL_STREAM_DRAW);
 
 	gl.VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
@@ -47,35 +47,34 @@ debug_init(struct debug_state *debug)
 }
 
 static void
-debug_update(struct debug_state *debug_state, struct memory_arena *frame_arena)
+debug_update(struct memory_arena *frame_arena)
 {
-	debug = debug_state;
-	debug->vertices = arena_alloc(frame_arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
-	debug->vertex_count = 0;
+	debug.vertices = arena_alloc(frame_arena, DEBUG_VERTEX_BUFFER_SIZE, struct debug_vertex);
+	debug.vertex_count = 0;
 }
 
 static void
 debug_set_color(f32 r, f32 g, f32 b)
 {
-	debug->color = v3(r, g, b);
+	debug.color = v3(r, g, b);
 }
 
 static void
 debug_line(v3 start, v3 end)
 {
-	struct debug_vertex *vertex = debug->vertices + debug->vertex_count;
-	assert(debug->vertex_count *
+	struct debug_vertex *vertex = debug.vertices + debug.vertex_count;
+	assert(debug.vertex_count *
 		sizeof(struct debug_vertex) < DEBUG_VERTEX_BUFFER_SIZE);
 
 	vertex->position = start;
-	vertex->color    = debug->color;
+	vertex->color    = debug.color;
 	vertex++;
 
 	vertex->position = end;
-	vertex->color    = debug->color;
+	vertex->color    = debug.color;
 	vertex++;
 
-	debug->vertex_count += 2;
+	debug.vertex_count += 2;
 }
 
 static void
@@ -112,20 +111,20 @@ debug_render(m4x4 view, m4x4 projection)
 	gl.Disable(GL_DEPTH_TEST);
 	gl.PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	gl.BindVertexArray(debug->vertex_array);
-	gl.BindBuffer(GL_ARRAY_BUFFER, debug->vertex_buffer);
+	gl.BindVertexArray(debug.vertex_array);
+	gl.BindBuffer(GL_ARRAY_BUFFER, debug.vertex_buffer);
 	gl.BufferSubData(GL_ARRAY_BUFFER, 0,
-		debug->vertex_count * sizeof(struct debug_vertex), debug->vertices);
+		debug.vertex_count * sizeof(struct debug_vertex), debug.vertices);
 
-	gl.UseProgram(debug->program);
-	gl.UniformMatrix4fv(debug->model, 1, GL_FALSE, (f32 *)m4x4_id(1).e);
-	gl.UniformMatrix4fv(debug->projection, 1, GL_FALSE, (f32 *)projection.e);
-	gl.UniformMatrix4fv(debug->view, 1, GL_FALSE, (f32 *)view.e);
+	gl.UseProgram(debug.program);
+	gl.UniformMatrix4fv(debug.model, 1, GL_FALSE, (f32 *)m4x4_id(1).e);
+	gl.UniformMatrix4fv(debug.projection, 1, GL_FALSE, (f32 *)projection.e);
+	gl.UniformMatrix4fv(debug.view, 1, GL_FALSE, (f32 *)view.e);
 
-	gl.DrawArrays(GL_LINES, 0, debug->vertex_count);
+	gl.DrawArrays(GL_LINES, 0, debug.vertex_count);
 
 	gl.PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	gl.Enable(GL_DEPTH_TEST);
 
-	debug->vertex_count = 0;
+	debug.vertex_count = 0;
 }
