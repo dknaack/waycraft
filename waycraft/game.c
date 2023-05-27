@@ -406,7 +406,7 @@ game_init(struct platform_memory *memory)
 	struct game_state *game = memory->data;
 	struct arena *arena = &game->arena;
 	*arena = arena_init(game + 1, memory->size - sizeof(struct game_state));
-	arena_suballoc(arena, MB(64), &game->frame_arena);
+	game->frame_arena = arena_create(MB(64), arena);
 
 	debug_init();
 	game->world = world_init(arena);

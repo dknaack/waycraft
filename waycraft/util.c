@@ -29,11 +29,13 @@ alloc(struct arena *arena, usz count, usz size)
 	return ptr;
 }
 
-static void
-arena_suballoc(struct arena *arena, usize size, struct arena *result)
+static struct arena
+arena_create(usz size, struct arena *arena)
 {
-	result->data = arena_alloc_(arena, size);
-	result->size = size;
+	struct arena result;
+	result.data = alloc(arena, 1, size);
+	result.size = size;
+	return result;
 }
 
 static i32 timer_initialized = 0;
