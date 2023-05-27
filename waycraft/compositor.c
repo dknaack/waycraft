@@ -728,7 +728,7 @@ compositor_init(struct platform_memory *memory,
 		goto error_socket;
 	}
 
-	arena_init(arena, compositor + 1, memory->size - sizeof(*compositor));
+	*arena = arena_init(compositor + 1, memory->size - sizeof(*compositor));
 
 	compositor->display = display;
 	compositor->egl_display = egl_display;

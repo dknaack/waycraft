@@ -388,7 +388,7 @@ game_init(struct platform_memory *memory)
 {
 	struct game_state *game = memory->data;
 	struct memory_arena *arena = &game->arena;
-	arena_init(arena, game + 1, memory->size - sizeof(struct game_state));
+	*arena = arena_init(game + 1, memory->size - sizeof(struct game_state));
 	arena_suballoc(arena, MB(64), &game->frame_arena);
 
 	debug_init(&game->debug_state);

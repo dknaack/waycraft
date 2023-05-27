@@ -10,12 +10,14 @@ get_time_sec(void)
 	return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-static void
-arena_init(struct memory_arena *arena, void *data, u64 size)
+static struct memory_arena
+arena_init(void *data, u64 size)
 {
-    arena->data = data;
-    arena->size = size;
-    arena->used = 0;
+	struct memory_arena arena = {0};
+	arena.data = data;
+	arena.size = size;
+	arena.used = 0;
+	return arena;
 }
 
 static void *
