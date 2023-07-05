@@ -106,28 +106,33 @@ struct game_state {
 
 static struct texture get_texture(struct game_assets *assets, u32 texture_id);
 
-static inline i32
+static bool
 button_was_pressed(u8 button)
 {
-	return (button & 0x3) == 0x1;
+	bool result = (button & 3) == 1;
+	return result;
 }
 
-static inline i32
+static bool
 button_was_released(u8 button)
 {
-	return (button & 0x3) == 0x2;
+	bool result = (button & 3) == 2;
+	return result;
 }
 
-static inline i32
+static bool
 button_is_down(u8 button)
 {
-	return button & 0x1;
+	bool result = ((button & 1) != 0);
+	return result;
 }
 
-static inline i32
+static bool
 box3_contains_point(box3 box, v3 point)
 {
-	return (box.min.x <= point.x && point.x <= box.max.x &&
+	bool result = (
+	    box.min.x <= point.x && point.x <= box.max.x &&
 	    box.min.y <= point.y && point.y <= box.max.y &&
 	    box.min.z <= point.z && point.z <= box.max.z);
+	return result;
 }
