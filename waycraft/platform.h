@@ -69,6 +69,13 @@ enum platform_event_type {
 	PLATFORM_EVENT_MOTION,
 };
 
+struct platform_modifiers {
+	u32 depressed;
+	u32 latched;
+	u32 locked;
+	u32 group;
+};
+
 struct platform_event {
 	u32 type;
 
@@ -78,12 +85,7 @@ struct platform_event {
 			i32 state;
 		} key, button;
 
-		struct {
-			u32 depressed;
-			u32 latched;
-			u32 locked;
-			u32 group;
-		} modifiers;
+		struct platform_modifiers modifiers;
 
 		struct {
 			i32 x;

@@ -832,85 +832,72 @@ compositor_update(struct platform_memory *memory,
 	}
 
 	while (event_count-- > 0) {
+		struct platform_modifiers mods;
+		i32 key, button, state;
+		bool are_equal;
+
 		switch (event->type) {
 		case PLATFORM_EVENT_BUTTON:
-			{
-				i32 button = event->button.code;
-				i32 state = event->button.state;
-				if (focused_surface) {
-					u32 time = get_time_msec();
-					u32 serial = wl_display_next_serial(compositor->display);
+			button = event->button.code;
+			state = event->button.state;
+			if (focused_surface) {
+				u32 time = get_time_msec();
+				u32 serial = wl_display_next_serial(compositor->display);
 
-					struct wl_resource *pointer;
-					wl_resource_for_each(pointer, &compositor->pointers) {
-						if (wl_resource_get_client(pointer) == focused_client) {
-							wl_pointer_send_button(pointer, serial, time, button, state);
-						}
+				struct wl_resource *pointer;
+				wl_resource_for_each(pointer, &compositor->pointers) {
+					if (wl_resource_get_client(pointer) == focused_client) {
+						wl_pointer_send_button(pointer, serial, time, button, state);
 					}
 				}
 			}
+
 			break;
 		case PLATFORM_EVENT_KEY:
-			{
-				i32 key = event->key.code;
-				i32 state = event->key.state;
+			key = event->key.code;
+			state = event->key.state;
+			if (focused_surface) {
+				u32 time = get_time_msec();
+				u32 serial = wl_display_next_serial(compositor->display);
+
+				struct wl_resource *keyboard;
+				wl_resource_for_each(keyboard, &compositor->keyboards) {
+					if (wl_resource_get_client(keyboard) == focused_client) {
+						wl_keyboard_send_key(keyboard, serial, time, key, state);
+					}
+				}
+			}
+
+			break;
+		case PLATFORM_EVENT_MODIFIERS:
+			are_equal = (memcmp(event->modifiers, compositor->modifiers, sizeof(event->modifiers)) != 0);
+			if (are_equal) {
+				compositor->modifiers = event->modifiers;
+				u32 serial = 0;
 
 				if (focused_surface) {
-					u32 time = get_time_msec();
-					u32 serial = wl_display_next_serial(compositor->display);
-
 					struct wl_resource *keyboard;
 					wl_resource_for_each(keyboard, &compositor->keyboards) {
 						if (wl_resource_get_client(keyboard) == focused_client) {
-							wl_keyboard_send_key(keyboard, serial, time, key, state);
+							wl_keyboard_send_modifiers(keyboard, serial,
+							    depressed, latched, locked, group);
 						}
 					}
 				}
 			}
-			break;
-		case PLATFORM_EVENT_MODIFIERS:
-			{
-				u32 depressed = event->modifiers.depressed;
-				u32 latched = event->modifiers.latched;
-				u32 locked = event->modifiers.locked;
-				u32 group = event->modifiers.group;
 
-				if (depressed != compositor->modifiers.depressed ||
-						latched != compositor->modifiers.latched ||
-						locked != compositor->modifiers.locked ||
-						group != compositor->modifiers.group) {
-					compositor->modifiers.depressed = depressed;
-					compositor->modifiers.latched = latched;
-					compositor->modifiers.locked = locked;
-					compositor->modifiers.group = group;
-
-					u32 serial = 0;
-
-					if (focused_surface) {
-						struct wl_resource *keyboard;
-						wl_resource_for_each(keyboard, &compositor->keyboards) {
-							if (wl_resource_get_client(keyboard) == focused_client) {
-								wl_keyboard_send_modifiers(keyboard, serial,
-									depressed, latched, locked, group);
-							}
-						}
-					}
-				}
-			}
 			break;
 		case PLATFORM_EVENT_MOTION:
-			{
-				if (focused_surface) {
-					u32 time = get_time_msec();
+			if (focused_surface) {
+				u32 time = get_time_msec();
 
-					struct wl_resource *pointer;
-					wl_resource_for_each(pointer, &compositor->pointers) {
-						if (wl_resource_get_client(pointer) == focused_client) {
-							v2 cursor_pos = compositor->window_manager.cursor.position;
-							wl_fixed_t surface_x = wl_fixed_from_double(cursor_pos.x);
-							wl_fixed_t surface_y = wl_fixed_from_double(cursor_pos.y);
-							wl_pointer_send_motion(pointer, time, surface_x, surface_y);
-						}
+				struct wl_resource *pointer;
+				wl_resource_for_each(pointer, &compositor->pointers) {
+					if (wl_resource_get_client(pointer) == focused_client) {
+						v2 cursor_pos = compositor->window_manager.cursor.position;
+						wl_fixed_t surface_x = wl_fixed_from_double(cursor_pos.x);
+						wl_fixed_t surface_y = wl_fixed_from_double(cursor_pos.y);
+						wl_pointer_send_motion(pointer, time, surface_x, surface_y);
 					}
 				}
 			}
