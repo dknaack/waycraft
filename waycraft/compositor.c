@@ -14,7 +14,7 @@ surface_role_string(enum surface_role role)
 {
 	switch (role) {
 	case SURFACE_ROLE_NONE:
-		return "no";
+		return "(none)";
 	case SURFACE_ROLE_XDG_TOPLEVEL:
 		return "xdg toplevel";
 	case SURFACE_ROLE_XDG_POPUP:
@@ -26,7 +26,7 @@ surface_role_string(enum surface_role role)
 	case SURFACE_ROLE_CURSOR:
 		return "cursor";
 	default:
-		return "invalid role";
+		return "(invalid role)";
 	}
 }
 
